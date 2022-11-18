@@ -296,9 +296,6 @@ DWORD CreateLowBoxToken(HANDLE base_token,
                         TokenType token_type,
                         SECURITY_CAPABILITIES* security_capabilities,
                         base::win::ScopedHandle* token) {
-  if (base::win::GetVersion() < base::win::Version::WIN8)
-    return ERROR_CALL_NOT_IMPLEMENTED;
-
   if (token_type != PRIMARY && token_type != IMPERSONATION)
     return ERROR_INVALID_PARAMETER;
 
