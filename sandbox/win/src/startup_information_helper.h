@@ -65,7 +65,7 @@ class StartupInformationHelper {
   void operator=(const StartupInformationHelper&) = delete;
   StartupInformationHelper(const StartupInformationHelper&) = delete;
 
-  int CountAttributes();
+  DWORD CountAttributes();
 
   // Fields that are not passed into CreateProcessAsUserW().
   scoped_refptr<AppContainer> app_container_;
