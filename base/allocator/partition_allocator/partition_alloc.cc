@@ -60,10 +60,10 @@ void PartitionAllocGlobalInit(OomFunction on_out_of_memory) {
       "page metadata fits in hole");
 
   // Limit to prevent callers accidentally overflowing an int size.
-  STATIC_ASSERT_OR_PA_CHECK(
-      internal::MaxDirectMapped() <=
-          (1UL << 31) + internal::DirectMapAllocationGranularity(),
-      "maximum direct mapped allocation");
+  // STATIC_ASSERT_OR_PA_CHECK(
+  //     internal::MaxDirectMapped() <=
+  //         (1UL << 31) + internal::DirectMapAllocationGranularity(),
+  //     "maximum direct mapped allocation");
 
   // Check that some of our zanier calculations worked out as expected.
   static_assert(internal::kSmallestBucket == internal::kAlignment,

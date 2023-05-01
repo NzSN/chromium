@@ -1108,6 +1108,36 @@ TEST_P(PartitionAllocTest, Alloc) {
   allocator.root()->Free(new_ptr);
 }
 
+TEST_P(PartitionAllocTest, HugeAlloc) {
+  {
+    void *ptr = allocator.root()->Alloc(1ULL << 33, type_name);
+    EXPECT_TRUE(ptr);
+    allocator.root()->Free(ptr);
+  }
+
+  {
+    // Allocate a huge one and free then try again
+    int count = 0;
+    while (count < 2) {
+      void *ptr = allocator.root()->Alloc(1ULL << 33, type_name);
+      EXPECT_TRUE(ptr);
+      allocator.root()->Free(ptr);
+
+      count++;
+    }
+  }
+
+  {
+    // Alocate a huge buffer then fill data into it.
+    void *ptr = allocator.root()->Alloc(1ULL << 33, type_name);
+    EXPECT_TRUE(ptr);
+
+    memset(ptr, 1, (1ULL << 33) - 10);
+
+    allocator.root()->Free(ptr);
+  }
+}
+
 // Test the generic allocation functions can handle some specific sizes of
 // interest.
 TEST_P(PartitionAllocTest, AllocSizes) {
