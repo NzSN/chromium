@@ -9,7 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "components/sync/driver/sync_service.h"
+#include "build/build_config.h"
+#include "components/sync/service/sync_service.h"
 #include "google_apis/gaia/google_service_auth_error.h"
 #include "url/gurl.h"
 
@@ -49,6 +50,9 @@ class FakeSyncService : public SyncService {
   GoogleServiceAuthError GetAuthError() const override;
   base::Time GetAuthErrorTime() const override;
   bool RequiresClientUpgrade() const override;
+#if BUILDFLAG(IS_CHROMEOS_ASH)
+  bool IsSyncFeatureDisabledViaDashboard() const override;
+#endif  // BUILDFLAG(IS_CHROMEOS_ASH)
   void DataTypePreconditionChanged(syncer::ModelType type) override;
   SyncTokenStatus GetSyncTokenStatusForDebugging() const override;
   bool QueryDetailedSyncStatusForDebugging(SyncStatus* result) const override;
@@ -65,6 +69,7 @@ class FakeSyncService : public SyncService {
   void RemoveProtocolEventObserver(ProtocolEventObserver* observer) override;
   void GetAllNodesForDebugging(
       base::OnceCallback<void(base::Value::List)> callback) override;
+  ModelTypeDownloadStatus GetDownloadStatusFor(ModelType type) const override;
   void SetInvalidationsForSessionsEnabled(bool enabled) override;
   void AddTrustedVaultDecryptionKeysFromWeb(
       const std::string& gaia_id,
@@ -78,6 +83,9 @@ class FakeSyncService : public SyncService {
 
   // KeyedService implementation.
   void Shutdown() override;
+
+ protected:
+  bool IsSyncFeatureConsideredRequested() const override;
 
  private:
   GURL sync_service_url_;

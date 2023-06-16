@@ -211,9 +211,9 @@ class TabStripTestBase : public ChromeViewsTestBase {
   }
 
   // Owned by TabStrip.
-  raw_ptr<FakeBaseTabStripController> controller_ = nullptr;
-  raw_ptr<TabStrip> tab_strip_ = nullptr;
-  raw_ptr<views::View> tab_strip_parent_ = nullptr;
+  raw_ptr<FakeBaseTabStripController, DanglingUntriaged> controller_ = nullptr;
+  raw_ptr<TabStrip, DanglingUntriaged> tab_strip_ = nullptr;
+  raw_ptr<views::View, DanglingUntriaged> tab_strip_parent_ = nullptr;
   std::unique_ptr<views::Widget> widget_;
 
   ui::MouseEvent dummy_event_ = ui::MouseEvent(ui::ET_MOUSE_PRESSED,
@@ -727,6 +727,21 @@ TEST_P(TabStripTest, PreferredWidthDuringDrag) {
   // Preferred width should be larger by Y.
   EXPECT_EQ(original_preferred_width + kXOffset,
             tab_strip_->GetPreferredSize().width());
+}
+
+TEST_P(TabStripTest, TabIconActiveState) {
+  controller_->AddTab(0, TabActive::kActive);
+  ASSERT_EQ(1, tab_strip_->GetTabCount());
+  Tab* tab0 = tab_strip_->tab_at(0);
+  EXPECT_TRUE(tab0->GetTabIconForTesting()->GetActiveStateForTesting());
+
+  controller_->AddTab(1, TabActive::kActive);
+  ASSERT_EQ(2, tab_strip_->GetTabCount());
+  EXPECT_FALSE(tab0->GetTabIconForTesting()->GetActiveStateForTesting());
+
+  controller_->SelectTab(0, dummy_event_);
+  ASSERT_EQ(2, tab_strip_->GetTabCount());
+  EXPECT_TRUE(tab0->GetTabIconForTesting()->GetActiveStateForTesting());
 }
 
 // TabStripTestWithScrollingDisabled contains tests that will run with scrolling

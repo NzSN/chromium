@@ -58,8 +58,9 @@ void RestoreDataCollector::CaptureActiveDeskAsSavedDesk(
 
     if (!delegate->IsWindowSupportedForSavedDesk(window)) {
       call.unsupported_apps.push_back(window);
-      if (delegate->IsIncognitoWindow(window))
-        call.incognito_window_count++;
+      if (!delegate->IsWindowPersistable(window)) {
+        ++call.non_persistable_window_count;
+      }
       continue;
     }
 
@@ -78,9 +79,10 @@ void RestoreDataCollector::CaptureActiveDeskAsSavedDesk(
         BuildWindowInfo(window, /*activation_index=*/absl::nullopt,
                         /*for_saved_desks=*/true, mru_windows);
 
-    // Clear the desk ID in the WindowInfo that is to be stored in the template.
-    // It will be set to the ID of a newly created desk when launching.
+    // Clear the desk ID and uuid in the WindowInfo that is to be stored in the
+    // template. They will be set to the newly created desk when launching.
     window_info->desk_id.reset();
+    window_info->desk_guid = base::Uuid();
 
     ++call.pending_request_count;
     delegate->GetAppLaunchDataForSavedDesk(
@@ -166,8 +168,9 @@ void RestoreDataCollector::SendDeskTemplate(uint32_t serial) {
     auto* dialog_controller = saved_desk_util::GetSavedDeskDialogController();
     DCHECK(dialog_controller);
     dialog_controller->ShowUnsupportedAppsDialog(
-        root_window_to_show, call.unsupported_apps, call.incognito_window_count,
-        std::move(call.callback), std::move(desk_template));
+        root_window_to_show, call.unsupported_apps,
+        call.non_persistable_window_count, std::move(call.callback),
+        std::move(desk_template));
   } else {
     std::move(call.callback).Run(std::move(desk_template));
   }

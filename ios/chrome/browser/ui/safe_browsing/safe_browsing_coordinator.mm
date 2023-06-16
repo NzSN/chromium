@@ -6,12 +6,12 @@
 
 #import "base/feature_list.h"
 #import "components/safe_browsing/core/common/features.h"
-#import "ios/chrome/browser/main/browser.h"
+#import "ios/chrome/browser/shared/model/browser/browser.h"
+#import "ios/chrome/browser/shared/model/web_state_list/web_state_list.h"
+#import "ios/chrome/browser/shared/model/web_state_list/web_state_list_observer_bridge.h"
 #import "ios/chrome/browser/shared/public/commands/application_commands.h"
 #import "ios/chrome/browser/shared/public/commands/command_dispatcher.h"
 #import "ios/chrome/browser/ui/settings/privacy/privacy_safe_browsing_coordinator.h"
-#import "ios/chrome/browser/web_state_list/web_state_list.h"
-#import "ios/chrome/browser/web_state_list/web_state_list_observer_bridge.h"
 #import "ios/components/security_interstitials/safe_browsing/safe_browsing_tab_helper.h"
 #import "ios/components/security_interstitials/safe_browsing/safe_browsing_tab_helper_delegate.h"
 
@@ -65,19 +65,25 @@
 
 #pragma mark - WebStateListObserving
 
+- (void)didChangeWebStateList:(WebStateList*)webStateList
+                       change:(const WebStateListChange&)change
+                    selection:(const WebStateSelection&)selection {
+  switch (change.type()) {
+    case WebStateListChange::Type::kReplace: {
+      const WebStateListChangeReplace& replaceChange =
+          change.As<WebStateListChangeReplace>();
+      SafeBrowsingTabHelper::FromWebState(replaceChange.inserted_web_state())
+          ->SetDelegate(self);
+      break;
+    }
+  }
+}
+
 - (void)webStateList:(WebStateList*)webStateList
     didInsertWebState:(web::WebState*)webState
               atIndex:(int)index
            activating:(BOOL)activating {
   SafeBrowsingTabHelper::FromWebState(webState)->SetDelegate(self);
-}
-
-- (void)webStateList:(WebStateList*)webStateList
-    didReplaceWebState:(web::WebState*)oldWebState
-          withWebState:(web::WebState*)newWebState
-               atIndex:(int)atIndex {
-  DCHECK(newWebState);
-  SafeBrowsingTabHelper::FromWebState(newWebState)->SetDelegate(self);
 }
 
 - (void)webStateList:(WebStateList*)webStateList

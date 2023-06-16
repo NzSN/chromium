@@ -939,6 +939,13 @@ bool ShelfLayoutManager::ProcessGestureEvent(
     return false;
   }
 
+  // In certain edge cases, SHOW_PRESS gesture may come just as scroll starts.
+  // Ignore it, as it's not actoinable, and should not cancel drag and drop.
+  // See b/277846859 for more details.
+  if (event_in_screen.type() == ui::ET_GESTURE_SHOW_PRESS) {
+    return true;
+  }
+
   if (event_in_screen.type() == ui::ET_GESTURE_SCROLL_UPDATE) {
     UpdateGestureDrag(event_in_screen);
     return true;
@@ -1011,8 +1018,7 @@ void ShelfLayoutManager::ProcessScrollOffset(int offset,
     return;
   }
 
-  if (app_list_features::IsQuickActionShowBubbleLauncherEnabled() &&
-      !IsLocationInBubbleLauncherShowBounds(event.root_location())) {
+  if (!IsLocationInBubbleLauncherShowBounds(event.root_location())) {
     return;
   }
 
@@ -1037,9 +1043,6 @@ void ShelfLayoutManager::ProcessScrollEventFromShelf(ui::ScrollEvent* event) {
 }
 
 bool ShelfLayoutManager::IsBubbleLauncherShowOnGestureScrollAvailable() {
-  if (!app_list_features::IsQuickActionShowBubbleLauncherEnabled())
-    return false;
-
   if (!state_.IsShelfVisible())
     return false;
 
@@ -3116,6 +3119,14 @@ void ShelfLayoutManager::UpdateVisibilityStateForTrayBubbleChange(
 void ShelfLayoutManager::HandleShelfAlignmentChange() {
   base::AutoReset<bool> immediate_transition(&state_change_animation_disabled_,
                                              true);
+
+  // The desk button widget needs to know that the alignment is changing early
+  // so that it can calculate the correct preferred length.
+  if (features::IsDeskButtonEnabled()) {
+    shelf_->desk_button_widget()->PrepareForAlignmentChange(
+        shelf_->alignment());
+  }
+
   UpdateVisibilityState(/*force_layout=*/true);
 }
 

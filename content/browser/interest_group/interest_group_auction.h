@@ -21,6 +21,7 @@
 #include "content/browser/interest_group/auction_result.h"
 #include "content/browser/interest_group/auction_worklet_manager.h"
 #include "content/browser/interest_group/interest_group_auction_reporter.h"
+#include "content/browser/interest_group/interest_group_pa_report_util.h"
 #include "content/browser/interest_group/interest_group_storage.h"
 #include "content/browser/interest_group/subresource_url_builder.h"
 #include "content/common/content_export.h"
@@ -138,6 +139,15 @@ class CONTENT_EXPORT InterestGroupAuction
 
   using PrivateAggregationRequests =
       std::vector<auction_worklet::mojom::PrivateAggregationRequestPtr>;
+
+  // Helps determine which level of worklet a particular PA request came from.
+  enum class PrivateAggregationPhase {
+    kBidder,
+    kNonTopLevelSeller,  // Seller for a component auction.
+    kTopLevelSeller,     // Top-level seller, either with components or
+                         // as the sole seller in a single-seller auction.
+    kNumPhases
+  };
 
   struct BidState {
     BidState();
@@ -266,18 +276,25 @@ class CONTENT_EXPORT InterestGroupAuction
 
     // Requests made to Private aggregation API in generateBid() and scoreAd().
     // Keyed by reporting origin of the associated requests, i.e., buyer origin
-    // for generateBid() and seller origin for scoreAd(), plus a bool that's
-    // true for top-level seller requests only, which is used to make sure they
-    // get the top-level signals.
+    // for generateBid() and seller origin for scoreAd(), plus an enum that
+    // determines exactly which phase of the auction made that request.
     //
     // TODO(qingxinwu): Consider only saving the requests without saving Origin,
     // since copying Origin is expensive.
-    std::map<std::pair<url::Origin, bool>, PrivateAggregationRequests>
+    std::map<std::pair<url::Origin, PrivateAggregationPhase>,
+             PrivateAggregationRequests>
         private_aggregation_requests;
 
     // Requests made to Private aggregation API in generateBid() for the
     // non-k-anonymous enforced bid when k-anonymity enforcement is active.
     PrivateAggregationRequests non_kanon_private_aggregation_requests;
+
+    PrivateAggregationTimings private_aggregation_timings[static_cast<int>(
+        PrivateAggregationPhase::kNumPhases)];
+
+    PrivateAggregationTimings& pa_timings(PrivateAggregationPhase phase) {
+      return private_aggregation_timings[static_cast<int>(phase)];
+    }
 
     // The reason this bid was rejected by the auction (i.e., reason why score
     // was non-positive).
@@ -341,10 +358,10 @@ class CONTENT_EXPORT InterestGroupAuction
 
     // InterestGroup that made the bid. Owned by the BidState of that
     // InterestGroup.
-    const raw_ptr<const blink::InterestGroup> interest_group;
+    const raw_ptr<const blink::InterestGroup, DanglingUntriaged> interest_group;
 
     // Points to the InterestGroupAd within `interest_group`.
-    const raw_ptr<const blink::InterestGroup::Ad> bid_ad;
+    const raw_ptr<const blink::InterestGroup::Ad, DanglingUntriaged> bid_ad;
 
     // `bid_state` of the InterestGroup that made the bid. This should not be
     // written to, except for adding seller debug reporting URLs.
@@ -787,7 +804,14 @@ class CONTENT_EXPORT InterestGroupAuction
       const absl::optional<GURL>& debug_loss_report_url,
       const absl::optional<GURL>& debug_win_report_url,
       PrivateAggregationRequests pa_requests,
+      base::TimeDelta scoring_latency,
+      base::TimeDelta trusted_signals_fetch_latency,
       const std::vector<std::string>& errors) override;
+
+  PrivateAggregationPhase seller_phase() const {
+    return parent_ ? PrivateAggregationPhase::kNonTopLevelSeller
+                   : PrivateAggregationPhase::kTopLevelSeller;
+  }
 
   // Compares `bid` with current auction leaders in `leader_info`, updating
   // `leader_info` if needed.
@@ -917,7 +941,7 @@ class CONTENT_EXPORT InterestGroupAuction
   const raw_ptr<AuctionMetricsRecorder> auction_metrics_recorder_;
 
   // Configuration of this auction.
-  raw_ptr<const blink::AuctionConfig> config_;
+  raw_ptr<const blink::AuctionConfig, DanglingUntriaged> config_;
 
   // True once all promises in this and component auction's configuration have
   // been resolved. (Note that if `this` is a component auction, it only looks

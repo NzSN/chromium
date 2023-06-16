@@ -7,8 +7,10 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "ash/ash_export.h"
+#include "base/containers/flat_set.h"
 #include "base/containers/queue.h"
 #include "base/files/file_path.h"
 #include "base/functional/callback.h"
@@ -28,10 +30,16 @@ enum class ScreensaverImageDownloadResult {
   kNetworkError,
   kFileSaveError,
   kFileSystemWriteError,
+  kCancelled,
 };
 
-// Provides a service to download external image files that will be displayed in
-// the managed screensaver feature.
+// Provides a cache service to download and store external image files that will
+// be displayed in the managed screensaver feature. This cache will operate in a
+// specific file directory, specified on instantiation.
+//
+// Each image will be downloaded and stored with a unique name based on its URL
+// address. This cache assumes that the remote contents of the URL will not
+// change, i.e. once downloaded, it will not attempt to refresh its content.
 class ASH_EXPORT ScreensaverImageDownloader {
  private:
   // Expresses the state of the downloading job queue. It only has two possible
@@ -44,33 +52,15 @@ class ASH_EXPORT ScreensaverImageDownloader {
   };
 
  public:
-  // Convenience definition for the callback provided by clients wanting to
-  // download images.
-  using ResultCallback =
-      base::OnceCallback<void(ScreensaverImageDownloadResult result,
-                              absl::optional<base::FilePath> path)>;
-
-  // Represents a single image download request from `image_url` to
-  // `download_directory_` with name `file_name`. Once this job has been
-  // completed, `result_callback` will be invoked with the actual result, and
-  // the path to the downloaded file if the operation suceeded.
-  struct Job {
-    Job() = delete;
-    Job(const std::string& image_url,
-        const std::string& file_name,
-        ResultCallback result_callback);
-    ~Job();
-
-    const std::string image_url;
-    std::string file_name;
-    ResultCallback result_callback;
-  };
+  using ImageListUpdatedCallback =
+      base::RepeatingCallback<void(const std::vector<base::FilePath>& images)>;
 
   ScreensaverImageDownloader() = delete;
 
   ScreensaverImageDownloader(
       scoped_refptr<network::SharedURLLoaderFactory> shared_url_loader_factory,
-      const base::FilePath& download_directory);
+      const base::FilePath& download_directory,
+      ImageListUpdatedCallback image_list_updated_callback);
 
   ~ScreensaverImageDownloader();
 
@@ -78,27 +68,79 @@ class ASH_EXPORT ScreensaverImageDownloader {
   ScreensaverImageDownloader& operator=(const ScreensaverImageDownloader&) =
       delete;
 
+  // Updates the list of images to be cached to `image_url_list`. Processing the
+  // new list can download new images and delete images that are no longer being
+  // referenced in the new list.
+  void UpdateImageUrlList(const base::Value::List& image_url_list);
+
+  std::vector<base::FilePath> GetScreensaverImages();
+
+  // Used for setting images in tests.
+  void SetImagesForTesting(const std::vector<base::FilePath>& images);
+
+  base::FilePath GetDowloadDirForTesting();
+
+ private:
+  friend class ScreensaverImageDownloaderTest;
+
+  // Represents a single image download request from `image_url` to
+  // `download_directory_`. Once this job has been completed, `result_callback`
+  // will be invoked with the actual result, and the path to the downloaded file
+  // if the operation succeeded.
+  // TODO(b/280810255): Delete this class, and use a plain std::string.
+  struct Job {
+    Job() = delete;
+    explicit Job(const std::string& image_url);
+    ~Job();
+
+    // Creates a unique name based on a hash operation on the image URL to
+    // be used for the file stored in disk.
+    std::string file_name() const;
+
+    const std::string image_url;
+  };
+
+  // Deletes all images on disk in the cache directory that are not referenced
+  // by the given `new_image_urls`.
+  std::vector<base::FilePath> DeleteUnreferencedImageFiles(
+      const std::vector<std::string>& new_image_urls);
+
+  // Called when unreferenced images have been deleted. Used for removing stale
+  // file references from the in-memory `downloaded_images_` cache.
+  void OnUnreferencedImagesDeleted(
+      std::vector<base::FilePath> file_paths_deleted);
+
   // Downloads a new external image from `image_url` to the download folder as
   // `file_name`. The async `callback` will pass the result, and the file path
   // if the operation succeeded.
   void QueueDownloadJob(std::unique_ptr<Job> download_job);
 
- private:
-  friend class ScreensaverImageDownloaderTest;
+  // Empties the downloading queue, and replies to pending requests to indicate
+  // that they have been cancelled.
+  void ClearRequestQueue();
+
+  // Clears out the download folder.
+  void DeleteDownloadedImages();
 
   // Verifies that the download directory is present and writable, or attempts
   // to create it otherwise. The result of this operation is passed along to
-  // `StartDownloadJobInternal`.
+  // `OnVerifyDownloadDirectoryCompleted`.
   void StartDownloadJob(std::unique_ptr<Job> download_job);
 
-  // Triggers a new URL request to download an image, if `can_download_file` is
-  // true. Otherwise, it completes the job with an error result.
-  void StartDownloadJobInternal(std::unique_ptr<Job> download_job,
-                                bool can_download_file);
+  // Starts a new job if the download folder is present and writable.
+  // Otherwise, it completes the request with an error result.
+  void OnVerifyDownloadDirectoryCompleted(std::unique_ptr<Job> download_job,
+                                          bool can_download_to_dir);
 
-  // Moves the downloaded image to its desired path. To avoid reading errors,
-  // every image is initially downloaded to a temporary file. On network error,
-  // `callback` is invoked.
+  // Resolves the download request if the file is already cached, otherwise
+  // triggers a new URL request to download the file.
+  void OnCheckIsFileIsInCache(const base::FilePath& file_path,
+                              std::unique_ptr<Job> download_job,
+                              bool is_file_present);
+
+  // Moves the downloaded image to its desired path. To avoid reading
+  // errors, every image is initially downloaded to a temporary file. On
+  // network error, `callback` is invoked.
   void OnUrlDownloadedToTempFile(
       std::unique_ptr<network::SimpleURLLoader> simple_loader,
       std::unique_ptr<Job> download_job,
@@ -122,9 +164,14 @@ class ASH_EXPORT ScreensaverImageDownloader {
   // jobs will be queued, and executed sequentially.
   base::queue<std::unique_ptr<Job>> downloading_queue_;
 
+  base::flat_set<base::FilePath> downloaded_images_;
+
   scoped_refptr<base::SequencedTaskRunner> task_runner_;
   scoped_refptr<network::SharedURLLoaderFactory> shared_url_loader_factory_;
   base::FilePath download_directory_;
+
+  // Used to notify changes in the list of downloaded images.
+  ImageListUpdatedCallback image_list_updated_callback_;
 
   base::WeakPtrFactory<ScreensaverImageDownloader> weak_ptr_factory_{this};
 };

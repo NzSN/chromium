@@ -62,7 +62,6 @@ _CONFIG = [
             'base::AutoReset',
             'base::Contains',
             'base::ConditionVariable',
-            'base::ShouldLogHistogramForCpuReductionExperiment',
             'base::ValuesEquivalent',
             'base::Days',
             'base::DefaultTickClock',
@@ -86,6 +85,7 @@ _CONFIG = [
             'base::MakeRefCounted',
             'base::MappedReadOnlyRegion',
             'base::MatcherStringPattern',
+            'base::MetricsSubSampler',
             'base::Microseconds',
             'base::Milliseconds',
             'base::Minutes',
@@ -169,6 +169,7 @@ _CONFIG = [
 
             # //base/functional/callback.h is allowed, but you need to use
             # WTF::Bind or WTF::BindRepeating to create callbacks in Blink.
+            'base::BarrierCallback',
             'base::BarrierClosure',
             'base::NullCallback',
             'base::OnceCallback',
@@ -181,12 +182,6 @@ _CONFIG = [
             'base::CancelableOnceClosure',
             'base::CancelableRepeatingCallback',
             'base::CancelableRepeatingClosure',
-
-            # //base/mac/scoped_nsobject.h
-            'base::scoped_nsobject',
-
-            # //base/memory/scoped_policy.h
-            'base::scoped_policy::RETAIN',
 
             # //base/memory/ptr_util.h.
             'base::WrapUnique',
@@ -319,8 +314,12 @@ _CONFIG = [
             'base::TestMockTimeTaskRunner',
             'base::TickClock',
 
+            # State transition checking
+            'base::StateTransitions',
+
             # cc painting and raster types.
             'cc::CategorizedWorkerPool',
+            'cc::ColorFilter',
             'cc::InspectablePaintRecorder',
             'cc::InspectableRecordPaintCanvas',
             'cc::PaintCanvas',
@@ -726,9 +725,9 @@ _CONFIG = [
             'crash_reporter::.*CrashKey.*',
 
             # Useful for platform-specific code.
-            'base::mac::(CFToNSCast|NSToCFCast)',
+            'base::apple::(CFToNSPtrCast|NSToCFPtrCast|CFToNSOwnershipCast|NSToCFOwnershipCast)',
             'base::mac::Is(AtMost|AtLeast)?OS.+',
-            'base::(scoped_nsobject|ScopedCFTypeRef)',
+            'base::ScopedCFTypeRef',
         ],
         'disallowed': [
             ('base::Bind(|Once|Repeating)',
@@ -1039,6 +1038,15 @@ _CONFIG = [
     },
     {
         'paths': [
+            'third_party/blink/renderer/platform/graphics/compositing/pending_layer.cc',
+            'third_party/blink/renderer/platform/graphics/paint/paint_chunker.cc',
+        ],
+        'allowed': [
+            'color_utils::GetResultingPaintColor',
+        ],
+    },
+    {
+        'paths': [
             'third_party/blink/renderer/core/inspector/inspector_contrast.cc',
             'third_party/blink/renderer/core/inspector/inspector_contrast.h'
         ],
@@ -1295,7 +1303,7 @@ _CONFIG = [
             'gpu::MailboxHolder',
             'media::.+',
             'libyuv::.+',
-            'viz::SkColorTypeToResourceFormat',
+            'viz::SkColorTypeToSinglePlaneSharedImageFormat',
         ]
     },
     {
@@ -1851,6 +1859,24 @@ _CONFIG = [
             'attribution_reporting:.*',
         ]
     },
+    {
+        'paths': [
+            'third_party/blink/renderer/core/highlight/highlight_style_utils.cc',
+        ],
+        'allowed': [
+            'shared_highlighting::kFragmentTextBackgroundColorARGB',
+        ]
+    },
+    {
+        'paths': [
+            'third_party/blink/renderer/core/events/keyboard_event.h',
+            'third_party/blink/renderer/core/events/keyboard_event.cc',
+        ],
+        'allowed': [
+            'base::StringPiece16',
+            'base::i18n::UTF16CharIterator',
+        ]
+    }
 ]
 
 

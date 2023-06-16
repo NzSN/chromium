@@ -233,7 +233,9 @@ MATCHER_P2(MatchVABufferDescriptor, va_buffer_type, va_buffer_size, "") {
 
 class MockVaapiWrapper : public VaapiWrapper {
  public:
-  MockVaapiWrapper() : VaapiWrapper(kEncodeConstantQuantizationParameter) {}
+  MockVaapiWrapper()
+      : VaapiWrapper(VADisplayStateHandle(),
+                     kEncodeConstantQuantizationParameter) {}
   MOCK_METHOD1(SubmitBuffer_Locked, bool(const VABufferDescriptor&));
 
  protected:
@@ -243,7 +245,8 @@ class MockVaapiWrapper : public VaapiWrapper {
 class MockVP9RateControl
     : public VideoRateControl<libvpx::VP9RateControlRtcConfig,
                               libvpx::VP9RateControlRTC,
-                              libvpx::VP9FrameParamsQpRTC> {
+                              libvpx::VP9FrameParamsQpRTC,
+                              int> {
  public:
   MockVP9RateControl() = default;
   ~MockVP9RateControl() override = default;
@@ -298,7 +301,7 @@ class VP9VaapiVideoEncoderDelegateTest
 
   std::unique_ptr<VP9VaapiVideoEncoderDelegate> encoder_;
   scoped_refptr<MockVaapiWrapper> mock_vaapi_wrapper_;
-  raw_ptr<MockVP9RateControl> mock_rate_ctrl_ = nullptr;
+  raw_ptr<MockVP9RateControl, DanglingUntriaged> mock_rate_ctrl_ = nullptr;
 };
 
 void VP9VaapiVideoEncoderDelegateTest::ResetEncoder() {

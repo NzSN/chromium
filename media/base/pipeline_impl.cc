@@ -192,7 +192,7 @@ class PipelineImpl::RendererWrapper final : public DemuxerHost,
 
   const scoped_refptr<base::SequencedTaskRunner> media_task_runner_;
   const scoped_refptr<base::SingleThreadTaskRunner> main_task_runner_;
-  const raw_ptr<MediaLog> media_log_;
+  const raw_ptr<MediaLog, DanglingUntriaged> media_log_;
 
   // A weak pointer to PipelineImpl. Must only use on the main task runner.
   base::WeakPtr<PipelineImpl> weak_pipeline_;
@@ -822,7 +822,7 @@ void PipelineImpl::RendererWrapper::OnDemuxerCompletedTrackChange(
     // TODO(tmathmeyer): Look into text track switching.
     case DemuxerStream::TEXT:
     case DemuxerStream::UNKNOWN:  // Fail on unknown type.
-      NOTREACHED();
+      NOTREACHED_NORETURN();
   }
 }
 
@@ -1570,8 +1570,7 @@ const char* PipelineImpl::GetStateString(State state) {
     RETURN_STRING(kSuspended);
     RETURN_STRING(kResuming);
   }
-  NOTREACHED();
-  return "INVALID";
+  NOTREACHED_NORETURN();
 }
 
 #undef RETURN_STRING

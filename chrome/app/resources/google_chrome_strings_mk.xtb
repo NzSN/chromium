@@ -32,6 +32,7 @@
  спарувањето. <ph name="IDS_BLUETOOTH_DEVICE_CHOOSER_AUTHORIZE_BLUETOOTH_LINK" /></translation>
 <translation id="1547295885616600893">Chrome OS е овозможен од дополнителен <ph name="BEGIN_LINK_CROS_OSS" />софтвер со отворен код<ph name="END_LINK_CROS_OSS" />.</translation>
 <translation id="1553358976309200471">Ажурирај го Chrome</translation>
+<translation id="1555506416658437797">измени начините на плаќање</translation>
 <translation id="1583073672411044740">Корисникот <ph name="EXISTING_USER" /> веќе е најавен на овој профил на Chrome. Ова ќе создаде нов профил на Chrome за <ph name="USER_EMAIL_ADDRESS" /></translation>
 <translation id="1587223624401073077">Google Chrome ја користи вашата камера.</translation>
 <translation id="1587325591171447154">Датотеката <ph name="FILE_NAME" /> е опасна, па затоа Chrome ја блокираше.</translation>
@@ -83,10 +84,12 @@
 <translation id="234869673307233423">Chrome не може да ги провери вашите лозинки. Обидете се пак подоцна.</translation>
 <translation id="235650106824528204">Податоците на Chrome што се генерирани при користењето на овој профил (како на пример, создавање обележувачи, историја, лозинки и други поставки) може да се отстранат од страна на администраторот на работниот профил. <ph name="LEARN_MORE" /></translation>
 <translation id="2359808026110333948">Продолжи</translation>
+<translation id="2399868464369312507">Google Chrome се обидува да ги измени начините на плаќање.</translation>
 <translation id="2401189691232800402">Систем Chrome OS</translation>
 <translation id="2467438592969358367">Google Chrome сака да ги извезе вашите лозинки. Внесете ја лозинката за Windows за да го дозволите ова.</translation>
 <translation id="2485422356828889247">Деинсталирај</translation>
 <translation id="2534507159460261402">Google Pay (копирана во Chrome)</translation>
+<translation id="2556847002339236023">Вашата организација го затвора Chrome кога не се користи <ph name="TIMEOUT_DURATION" />. Податоците од прелистување се избришаа. Тоа може да ги опфати историјата, автоматското пополнување и преземањата.</translation>
 <translation id="2559253115192232574">Подоцна, сајтот што го посетувате може да побара од Chrome да ги види вашите интереси за да ги персонализира рекламите што ги гледате. Chrome може да сподели до 3 интереси.</translation>
 <translation id="2563121210305478421">Да се рестартира Chrome?</translation>
 <translation id="2574930892358684005">Корисникот <ph name="EXISTING_USER" /> веќе е најавен на овој профил на Chrome. За да прелистувате одделно, Chrome може да создаде одделен профил за вас.</translation>
@@ -118,6 +121,7 @@
 <translation id="2929907241665500097">Chrome не се ажурираше, нешто тргна наопаку. <ph name="BEGIN_LINK" />Поправете ги проблемите со ажурирањето на Chrome и со неуспешните ажурирања.<ph name="END_LINK" /></translation>
 <translation id="2969728957078202736"><ph name="PAGE_TITLE" /> - Мрежно најавување - Chrome</translation>
 <translation id="3019382870990049182">Рестартирај за да се ажурира &amp;ChromeOS Flex</translation>
+<translation id="3033660625209020231">{NUM_DEVICES,plural, =0{Екстензиите за Google Chrome пристапувале до HID-уреди}=1{Екстензиите за Google Chrome пристапуваат до HID-уреди}one{Екстензиите за Google Chrome пристапуваат до # HID-уред}other{Екстензиите за Google Chrome пристапуваат до # HID-уреди}}</translation>
 <translation id="303514781271618814">Chrome истражува нови функции што им овозможуваат на сајтовите да го испорачуваат истото доживување при прелистувањето со користење помалку податоци</translation>
 <translation id="3037838751736561277">Google Chrome е во заднински режим.</translation>
 <translation id="3038232873781883849">Се чека инсталирање…</translation>
@@ -198,7 +202,7 @@
 <translation id="4458462641685292929">Во тек е друга операција на Google Chrome. Обидете се повторно подоцна.</translation>
 <translation id="4459234553906210702">Мерењето на рекламите им овозможува на сајтовите што ги посетувате да бараат податоци од Chrome што му помагаат на сајтот да ја мери изведбата на своите реклами. Мерењето на рекламите го ограничува следењето меѓу сајтовите со префрлање што е можно помалку податоци меѓу сајтовите.</translation>
 <translation id="4561051373932531560">Google Chrome ви овозможува да кликнете на телефонски број на интернет и да го повикате со Skype!</translation>
-<translation id="4567424176335768812">Најавени сте како <ph name="USER_EMAIL_ADDRESS" />. Сега може да пристапувате кон вашите обележувачи, историја и други поставки на сите најавени уреди.</translation>
+<translation id="4567424176335768812">Најавени сте како: <ph name="USER_EMAIL_ADDRESS" />. Сега може да пристапувате кон вашите обележувачи, историја и други поставки на сите најавени уреди.</translation>
 <translation id="4571503333518166079">Одете во поставките за известувања на Chrome</translation>
 <translation id="459622048091363950">Ако Chrome има пристап, тогаш и веб-сајтовите ќе може да ви бараат пристап.</translation>
 <translation id="4600710005438004015">Chrome не може да се ажурира на најновата верзија и поради тоа ги пропуштате новите функции и безбедносни поправки.</translation>
@@ -223,6 +227,7 @@
 <translation id="4970880042055371251">Верзија на Chrome OS</translation>
 <translation id="4970947549776831107">Chrome ја блокираше датотекава бидејќи типот на датотека е опасен</translation>
 <translation id="4990567037958725628">Google Chrome Канари</translation>
+<translation id="5005958605836556244">{NUM_DEVICES,plural, =0{Екстензија за Google Chrome пристапувала до HID-уреди}=1{Екстензија за Google Chrome пристапува до 1 HID-уред}one{Екстензија за Google Chrome пристапува до # HID-уред}other{Екстензија за Google Chrome пристапува до # HID-уреди}}</translation>
 <translation id="5064155331105009416">{COUNT,plural, =1{Администраторот го затвора Chrome автоматски кога не се користи 1 минута. Податоците од прелистувањето се бришат. Тоа може да ги опфати историјата, автоматското пополнување и преземањата.}one{Администраторот го затвора Chrome автоматски кога не се користи # минута. Податоците од прелистувањето се бришат. Тоа може да ги опфати историјата, автоматското пополнување и преземањата.}other{Администраторот го затвора Chrome автоматски кога не се користи # минути. Податоците од прелистувањето се бришат. Тоа може да ги опфати историјата, автоматското пополнување и преземањата.}}</translation>
 <translation id="5098668839038261629">Кога е вклучено, ќе се одјавите и од Chrome</translation>
 <translation id="5132929315877954718">Открива одлични апликации, игри, наставки и теми за Google Chrome.</translation>
@@ -256,6 +261,7 @@ Google Chrome не може да ги обнови вашите поставки
 <translation id="5756509061973259733">На уредов веќе постои профил на Chrome со оваа сметка</translation>
 <translation id="5795887333006832406"><ph name="PAGE_TITLE" /> - Google Chrome Canary</translation>
 <translation id="5804318322022881572">Не може да се стартува Chrome. Обидете се повторно.</translation>
+<translation id="585620188971323280">ги измени поставките за пополнување на начините на плаќање.</translation>
 <translation id="5895138241574237353">Рестартирај</translation>
 <translation id="5903106910045431592"><ph name="PAGE_TITLE" /> - Мрежно најавување</translation>
 <translation id="5924017743176219022">Се поврзува на интернет…</translation>
@@ -273,6 +279,7 @@ Google Chrome не може да ги обнови вашите поставки
 <translation id="6113794647360055231">Chrome тукушто се подобри</translation>
 <translation id="6145313976051292476">Отворај PDF-формат во Chrome</translation>
 <translation id="6155960517327665396">„Штедачот на меморија“ го направи Chrome побрз</translation>
+<translation id="6157638032135951407">Вашата организација ги брише податоците на Chrome кога не се користи <ph name="TIMEOUT_DURATION" />. Тоа може да ги опфати историјата, автоматското пополнување и преземањата.</translation>
 <translation id="6169866489629082767"><ph name="PAGE_TITLE" /> – Google Chrome</translation>
 <translation id="6173637689840186878"><ph name="PAGE_TITLE" /> - Google Chrome Beta</translation>
 <translation id="6235018212288296708">Дојдовно правило за Google Chrome за да овозможи сообраќај mDNS.</translation>
@@ -288,6 +295,7 @@ Google Chrome не може да ги обнови вашите поставки
 <translation id="6418662306461808273">Сакате да се префрлите на постојниот профил на Chrome?</translation>
 <translation id="648319183876919572">„Подобрено безбедно прелистување“ нуди поголема заштита од опасни веб-сајтови и преземања</translation>
 <translation id="6493527311031785448">Google Chrome се обидува да <ph name="AUTHENTICATION_PURPOSE" /></translation>
+<translation id="6497147134301593682">Chrome се затвори автоматски</translation>
 <translation id="6506909944137591434">На Chrome му треба дозвола за камерата за да создаде 3D-карта на опкружувањето</translation>
 <translation id="6515495397637126556"><ph name="PAGE_TITLE" /> - Google Chrome Dev</translation>
 <translation id="659498884637196217">Во „Управникот со лозинки на Google“ на уредов</translation>
@@ -324,6 +332,7 @@ Google Chrome не може да ги обнови вашите поставки
 <translation id="7155997830309522122">Ако е така, изменете ја зачуваната лозинка во Chrome за да се совпаѓа со новата лозинка.</translation>
 <translation id="7161904924553537242">Добре дојдовте на Google Chrome</translation>
 <translation id="7177959540995930968">Може да дознаете повеќе за овие функции во поставките за Chrome.</translation>
+<translation id="7193885263065350793">Вашата организација го затвора Chrome кога не се користи <ph name="TIMEOUT_DURATION" />.</translation>
 <translation id="7242029209006116544">Се пријавувате со управувана сметка и на нејзиниот администратор му давате контрола врз вашиот профил на Google Chrome. Вашите податоци на Chrome, како апликации, обележувачи, историја, лозинки и други поставки, трајно ќе се поврзат со <ph name="USER_NAME" />. Ќе може да ги избришете податоците преку Информациска табла на сметките на Google, но нема да може да ги поврзувате со друга сметка. Изборно може да направите и нов профил за постоечките податоци од Chrome за да бидат одделни. <ph name="LEARN_MORE" /></translation>
 <translation id="7295052994004373688">Овој јазик се користи за приказ на корисничкиот интерфејс на Google Chrome</translation>
 <translation id="7296210096911315575">Важни информации за користење и безбедност</translation>
@@ -385,11 +394,13 @@ Google Chrome не може да ги обнови вашите поставки
 <translation id="8418845734693287262">Chrome OS не може да ги синхронизира податоците бидејќи деталите за најавување на сметката се застарени.</translation>
 <translation id="8433638294851456451">За да испратите број оттука до телефонот со Android, најавете се на Chrome на двата уреда.</translation>
 <translation id="8451192282033883849">Со сметката управува <ph name="MANAGER_NAME" />. Администраторот може да го види и изменува овој профил на прелистувач Chrome и податоците за него, како обележувачи, историја и лозинки.</translation>
+<translation id="8496177819998570653">Google Password Manager</translation>
 <translation id="8498858610309223613">Тукушто применивме посебно безбедносно ажурирање за Google Chrome. Рестартирајте сега и ќе ви ги вратиме картичките.</translation>
 <translation id="8504220326736535258">Chrome ја блокираше датотекава бидејќи има злонамерен софтвер</translation>
 <translation id="8516431725144212809">Вашите интереси како што се проценети од Chrome</translation>
 <translation id="8521348052903287641">Дојдовно правило за Google Chrome Dev за овозможување mDNS-сообраќај.</translation>
 <translation id="8540666473246803645">Google Chrome</translation>
+<translation id="8544217240017914508">Google Chrome се обидува да ги измени поставките за пополнување на начините на плаќање.</translation>
 <translation id="8550334526674375523">Овој работен профил е целосно одделен од вашиот личен профил.</translation>
 <translation id="8556340503434111824">Достапна е нова верзија на Google Chrome и побрза е од кога било.</translation>
 <translation id="8571790202382503603">Со профилите на Chrome може да ги одделите сите ваши работи на Chrome. Со ова е полесно да се одделат работата и забавата.</translation>

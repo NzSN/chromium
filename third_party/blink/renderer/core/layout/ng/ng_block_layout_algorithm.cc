@@ -88,18 +88,6 @@ bool HasLineEvenIfEmpty(LayoutBox* box) {
   return false;
 }
 
-LogicalOffset CenterBlockChild(LogicalOffset offset,
-                               LayoutUnit available_block_size,
-                               LayoutUnit child_block_size) {
-  if (available_block_size == child_block_size)
-    return offset;
-  // We don't clamp a negative difference to zero. We'd like to center the
-  // child even if its taller than the container.
-  LayoutUnit block_size_diff = available_block_size - child_block_size;
-  offset.block_offset += block_size_diff / 2 + LayoutMod(block_size_diff, 2);
-  return offset;
-}
-
 inline const NGLayoutResult* LayoutBlockChild(
     const NGConstraintSpace& space,
     const NGBreakToken* break_token,
@@ -218,6 +206,16 @@ LogicalOffset LogicalFromBfcOffsets(const NGBfcOffset& child_bfc_offset,
 
   return {inline_offset,
           child_bfc_offset.block_offset - parent_bfc_offset.block_offset};
+}
+
+// Whether the `node` reuqires `NGLineInfoList` or not.
+inline bool NeedsOptimalInlineChildLayoutContext(const NGInlineNode& node) {
+  const TextWrap wrap = node.Style().GetTextWrap();
+  if (UNLIKELY(wrap == TextWrap::kPretty)) {
+    DCHECK(RuntimeEnabledFeatures::CSSTextWrapPrettyEnabled());
+    return !node.IsScoreLineBreakDisabled();
+  }
+  return false;
 }
 
 }  // namespace
@@ -456,11 +454,16 @@ const NGLayoutResult* NGBlockLayoutAlgorithm::Layout() {
   // Inline children require an inline child layout context to be
   // passed between siblings. We want to stack-allocate that one, but
   // only on demand, as it's quite big.
-  NGLayoutInputNode first_child(nullptr);
-  if (Node().IsInlineFormattingContextRoot(&first_child))
-    result = LayoutWithInlineChildLayoutContext(first_child);
-  else
+  NGInlineNode inline_child(nullptr);
+  if (Node().IsInlineFormattingContextRoot(&inline_child)) {
+    if (UNLIKELY(NeedsOptimalInlineChildLayoutContext(inline_child))) {
+      result = LayoutWithOptimalInlineChildLayoutContext(inline_child);
+    } else {
+      result = LayoutWithSimpleInlineChildLayoutContext(inline_child);
+    }
+  } else {
     result = Layout(nullptr);
+  }
 
   if (result->Status() == NGLayoutResult::kSuccess) {
     return result;
@@ -500,10 +503,17 @@ NGBlockLayoutAlgorithm::HandleNonsuccessfulLayoutResult(
 }
 
 NOINLINE const NGLayoutResult*
-NGBlockLayoutAlgorithm::LayoutWithInlineChildLayoutContext(
-    const NGLayoutInputNode& first_child) {
-  NGInlineChildLayoutContext context(To<NGInlineNode>(first_child),
-                                     &container_builder_);
+NGBlockLayoutAlgorithm::LayoutWithSimpleInlineChildLayoutContext(
+    const NGInlineNode& child) {
+  NGSimpleInlineChildLayoutContext context(child, &container_builder_);
+  const NGLayoutResult* result = Layout(&context);
+  return result;
+}
+
+NOINLINE const NGLayoutResult*
+NGBlockLayoutAlgorithm::LayoutWithOptimalInlineChildLayoutContext(
+    const NGInlineNode& child) {
+  NGOptimalInlineChildLayoutContext context(child, &container_builder_);
   const NGLayoutResult* result = Layout(&context);
   return result;
 }
@@ -1088,8 +1098,7 @@ const NGLayoutResult* NGBlockLayoutAlgorithm::FinishLayout(
                                                    &container_builder_);
   }
 
-  if (RuntimeEnabledFeatures::LayoutNewFormCenteringEnabled() &&
-      Style().AlignContentBlockCenter() &&
+  if (Style().AlignContentBlockCenter() &&
       !IsBreakInside(container_builder_.PreviousBreakToken())) {
     container_builder_.MoveChildrenInBlockDirection(
         (container_builder_.FragmentBlockSize() -
@@ -1540,28 +1549,6 @@ NGLayoutResult::EStatus NGBlockLayoutAlgorithm::HandleNewFormattingContext(
   if (!PositionOrPropagateListMarker(*layout_result, &logical_offset,
                                      previous_inflow_position))
     return NGLayoutResult::kBfcBlockOffsetResolved;
-
-  if (UNLIKELY(!RuntimeEnabledFeatures::LayoutNewFormCenteringEnabled() &&
-               child.Style().AlignSelfBlockCenter())) {
-    // The block-size of a textfield doesn't depend on its contents, so we can
-    // compute the block-size without passing the actual intrinsic block-size.
-    const LayoutUnit bsp_block_sum = BorderScrollbarPadding().BlockSum();
-    LayoutUnit block_size =
-        ClampIntrinsicBlockSize(ConstraintSpace(), Node(), BreakToken(),
-                                BorderScrollbarPadding(), bsp_block_sum);
-    block_size = ComputeBlockSizeForFragment(
-        ConstraintSpace(), Style(), BorderPadding(), block_size,
-        container_builder_.InitialBorderBoxSize().inline_size);
-    block_size -= bsp_block_sum;
-    if (block_size > 0 || !Style().LogicalHeight().IsAuto() ||
-        Node().IsOutOfFlowPositioned()) {
-      logical_offset =
-          CenterBlockChild(logical_offset, block_size, fragment.BlockSize());
-      // We can't apply the simplified layout to the container if
-      // |-internal-align-self-block:center| is specified to a child.
-      container_builder_.SetDisableSimplifiedLayout();
-    }
-  }
 
   PropagateBaselineFromBlockChild(physical_fragment, child_data.margins,
                                   logical_offset.block_offset);
@@ -2137,10 +2124,6 @@ NGLayoutResult::EStatus NGBlockLayoutAlgorithm::FinishInflow(
   if (!PositionOrPropagateListMarker(*layout_result, &logical_offset,
                                      previous_inflow_position))
     return NGLayoutResult::kBfcBlockOffsetResolved;
-
-  // The box with -internal-align-self:center should create new
-  // formatting context.
-  DCHECK(child.IsInline() || !child.Style().AlignSelfBlockCenter());
 
   if (physical_fragment.IsLineBox()) {
     PropagateBaselineFromLineBox(physical_fragment,

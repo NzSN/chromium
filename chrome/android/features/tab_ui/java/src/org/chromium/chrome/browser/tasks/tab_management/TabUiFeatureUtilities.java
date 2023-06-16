@@ -71,6 +71,13 @@ public class TabUiFeatureUtilities {
             new BooleanCachedFieldTrialParameter(ChromeFeatureList.TAB_STRIP_REDESIGN,
                     TAB_STRIP_REDESIGN_DISABLE_NTB_ANCHOR_PARAM, false);
 
+    // Field trial parameter for disabling button style for tab strip redesign. This includes
+    // disabling NTB anchor and button bg style.
+    private static final String TAB_STRIP_REDESIGN_DISABLE_BUTTON_STYLE_PARAM = "disable_btn_style";
+    public static final BooleanCachedFieldTrialParameter TAB_STRIP_REDESIGN_DISABLE_BUTTON_STYLE =
+            new BooleanCachedFieldTrialParameter(ChromeFeatureList.TAB_STRIP_REDESIGN,
+                    TAB_STRIP_REDESIGN_DISABLE_BUTTON_STYLE_PARAM, false);
+
     private static boolean sTabSelectionEditorLongPressEntryEnabled;
 
     /**
@@ -88,10 +95,26 @@ public class TabUiFeatureUtilities {
     }
 
     /**
+     * @return Whether button style for tab strip redesign is disabled.
+     */
+    public static boolean isTabStripButtonStyleDisabled() {
+        return TAB_STRIP_REDESIGN_DISABLE_BUTTON_STYLE.getValue();
+    }
+
+    /**
      * Whether the longpress entry for TabSelectionEditor is enabled. Currently only in tests.
      */
     public static boolean isTabSelectionEditorLongPressEntryEnabled() {
         return sTabSelectionEditorLongPressEntryEnabled;
+    }
+
+    /**
+     * @return Whether we should delay the placeholder tab strip removal on startup.
+     * @param context The activity context.
+     */
+    public static boolean isDelayTempStripRemovalEnabled(Context context) {
+        return DeviceFormFactor.isNonMultiDisplayContextOnTablet(context)
+                && ChromeFeatureList.sDelayTempStripRemoval.isEnabled();
     }
 
     /**

@@ -35,12 +35,6 @@
 
 - (void)sceneState:(SceneState*)sceneState
     transitionedToActivationLevel:(SceneActivationLevel)level {
-  // Don't show Default Browser promo for users not on the stable 14.0.1 iOS
-  // version yet.
-  if (!base::ios::IsRunningOnOrLater(14, 0, 1)) {
-    return;
-  }
-
   // Register default browser promo manager to the promo manager.
   if (IsDefaultBrowserInPromoManagerEnabled()) {
     if (level == SceneActivationLevelForegroundActive) {
@@ -85,6 +79,8 @@
         break;
       case DefaultPromoTypeAllTabs:
         [defaultPromoHandler showTailoredPromoAllTabs];
+        break;
+      case DefaultPromoTypeVideo:
         break;
     }
 

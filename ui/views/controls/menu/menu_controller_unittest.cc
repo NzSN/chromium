@@ -288,7 +288,7 @@ class CancelMenuOnMousePressView : public View {
   gfx::Size CalculatePreferredSize() const override { return size(); }
 
  private:
-  raw_ptr<MenuController> controller_;
+  raw_ptr<MenuController, DanglingUntriaged> controller_;
 };
 
 }  // namespace
@@ -789,10 +789,11 @@ class MenuControllerTest : public ViewsTestBase,
   // Causes the |menu_controller_| to begin dragging. Use TestDragDropClient to
   // avoid nesting message loops.
   void StartDrag() {
-    const gfx::Point location;
-    menu_controller_->state_.item = menu_item()->GetSubmenu()->GetMenuItemAt(0);
-    menu_controller_->StartDrag(
-        menu_item()->GetSubmenu()->GetMenuItemAt(0)->CreateSubmenu(), location);
+    MenuItemView* const dragged_item =
+        menu_item()->GetSubmenu()->GetMenuItemAt(0);
+    menu_controller_->state_.item = dragged_item;
+    menu_controller_->StartDrag(menu_item()->GetSubmenu(),
+                                dragged_item->bounds().CenterPoint());
   }
 
   void SetUpMenuControllerForCalculateBounds(const MenuBoundsOptions& options) {
@@ -929,14 +930,15 @@ class MenuControllerTest : public ViewsTestBase,
   }
 
   // Not owned.
-  raw_ptr<ReleaseRefTestViewsDelegate> test_views_delegate_ = nullptr;
+  raw_ptr<ReleaseRefTestViewsDelegate, DanglingUntriaged> test_views_delegate_ =
+      nullptr;
 
   std::unique_ptr<GestureTestWidget> owner_;
   std::unique_ptr<ui::test::EventGenerator> event_generator_;
   std::unique_ptr<TestMenuItemViewShown> menu_item_;
   std::unique_ptr<TestMenuControllerDelegate> menu_controller_delegate_;
   std::unique_ptr<TestMenuDelegate> menu_delegate_;
-  raw_ptr<MenuController> menu_controller_ = nullptr;
+  raw_ptr<MenuController, DanglingUntriaged> menu_controller_ = nullptr;
 };
 
 INSTANTIATE_TEST_SUITE_P(All, MenuControllerTest, testing::Bool());
@@ -2859,6 +2861,7 @@ TEST_F(MenuControllerTest, ContextMenuInitializesAuraWindowWhenShown) {
   EXPECT_EQ(ui::OwnedWindowAnchorGravity::kBottomRight, anchor->anchor_gravity);
   EXPECT_EQ((ui::OwnedWindowConstraintAdjustment::kAdjustmentSlideY |
              ui::OwnedWindowConstraintAdjustment::kAdjustmentFlipX |
+             ui::OwnedWindowConstraintAdjustment::kAdjustmentResizeX |
              ui::OwnedWindowConstraintAdjustment::kAdjustmentRezizeY),
             anchor->constraint_adjustment);
   EXPECT_EQ(
@@ -2919,6 +2922,7 @@ TEST_F(MenuControllerTest, RootAndChildMenusInitializeAuraWindowWhenShown) {
   EXPECT_EQ(ui::OwnedWindowAnchorGravity::kBottomRight, anchor->anchor_gravity);
   EXPECT_EQ((ui::OwnedWindowConstraintAdjustment::kAdjustmentSlideY |
              ui::OwnedWindowConstraintAdjustment::kAdjustmentFlipX |
+             ui::OwnedWindowConstraintAdjustment::kAdjustmentResizeX |
              ui::OwnedWindowConstraintAdjustment::kAdjustmentRezizeY),
             anchor->constraint_adjustment);
   auto anchor_rect = anchor->anchor_rect;

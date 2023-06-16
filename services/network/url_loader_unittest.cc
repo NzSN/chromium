@@ -761,7 +761,7 @@ class URLLoaderTest : public testing::Test {
     test_server_.AddDefaultHandlers(
         base::FilePath(FILE_PATH_LITERAL("services/test/data")));
     test_server_.RegisterRequestHandler(
-        base::BindRepeating(&HandleAttestationRequest));
+        base::BindRepeating(&HandleVerificationRequest));
     // This Unretained is safe because test_server_ is owned by |this|.
     test_server_.RegisterRequestMonitor(
         base::BindRepeating(&URLLoaderTest::Monitor, base::Unretained(this)));
@@ -1170,7 +1170,7 @@ class URLLoaderTest : public testing::Test {
   net::ScopedTestRoot scoped_test_root_;
   net::EmbeddedTestServer test_server_;
   std::unique_ptr<net::ScopedDefaultHostResolverProc> mock_host_resolver_;
-  raw_ptr<net::TestNetworkDelegate>
+  raw_ptr<net::TestNetworkDelegate, DanglingUntriaged>
       unowned_test_network_delegate_;  // owned by |url_request_context_|
   std::unique_ptr<net::URLRequestContext> url_request_context_;
   URLLoaderContextForTests url_loader_context_for_tests_;
@@ -6363,7 +6363,7 @@ TEST_P(URLLoaderSyncOrAsyncTrustTokenOperationTest,
 TEST_P(URLLoaderSyncOrAsyncTrustTokenOperationTest,
        HandlesTrustTokenFollowedByAttribution) {
   GURL request_url = test_server_.GetURL(
-      base::JoinString({kAttestationHandlerPathPrefix, "some-path"}, "/"));
+      base::JoinString({kVerificationHandlerPathPrefix, "some-path"}, "/"));
 
   ResourceRequest request = CreateTrustTokenResourceRequest(request_url);
 
@@ -6372,7 +6372,7 @@ TEST_P(URLLoaderSyncOrAsyncTrustTokenOperationTest,
   mojo::PendingRemote<mojom::URLLoader> loader_remote;
   std::unique_ptr<URLLoader> url_loader;
 
-  // Request must come from a valid origin for attestation operation to run.
+  // Request must come from a valid origin for verification operation to run.
   context().mutable_factory_params().isolation_info =
       net::IsolationInfo::CreateForInternalRequest(url::Origin::Create(
           GURL("https://valid-destination-origin.example")));
@@ -6402,10 +6402,12 @@ TEST_P(URLLoaderSyncOrAsyncTrustTokenOperationTest,
   client()->RunUntilComplete();
   delete_run_loop.Run();
 
-  ASSERT_TRUE(client()->response_head()->trigger_attestation);
-  EXPECT_TRUE(FakeCryptographer::IsToken(
-      client()->response_head()->trigger_attestation->token(),
-      kTestBlindToken));
+  ASSERT_GE(client()->response_head()->trigger_verifications.size(), 1u);
+  for (const auto& verification :
+       client()->response_head()->trigger_verifications) {
+    EXPECT_TRUE(
+        FakeCryptographer::IsToken(verification.token(), kTestBlindToken));
+  }
 }
 
 // When a request's associated Trust Tokens operation's Begin step fails, the
@@ -6590,9 +6592,9 @@ TEST_P(URLLoaderSyncOrAsyncTrustTokenOperationTest,
           test_server()->GetOrigin(), test_server()->GetOrigin(), true)));
 }
 
-TEST_F(URLLoaderTest, HandlesTriggerAttestationRequest) {
+TEST_F(URLLoaderTest, HandlesTriggerVerificationRequest) {
   GURL request_url = test_server_.GetURL(
-      base::JoinString({kAttestationHandlerPathPrefix, "some-path"}, "/"));
+      base::JoinString({kVerificationHandlerPathPrefix, "some-path"}, "/"));
   ResourceRequest request = CreateResourceRequest("GET", request_url);
 
   base::RunLoop delete_run_loop;
@@ -6600,7 +6602,7 @@ TEST_F(URLLoaderTest, HandlesTriggerAttestationRequest) {
   mojo::PendingRemote<mojom::URLLoader> loader_remote;
   std::unique_ptr<URLLoader> url_loader;
 
-  // Request must come from a valid origin for attestation operation to run.
+  // Request must come from a valid origin for verification operation to run.
   context().mutable_factory_params().isolation_info =
       net::IsolationInfo::CreateForInternalRequest(url::Origin::Create(
           GURL("https://valid-destination-origin.example")));
@@ -6623,15 +6625,16 @@ TEST_F(URLLoaderTest, HandlesTriggerAttestationRequest) {
   client()->RunUntilComplete();
   delete_run_loop.Run();
 
-  absl::optional<::network::TriggerAttestation> response_attestation =
-      client()->response_head()->trigger_attestation;
-  ASSERT_TRUE(response_attestation.has_value());
-  EXPECT_TRUE(FakeCryptographer::IsToken(response_attestation->token(),
-                                         kTestBlindToken));
+  ASSERT_GE(client()->response_head()->trigger_verifications.size(), 1u);
+  for (const auto& verification :
+       client()->response_head()->trigger_verifications) {
+    EXPECT_TRUE(
+        FakeCryptographer::IsToken(verification.token(), kTestBlindToken));
+  }
 }
 
-TEST_F(URLLoaderTest, HandlesTriggerAttestationRequestWithRedirect) {
-  GURL request_url = test_server_.GetURL(kRedirectAttestationRequestPath);
+TEST_F(URLLoaderTest, HandlesTriggerVerificationRequestWithRedirect) {
+  GURL request_url = test_server_.GetURL(kRedirectVerificationRequestPath);
   ResourceRequest request = CreateResourceRequest("GET", request_url);
 
   base::RunLoop delete_run_loop;
@@ -6639,7 +6642,7 @@ TEST_F(URLLoaderTest, HandlesTriggerAttestationRequestWithRedirect) {
   mojo::PendingRemote<mojom::URLLoader> loader_remote;
   std::unique_ptr<URLLoader> url_loader;
 
-  // Request must come from a valid origin for attestation operation to run.
+  // Request must come from a valid origin for verification operation to run.
   context().mutable_factory_params().isolation_info =
       net::IsolationInfo::CreateForInternalRequest(url::Origin::Create(
           GURL("https://valid-destination-origin.example")));
@@ -6662,11 +6665,13 @@ TEST_F(URLLoaderTest, HandlesTriggerAttestationRequestWithRedirect) {
   client()->RunUntilRedirectReceived();
   ASSERT_TRUE(client()->has_received_redirect());
 
-  absl::optional<TriggerAttestation> redirect_attestation =
-      client()->response_head()->trigger_attestation;
-  ASSERT_TRUE(redirect_attestation.has_value());
-  EXPECT_TRUE(FakeCryptographer::IsToken(redirect_attestation->token(),
-                                         kTestBlindToken));
+  std::vector<TriggerVerification> redirect_verifications =
+      client()->response_head()->trigger_verifications;
+  ASSERT_GE(redirect_verifications.size(), 1u);
+  for (const auto& verification : redirect_verifications) {
+    EXPECT_TRUE(
+        FakeCryptographer::IsToken(verification.token(), kTestBlindToken));
+  }
   // Follow redirect is called by the client. Even if the attribution request
   // helper adds/remove headers follow redirect would/can still be called by the
   // client without headers changes.
@@ -6676,14 +6681,16 @@ TEST_F(URLLoaderTest, HandlesTriggerAttestationRequestWithRedirect) {
 
   client()->RunUntilComplete();
   delete_run_loop.Run();
-  absl::optional<TriggerAttestation> response_attestation =
-      client()->response_head()->trigger_attestation;
-  ASSERT_TRUE(response_attestation.has_value());
-  EXPECT_TRUE(FakeCryptographer::IsToken(response_attestation->token(),
-                                         kTestBlindToken));
 
-  EXPECT_NE(redirect_attestation->aggregatable_report_id(),
-            response_attestation->aggregatable_report_id());
+  std::vector<TriggerVerification> response_verifications =
+      client()->response_head()->trigger_verifications;
+  ASSERT_GE(response_verifications.size(), 1u);
+  for (const auto& verification : response_verifications) {
+    EXPECT_TRUE(
+        FakeCryptographer::IsToken(verification.token(), kTestBlindToken));
+  }
+  EXPECT_NE(redirect_verifications.at(0).aggregatable_report_id(),
+            response_verifications.at(0).aggregatable_report_id());
 }
 
 TEST_F(URLLoaderTest, OnRawRequestClientSecurityStateFactory) {
@@ -6822,6 +6829,7 @@ TEST_F(URLLoaderMockSocketTest,
        CorbDoesNotCloseSocketsWhenResourcesNotBlocked) {
   corb_enabled_ = true;
 
+  net::MockConnect kConnect = net::MockConnect(net::ASYNC, net::OK);
   const net::MockWrite kWrites[] = {
       net::MockWrite(net::SYNCHRONOUS, 0,
                      "GET / HTTP/1.1\r\n"
@@ -6838,8 +6846,11 @@ TEST_F(URLLoaderMockSocketTest,
       net::MockRead(net::SYNCHRONOUS, 2, "Hello"),
   };
 
-  net::SequencedSocketData socket_data(kReads, kWrites);
-  socket_factory_.AddSocketDataProvider(&socket_data);
+  net::SequencedSocketData socket_data_connect(
+      kConnect, base::span<net::MockRead>(), base::span<net::MockWrite>());
+  net::SequencedSocketData socket_data_reads_writes(kReads, kWrites);
+  socket_factory_.AddSocketDataProvider(&socket_data_connect);
+  socket_factory_.AddSocketDataProvider(&socket_data_reads_writes);
 
   GURL url("http://origin.test/");
   url::Origin initiator =
@@ -6853,12 +6864,13 @@ TEST_F(URLLoaderMockSocketTest,
   EXPECT_EQ(body, "Hello");
 
   // Socket should still be alive, in the socket pool.
-  EXPECT_TRUE(socket_data.socket());
+  EXPECT_TRUE(socket_data_reads_writes.socket());
 }
 
 TEST_F(URLLoaderMockSocketTest, CorbClosesSocketOnReceivingHeaders) {
   corb_enabled_ = true;
 
+  net::MockConnect kConnect = net::MockConnect(net::ASYNC, net::OK);
   const net::MockWrite kWrites[] = {
       net::MockWrite(net::SYNCHRONOUS, 0,
                      "GET / HTTP/1.1\r\n"
@@ -6877,8 +6889,11 @@ TEST_F(URLLoaderMockSocketTest, CorbClosesSocketOnReceivingHeaders) {
       net::MockRead(net::SYNCHRONOUS, 2, "This should not be read"),
   };
 
-  net::SequencedSocketData socket_data(kReads, kWrites);
-  socket_factory_.AddSocketDataProvider(&socket_data);
+  net::SequencedSocketData socket_data_connect(
+      kConnect, base::span<net::MockRead>(), base::span<net::MockWrite>());
+  net::SequencedSocketData socket_data_reads_writes(kReads, kWrites);
+  socket_factory_.AddSocketDataProvider(&socket_data_connect);
+  socket_factory_.AddSocketDataProvider(&socket_data_reads_writes);
 
   GURL url("http://origin.test/");
   url::Origin initiator =
@@ -6892,13 +6907,14 @@ TEST_F(URLLoaderMockSocketTest, CorbClosesSocketOnReceivingHeaders) {
   EXPECT_TRUE(body.empty());
 
   // Socket should have been destroyed, so it will not be reused.
-  EXPECT_FALSE(socket_data.socket());
+  EXPECT_FALSE(socket_data_reads_writes.socket());
 }
 
 TEST_F(URLLoaderMockSocketTest,
        CorbDoesNotCloseSocketsWhenResourcesNotBlockedAfterSniffingMimeType) {
   corb_enabled_ = true;
 
+  net::MockConnect kConnect = net::MockConnect(net::ASYNC, net::OK);
   const net::MockWrite kWrites[] = {
       net::MockWrite(net::SYNCHRONOUS, 0,
                      "GET / HTTP/1.1\r\n"
@@ -6916,8 +6932,11 @@ TEST_F(URLLoaderMockSocketTest,
       net::MockRead(net::SYNCHRONOUS, 2, "Not actually JSON"),
   };
 
-  net::SequencedSocketData socket_data(kReads, kWrites);
-  socket_factory_.AddSocketDataProvider(&socket_data);
+  net::SequencedSocketData socket_data_connect(
+      kConnect, base::span<net::MockRead>(), base::span<net::MockWrite>());
+  net::SequencedSocketData socket_data_reads_writes(kReads, kWrites);
+  socket_factory_.AddSocketDataProvider(&socket_data_connect);
+  socket_factory_.AddSocketDataProvider(&socket_data_reads_writes);
 
   GURL url("http://origin.test/");
   url::Origin initiator =
@@ -6931,12 +6950,13 @@ TEST_F(URLLoaderMockSocketTest,
   EXPECT_EQ("Not actually JSON", body);
 
   // Socket should still be alive, in the socket pool.
-  EXPECT_TRUE(socket_data.socket());
+  EXPECT_TRUE(socket_data_reads_writes.socket());
 }
 
 TEST_F(URLLoaderMockSocketTest, CorbClosesSocketOnSniffingMimeType) {
   corb_enabled_ = true;
 
+  net::MockConnect kConnect = net::MockConnect(net::ASYNC, net::OK);
   const net::MockWrite kWrites[] = {
       net::MockWrite(net::SYNCHRONOUS, 0,
                      "GET / HTTP/1.1\r\n"
@@ -6954,8 +6974,11 @@ TEST_F(URLLoaderMockSocketTest, CorbClosesSocketOnSniffingMimeType) {
       net::MockRead(net::SYNCHRONOUS, 2, "{\"x\" : 3}"),
   };
 
-  net::SequencedSocketData socket_data(kReads, kWrites);
-  socket_factory_.AddSocketDataProvider(&socket_data);
+  net::SequencedSocketData socket_data_connect(
+      kConnect, base::span<net::MockRead>(), base::span<net::MockWrite>());
+  net::SequencedSocketData socket_data_reads_writes(kReads, kWrites);
+  socket_factory_.AddSocketDataProvider(&socket_data_connect);
+  socket_factory_.AddSocketDataProvider(&socket_data_reads_writes);
 
   GURL url("http://origin.test/");
   url::Origin initiator =
@@ -6969,7 +6992,7 @@ TEST_F(URLLoaderMockSocketTest, CorbClosesSocketOnSniffingMimeType) {
   EXPECT_TRUE(body.empty());
 
   // Socket should have been destroyed, so it will not be reused.
-  EXPECT_FALSE(socket_data.socket());
+  EXPECT_FALSE(socket_data_reads_writes.socket());
 }
 
 TEST_F(URLLoaderMockSocketTest, CorpClosesSocket) {
@@ -6980,6 +7003,7 @@ TEST_F(URLLoaderMockSocketTest, CorpClosesSocket) {
       mojom::LocalNetworkRequestPolicy::kAllow;
   set_factory_client_security_state(std::move(client_security_state));
 
+  net::MockConnect kConnect = net::MockConnect(net::ASYNC, net::OK);
   const net::MockWrite kWrites[] = {
       net::MockWrite(net::SYNCHRONOUS, 0,
                      "GET / HTTP/1.1\r\n"
@@ -6997,8 +7021,11 @@ TEST_F(URLLoaderMockSocketTest, CorpClosesSocket) {
       net::MockRead(net::SYNCHRONOUS, 2, "This should not be read"),
   };
 
-  net::SequencedSocketData socket_data(kReads, kWrites);
-  socket_factory_.AddSocketDataProvider(&socket_data);
+  net::SequencedSocketData socket_data_connect(
+      kConnect, base::span<net::MockRead>(), base::span<net::MockWrite>());
+  net::SequencedSocketData socket_data_reads_writes(kReads, kWrites);
+  socket_factory_.AddSocketDataProvider(&socket_data_connect);
+  socket_factory_.AddSocketDataProvider(&socket_data_reads_writes);
 
   GURL url("http://origin.test/");
   url::Origin initiator =
@@ -7010,16 +7037,21 @@ TEST_F(URLLoaderMockSocketTest, CorpClosesSocket) {
   EXPECT_EQ(net::ERR_BLOCKED_BY_RESPONSE, LoadRequest(request));
 
   // Socket should have been destroyed, so it will not be reused.
-  EXPECT_FALSE(socket_data.socket());
+  EXPECT_FALSE(socket_data_reads_writes.socket());
 }
 
-TEST_F(URLLoaderMockSocketTest,
+class URLLoaderMockSocketAuctionOnlyTest
+    : public URLLoaderMockSocketTest,
+      public testing::WithParamInterface<std::string> {};
+
+TEST_P(URLLoaderMockSocketAuctionOnlyTest,
        FetchAuctionOnlySignalsFromRendererClosesSocket) {
   auto client_security_state = NewSecurityState();
   client_security_state->local_network_request_policy =
       mojom::LocalNetworkRequestPolicy::kAllow;
   set_factory_client_security_state(std::move(client_security_state));
 
+  net::MockConnect kConnect = net::MockConnect(net::ASYNC, net::OK);
   const net::MockWrite kWrites[] = {
       net::MockWrite(net::SYNCHRONOUS, 0,
                      "GET / HTTP/1.1\r\n"
@@ -7028,18 +7060,23 @@ TEST_F(URLLoaderMockSocketTest,
                      "User-Agent: \r\n"
                      "Accept-Encoding: gzip, deflate\r\n\r\n"),
   };
+  const std::string first_read = base::StringPrintf(
+      "HTTP/1.1 200 OK\r\n"
+      "Connection: keep-alive\r\n"
+      "%s"
+      "Content-Type: text/plain\r\n"
+      "Content-Length: 23\r\n\r\n",
+      GetParam().c_str());
   net::MockRead kReads[] = {
-      net::MockRead(net::SYNCHRONOUS, 1,
-                    "HTTP/1.1 200 OK\r\n"
-                    "Connection: keep-alive\r\n"
-                    "X-FLEDGE-Auction-Only: true\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Content-Length: 23\r\n\r\n"),
+      net::MockRead(net::SYNCHRONOUS, 1, first_read.c_str()),
       net::MockRead(net::SYNCHRONOUS, 2, "This should not be read"),
   };
 
-  net::SequencedSocketData socket_data(kReads, kWrites);
-  socket_factory_.AddSocketDataProvider(&socket_data);
+  net::SequencedSocketData socket_data_connect(
+      kConnect, base::span<net::MockRead>(), base::span<net::MockWrite>());
+  net::SequencedSocketData socket_data_reads_writes(kReads, kWrites);
+  socket_factory_.AddSocketDataProvider(&socket_data_connect);
+  socket_factory_.AddSocketDataProvider(&socket_data_reads_writes);
 
   GURL url("http://origin.test/");
   url::Origin initiator = url::Origin::Create(url);
@@ -7052,16 +7089,17 @@ TEST_F(URLLoaderMockSocketTest,
                                                       /*is_trusted=*/false));
 
   // Socket should have been destroyed, so it will not be reused.
-  EXPECT_FALSE(socket_data.socket());
+  EXPECT_FALSE(socket_data_reads_writes.socket());
 }
 
-TEST_F(URLLoaderMockSocketTest,
+TEST_P(URLLoaderMockSocketAuctionOnlyTest,
        FetchAuctionOnlySignalsFromBrowserProcessSucceeds) {
   auto client_security_state = NewSecurityState();
   client_security_state->local_network_request_policy =
       mojom::LocalNetworkRequestPolicy::kAllow;
   set_factory_client_security_state(std::move(client_security_state));
 
+  net::MockConnect kConnect = net::MockConnect(net::ASYNC, net::OK);
   const net::MockWrite kWrites[] = {
       net::MockWrite(net::SYNCHRONOUS, 0,
                      "GET / HTTP/1.1\r\n"
@@ -7070,18 +7108,23 @@ TEST_F(URLLoaderMockSocketTest,
                      "User-Agent: \r\n"
                      "Accept-Encoding: gzip, deflate\r\n\r\n"),
   };
+  const std::string first_read = base::StringPrintf(
+      "HTTP/1.1 200 OK\r\n"
+      "Connection: keep-alive\r\n"
+      "%s"
+      "Content-Type: text/plain\r\n"
+      "Content-Length: 23\r\n\r\n",
+      GetParam().c_str());
   net::MockRead kReads[] = {
-      net::MockRead(net::SYNCHRONOUS, 1,
-                    "HTTP/1.1 200 OK\r\n"
-                    "Connection: keep-alive\r\n"
-                    "X-FLEDGE-Auction-Only: true\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Content-Length: 23\r\n\r\n"),
+      net::MockRead(net::SYNCHRONOUS, 1, first_read.c_str()),
       net::MockRead(net::SYNCHRONOUS, 2, "This should not be read"),
   };
 
-  net::SequencedSocketData socket_data(kReads, kWrites);
-  socket_factory_.AddSocketDataProvider(&socket_data);
+  net::SequencedSocketData socket_data_connect(
+      kConnect, base::span<net::MockRead>(), base::span<net::MockWrite>());
+  net::SequencedSocketData socket_data_reads_writes(kReads, kWrites);
+  socket_factory_.AddSocketDataProvider(&socket_data_connect);
+  socket_factory_.AddSocketDataProvider(&socket_data_reads_writes);
 
   GURL url("http://origin.test/");
   url::Origin initiator = url::Origin::Create(url);
@@ -7091,8 +7134,18 @@ TEST_F(URLLoaderMockSocketTest,
   request.request_initiator = initiator;
   EXPECT_EQ(net::OK,
             LoadRequest(request, /*body=*/nullptr, /*is_trusted=*/true));
-  EXPECT_TRUE(socket_data.socket());
+  EXPECT_TRUE(socket_data_reads_writes.socket());
 }
+
+// TODO(crbug.com/1448564): Remove old names once API users have migrated to new
+// names.
+INSTANTIATE_TEST_SUITE_P(
+    All,
+    URLLoaderMockSocketAuctionOnlyTest,
+    testing::Values(
+        "Ad-Auction-Only: true\r\n",
+        "X-FLEDGE-Auction-Only: true\r\n",
+        "Ad-Auction-Only: true\r\nX-FLEDGE-Auction-Only: true\r\n"));
 
 TEST_F(URLLoaderMockSocketTest, PrivateNetworkRequestPolicyDoesNotCloseSocket) {
   auto client_security_state = NewSecurityState();
@@ -7100,9 +7153,13 @@ TEST_F(URLLoaderMockSocketTest, PrivateNetworkRequestPolicyDoesNotCloseSocket) {
       mojom::LocalNetworkRequestPolicy::kBlock;
   set_factory_client_security_state(std::move(client_security_state));
 
+  net::MockConnect kConnect = net::MockConnect(net::ASYNC, net::OK);
   // No data should be read or written. Trying to do so will assert.
-  net::SequencedSocketData socket_data;
-  socket_factory_.AddSocketDataProvider(&socket_data);
+  net::SequencedSocketData socket_data_no_reads_no_writes;
+  net::SequencedSocketData socket_data_connect(
+      kConnect, base::span<net::MockRead>(), base::span<net::MockWrite>());
+  socket_factory_.AddSocketDataProvider(&socket_data_connect);
+  socket_factory_.AddSocketDataProvider(&socket_data_no_reads_no_writes);
 
   GURL url("http://origin.test/");
   url::Origin initiator =
@@ -7114,7 +7171,7 @@ TEST_F(URLLoaderMockSocketTest, PrivateNetworkRequestPolicyDoesNotCloseSocket) {
   EXPECT_EQ(net::ERR_FAILED, LoadRequest(request));
 
   // Socket should not be closed, since it can be reused.
-  EXPECT_TRUE(socket_data.socket());
+  EXPECT_TRUE(socket_data_no_reads_no_writes.socket());
 }
 
 TEST_F(URLLoaderTest, WithDnsAliases) {

@@ -31,8 +31,7 @@ NearbyProcessManager* NearbyProcessManagerFactory::GetForProfile(
 bool NearbyProcessManagerFactory::CanBeLaunchedForProfile(Profile* profile) {
   // We allow NearbyProcessManager to be used with the signin profile since it
   // is required for OOBE Quick Start.
-  if (ProfileHelper::IsSigninProfile(profile) &&
-      features::IsOobeQuickStartEnabled()) {
+  if (ProfileHelper::IsSigninProfile(profile)) {
     return true;
   }
 
@@ -52,7 +51,8 @@ bool NearbyProcessManagerFactory::CanBeLaunchedForProfile(Profile* profile) {
 
 // static
 NearbyProcessManagerFactory* NearbyProcessManagerFactory::GetInstance() {
-  return base::Singleton<NearbyProcessManagerFactory>::get();
+  static base::NoDestructor<NearbyProcessManagerFactory> instance;
+  return instance.get();
 }
 
 // static
@@ -63,8 +63,14 @@ void NearbyProcessManagerFactory::SetBypassPrimaryUserCheckForTesting(
 }
 
 NearbyProcessManagerFactory::NearbyProcessManagerFactory()
-    : ProfileKeyedServiceFactory("NearbyProcessManager",
-                                 ProfileSelections::BuildForAllProfiles()) {
+    : ProfileKeyedServiceFactory(
+          "NearbyProcessManager",
+          ProfileSelections::Builder()
+              .WithRegular(ProfileSelection::kOwnInstance)
+              // TODO(crbug.com/1418376): Check if this service is needed in
+              // Guest mode.
+              .WithGuest(ProfileSelection::kOwnInstance)
+              .Build()) {
   DependsOn(NearbyDependenciesProviderFactory::GetInstance());
 }
 

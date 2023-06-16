@@ -13,7 +13,6 @@
 #include "components/content_settings/core/browser/host_content_settings_map.h"
 #include "components/keyed_service/core/keyed_service.h"
 #include "components/prefs/pref_change_registrar.h"
-#include "components/privacy_sandbox/canonical_topic.h"
 #include "components/privacy_sandbox/privacy_sandbox_prefs.h"
 #include "components/privacy_sandbox/privacy_sandbox_settings.h"
 #include "components/profile_metrics/browser_profile_type.h"
@@ -98,13 +97,14 @@ class PrivacySandboxService : public KeyedService {
     kConsentMoreButtonClicked = 14,
     kNoticeMoreButtonClicked = 15,
 
-    // Restricted notice interactions, including only the interactions that
-    // complete
-    // the notice, using the `kNoticeXxx` for all other interactions.
+    // Restricted notice interactions
     kRestrictedNoticeAcknowledge = 16,
     kRestrictedNoticeOpenSettings = 17,
+    kRestrictedNoticeShown = 18,
+    kRestrictedNoticeClosedNoInteraction = 19,
+    kRestrictedNoticeMoreButtonClicked = 20,
 
-    kMaxValue = kRestrictedNoticeOpenSettings,
+    kMaxValue = kRestrictedNoticeMoreButtonClicked,
   };
 
   // TODO(crbug.com/1378703): Integrate this when handling Notice and Consent
@@ -386,6 +386,18 @@ class PrivacySandboxService : public KeyedService {
       RecordPrivacySandbox4StartupMetrics_PromptNotSuppressed_ROW);
   FRIEND_TEST_ALL_PREFIXES(PrivacySandboxServiceM1Test,
                            RecordPrivacySandbox4StartupMetrics_APIs);
+  FRIEND_TEST_ALL_PREFIXES(
+      PrivacySandboxServiceM1RestrictedNoticePromptTest,
+      RecordPrivacySandbox4StartupMetrics_PromptNotSuppressed);
+  FRIEND_TEST_ALL_PREFIXES(
+      PrivacySandboxServiceM1RestrictedNoticeUserCurrentlyUnrestricted,
+      RecordPrivacySandbox4StartupMetrics_GraduationFlow);
+  FRIEND_TEST_ALL_PREFIXES(
+      PrivacySandboxServiceM1RestrictedNoticeUserCurrentlyRestricted,
+      RecordPrivacySandbox4StartupMetrics_GraduationFlow);
+  FRIEND_TEST_ALL_PREFIXES(
+      PrivacySandboxServiceM1RestrictedNoticeUserCurrentlyUnrestricted,
+      RecordPrivacySandbox4StartupMetrics_GraduationFlowWhenNoticeShownToGuardian);
 
   // Should be used only for tests when mocking the service.
   PrivacySandboxService();
@@ -472,10 +484,15 @@ class PrivacySandboxService : public KeyedService {
     kPromptNotShownDueToTrialsDisabledAfterNoticeShown = 9,
     kPromptNotShownDueToManagedState = 10,
     kRestrictedNoticeNotShownDueToNoticeShownToGuardian = 11,
+    kRestrictedNoticePromptWaiting = 12,
+    kRestrictedNoticeFlowCompleted = 13,
+    kRestrictedNoticeNotShownDueToFullNoticeAcknowledged = 14,
+    kWaitingForGraduationRestrictedNoticeFlowNotCompleted = 15,
+    kWaitingForGraduationRestrictedNoticeFlowCompleted = 16,
 
     // Add values above this line with a corresponding label in
     // tools/metrics/histograms/enums.xml
-    kMaxValue = kRestrictedNoticeNotShownDueToNoticeShownToGuardian,
+    kMaxValue = kWaitingForGraduationRestrictedNoticeFlowCompleted,
   };
 
   // Helper function to log first party sets state.
@@ -539,7 +556,8 @@ class PrivacySandboxService : public KeyedService {
       bool did_consent) const;
 
  private:
-  raw_ptr<privacy_sandbox::PrivacySandboxSettings> privacy_sandbox_settings_;
+  raw_ptr<privacy_sandbox::PrivacySandboxSettings, DanglingUntriaged>
+      privacy_sandbox_settings_;
   raw_ptr<content_settings::CookieSettings> cookie_settings_;
   raw_ptr<PrefService> pref_service_;
   raw_ptr<content::InterestGroupManager> interest_group_manager_;
@@ -547,7 +565,7 @@ class PrivacySandboxService : public KeyedService {
   raw_ptr<content::BrowsingDataRemover> browsing_data_remover_;
   raw_ptr<HostContentSettingsMap> host_content_settings_map_;
 #if !BUILDFLAG(IS_ANDROID)
-  raw_ptr<TrustSafetySentimentService> sentiment_service_;
+  raw_ptr<TrustSafetySentimentService, DanglingUntriaged> sentiment_service_;
 #endif
   raw_ptr<browsing_topics::BrowsingTopicsService> browsing_topics_service_;
   raw_ptr<first_party_sets::FirstPartySetsPolicyService>
@@ -559,16 +577,13 @@ class PrivacySandboxService : public KeyedService {
   std::set<Browser*> browsers_with_open_prompts_;
 
   // Fake implementation for current and blocked topics.
+  static constexpr int kFakeTaxonomyVersion = 1;
   std::set<privacy_sandbox::CanonicalTopic> fake_current_topics_ = {
-      {browsing_topics::Topic(1),
-       privacy_sandbox::CanonicalTopic::AVAILABLE_TAXONOMY},
-      {browsing_topics::Topic(2),
-       privacy_sandbox::CanonicalTopic::AVAILABLE_TAXONOMY}};
+      {browsing_topics::Topic(1), kFakeTaxonomyVersion},
+      {browsing_topics::Topic(2), kFakeTaxonomyVersion}};
   std::set<privacy_sandbox::CanonicalTopic> fake_blocked_topics_ = {
-      {browsing_topics::Topic(3),
-       privacy_sandbox::CanonicalTopic::AVAILABLE_TAXONOMY},
-      {browsing_topics::Topic(4),
-       privacy_sandbox::CanonicalTopic::AVAILABLE_TAXONOMY}};
+      {browsing_topics::Topic(3), kFakeTaxonomyVersion},
+      {browsing_topics::Topic(4), kFakeTaxonomyVersion}};
 
   // Informs the TrustSafetySentimentService, if it exists, that a
   // Privacy Sandbox 3 interaction for an area has occurred The area is

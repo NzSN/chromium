@@ -443,7 +443,7 @@ void GPUQueue::WriteTextureImpl(ScriptState* script_state,
                                 ExceptionState& exception_state) {
   WGPUExtent3D dawn_write_size;
   WGPUImageCopyTexture dawn_destination;
-  if (!ConvertToDawn(write_size, &dawn_write_size, exception_state) ||
+  if (!ConvertToDawn(write_size, &dawn_write_size, device_, exception_state) ||
       !ConvertToDawn(destination, &dawn_destination, exception_state)) {
     return;
   }
@@ -507,7 +507,7 @@ void GPUQueue::copyExternalImageToTexture(
   WGPUExtent3D dawn_copy_size;
   WGPUOrigin2D origin_in_external_image;
   WGPUImageCopyTexture dawn_destination;
-  if (!ConvertToDawn(copy_size, &dawn_copy_size, exception_state) ||
+  if (!ConvertToDawn(copy_size, &dawn_copy_size, device_, exception_state) ||
       !ConvertToDawn(copyImage->origin(), &origin_in_external_image,
                      exception_state) ||
       !ConvertToDawn(destination, &dawn_destination, exception_state)) {
@@ -551,7 +551,7 @@ void GPUQueue::copyExternalImageToTexture(
     return;
   }
 
-  WGPUTextureUsage dst_texture_usage = destination->texture()->Usage();
+  WGPUTextureUsageFlags dst_texture_usage = destination->texture()->Usage();
 
   if ((dst_texture_usage & WGPUTextureUsage_RenderAttachment) !=
           WGPUTextureUsage_RenderAttachment ||
@@ -679,18 +679,20 @@ bool GPUQueue::CopyFromCanvasSourceImage(
 // platform requires interop supported. According to the bug, this change will
 // be a long time task. So disable using webgpu mailbox texture uploading path
 // on linux platform.
+// TODO(crbug.com/1424119): using a webgpu mailbox texture on the OpenGLES
+// backend is failing for unknown reasons.
 #if BUILDFLAG(IS_LINUX)
-  use_webgpu_mailbox_texture = false;
-  unaccelerated_image = image->MakeUnaccelerated();
-  image = unaccelerated_image.get();
-#endif  // BUILDFLAG(IS_LINUX)
-
-  // TODO(crbug.com/1424119):
-  // Using a webgpu mailbox texture to upload a cpu-backed resource on OpenGLES uploads all
-  // zeros. Disable that upload path if the image is not texture-backed.
-  auto backendType = device()->adapter()->backendType();
-  if (backendType == WGPUBackendType_OpenGLES && !image->IsTextureBacked()) {
+  bool forceReadback = true;
+#elif BUILDFLAG(IS_WIN)
+  bool forceReadback =
+      device()->adapter()->backendType() == WGPUBackendType_OpenGLES;
+#else
+  bool forceReadback = false;
+#endif
+  if (forceReadback) {
     use_webgpu_mailbox_texture = false;
+    unaccelerated_image = image->MakeUnaccelerated();
+    image = unaccelerated_image.get();
   }
 
   // TODO(crbug.com/1426666): If disable OOP-R, using webgpu mailbox to upload

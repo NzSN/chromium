@@ -30,6 +30,7 @@
 #include "ui/events/ash/keyboard_capability.h"
 #include "ui/events/devices/input_device.h"
 #include "ui/events/devices/input_device_event_observer.h"
+#include "ui/events/devices/keyboard_device.h"
 
 namespace ash::shortcut_ui {
 
@@ -196,13 +197,12 @@ class AcceleratorConfigurationProvider
   base::flat_map<std::string, AcceleratorLayoutDetails>
       accelerator_layout_lookup_;
 
-  std::map<AcceleratorActionId, std::vector<mojom::AcceleratorInfoPtr>>
-      id_to_accelerator_info_;
+  AcceleratorConfigurationMap cached_configuration_;
 
   AcceleratorSourceMap accelerators_mapping_;
 
   // Stores all connected keyboards.
-  std::vector<ui::InputDevice> connected_keyboards_;
+  std::vector<ui::KeyboardDevice> connected_keyboards_;
 
   NonConfigurableActionsMap non_configurable_actions_mapping_;
 

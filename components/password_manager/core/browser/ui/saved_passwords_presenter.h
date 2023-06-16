@@ -18,6 +18,7 @@
 #include "components/password_manager/core/browser/password_store_consumer.h"
 #include "components/password_manager/core/browser/ui/affiliated_group.h"
 #include "components/password_manager/core/browser/ui/credential_ui_entry.h"
+#include "components/webauthn/core/browser/passkey_model.h"
 
 namespace password_manager {
 
@@ -60,7 +61,8 @@ class SavedPasswordsPresenter : public PasswordStoreInterface::Observer,
     // the underlying password store happens. This might be due to a call to
     // EditPassword(), but can also happen if passwords are added or removed due
     // to other reasons.
-    virtual void OnSavedPasswordsChanged() {}
+    virtual void OnSavedPasswordsChanged(
+        const PasswordStoreChangeList& changes) {}
   };
 
   // Result of EditSavedCredentials.
@@ -104,7 +106,8 @@ class SavedPasswordsPresenter : public PasswordStoreInterface::Observer,
 
   SavedPasswordsPresenter(AffiliationService* affiliation_service,
                           scoped_refptr<PasswordStoreInterface> profile_store,
-                          scoped_refptr<PasswordStoreInterface> account_store);
+                          scoped_refptr<PasswordStoreInterface> account_store,
+                          PasskeyModel* passkey_store = nullptr);
   ~SavedPasswordsPresenter() override;
 
   SavedPasswordsPresenter(const SavedPasswordsPresenter&) = delete;
@@ -165,11 +168,11 @@ class SavedPasswordsPresenter : public PasswordStoreInterface::Observer,
       metrics_util::MoveToAccountStoreTrigger trigger);
 
   // Returns a list of unique passwords which includes normal credentials,
-  // federated credentials and blocked forms. If a same form is present both on
-  // account and profile stores it will be represented as a single entity.
-  // Uniqueness is determined using site name, username, password. For Android
-  // credentials package name is also taken into account and for Federated
-  // credentials federation origin.
+  // federated credentials, passkeys, and blocked forms. If a same form is
+  // present both on account and profile stores it will be represented as a
+  // single entity. Uniqueness is determined using site name, username,
+  // password. For Android credentials package name is also taken into account
+  // and for Federated credentials federation origin.
   std::vector<CredentialUIEntry> GetSavedCredentials() const;
 
   // Returns a list of affiliated groups for the Password Manager.
@@ -207,7 +210,7 @@ class SavedPasswordsPresenter : public PasswordStoreInterface::Observer,
 
   // Notify observers about changes in the compromised credentials.
   void NotifyEdited(const CredentialUIEntry& password);
-  void NotifySavedPasswordsChanged();
+  void NotifySavedPasswordsChanged(const PasswordStoreChangeList& changes);
 
   void RemoveObservers();
 
@@ -227,11 +230,16 @@ class SavedPasswordsPresenter : public PasswordStoreInterface::Observer,
 
   // Helper functions to update local cache of PasswordForms.
   void RemoveForms(const std::vector<PasswordForm>& forms);
-  void AddForms(const std::vector<PasswordForm>& forms);
+  void AddForms(const std::vector<PasswordForm>& forms,
+                base::OnceClosure completion);
 
   // The password stores containing the saved passwords.
   scoped_refptr<PasswordStoreInterface> profile_store_;
   scoped_refptr<PasswordStoreInterface> account_store_;
+
+  // Store containing account passkeys. This may be null if the feature is
+  // disabled.
+  raw_ptr<PasskeyModel> passkey_store_;
 
   // The number of stores from which no updates have been received yet.
   int pending_store_updates_ = 0;

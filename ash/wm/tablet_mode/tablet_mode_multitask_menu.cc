@@ -246,7 +246,7 @@ void TabletModeMultitaskMenu::Animate(bool show) {
                                       kVerticalPosition),
                     gfx::Tween::ACCEL_20_DECEL_100);
   ui::Layer* cue_layer = event_handler_->multitask_cue()->cue_layer();
-  if (cue_layer && !cue_layer->GetAnimator()->is_animating()) {
+  if (cue_layer) {
     animation_builder.GetCurrentSequence().SetTransform(
         cue_layer,
         show ? gfx::Transform::MakeTranslation(
@@ -304,7 +304,7 @@ void TabletModeMultitaskMenu::UpdateDrag(float current_y, bool down) {
   menu_view_->layer()->SetTransform(
       gfx::Transform::MakeTranslation(0, translation_y));
 
-  if (ui::Layer* cue_layer = event_handler_->multitask_cue()->cue_layer()) {
+  if (auto* cue_layer = event_handler_->multitask_cue()->cue_layer()) {
     cue_layer->SetTransform(gfx::Transform::MakeTranslation(
         0, menu_view_->GetPreferredSize().height() + kVerticalPosition +
                translation_y));
@@ -329,6 +329,14 @@ void TabletModeMultitaskMenu::Reset() {
 
 void TabletModeMultitaskMenu::OnNativeFocusChanged(
     gfx::NativeView focused_now) {
+  ui::Layer* view_layer = menu_view_->layer();
+  // Prevent fade out while we are animating to show. This can happen if the
+  // drag goes out of bounds while the menu is animating.
+  if (view_layer->GetAnimator()->is_animating() &&
+      view_layer->GetTargetOpacity() == 1.0f) {
+    return;
+  }
+
   if (widget_->GetNativeView() != focused_now) {
     // Destroys `this` at the end of animation.
     AnimateFadeOut();

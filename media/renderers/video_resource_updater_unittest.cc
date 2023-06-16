@@ -331,7 +331,7 @@ class VideoResourceUpdaterTest : public testing::Test {
   // VideoResourceUpdater registers as a MemoryDumpProvider, which requires
   // a TaskRunner.
   base::test::SingleThreadTaskEnvironment task_environment_;
-  raw_ptr<UploadCounterGLES2Interface> gl_;
+  raw_ptr<UploadCounterGLES2Interface, DanglingUntriaged> gl_;
   scoped_refptr<viz::TestContextProvider> context_provider_;
   FakeSharedBitmapReporter shared_bitmap_reporter_;
   std::unique_ptr<viz::ClientResourceProvider> resource_provider_;
@@ -972,7 +972,7 @@ TEST_F(VideoResourceUpdaterTest, GenerateReleaseSyncToken) {
 
   EXPECT_TRUE(release_sync_token_.HasData());
   EXPECT_NE(release_sync_token_, sync_token1);
-  EXPECT_NE(release_sync_token_, sync_token2);
+  EXPECT_EQ(release_sync_token_, sync_token2);
 }
 
 // Pass mailbox sync token as is if no GL operations are performed before frame
@@ -1098,7 +1098,7 @@ TEST_F(VideoResourceUpdaterTest,
 TEST_F(VideoResourceUpdaterTest, CreateForHardwarePlanes_SingleP016HDR) {
   constexpr auto kHDR10ColorSpace = gfx::ColorSpace::CreateHDR10();
   gfx::HDRMetadata hdr_metadata{};
-  hdr_metadata.color_volume_metadata.luminance_max = 1000;
+  hdr_metadata.smpte_st_2086.luminance_max = 1000;
   std::unique_ptr<VideoResourceUpdater> updater = CreateUpdaterForHardware();
   EXPECT_EQ(0u, GetSharedImageCount());
   scoped_refptr<VideoFrame> video_frame = CreateTestHardwareVideoFrame(

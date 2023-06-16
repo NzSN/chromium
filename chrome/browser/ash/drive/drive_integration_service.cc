@@ -56,6 +56,7 @@
 #include "chromeos/ash/components/network/network_state_handler.h"
 #include "chromeos/ash/components/network/network_state_handler_observer.h"
 #include "chromeos/components/drivefs/mojom/drivefs_native_messaging.mojom.h"
+#include "chromeos/constants/chromeos_features.h"
 #include "chromeos/crosapi/mojom/drive_integration_service.mojom.h"
 #include "components/drive/drive_api_util.h"
 #include "components/drive/drive_notification_manager.h"
@@ -374,10 +375,10 @@ class DriveIntegrationService::PreferenceWatcher
   using NetworkState = ash::NetworkState;
   using PortalState = NetworkState::PortalState;
 
-  explicit PreferenceWatcher(PrefService* pref_service)
-      : pref_service_(pref_service) {
-    DCHECK(pref_service);
-    pref_change_registrar_.Init(pref_service);
+  explicit PreferenceWatcher(Profile* profile)
+      : profile_(profile), pref_service_(profile->GetPrefs()) {
+    DCHECK(pref_service_);
+    pref_change_registrar_.Init(pref_service_);
     pref_change_registrar_.Add(
         prefs::kDisableDrive,
         base::BindRepeating(&PreferenceWatcher::OnPreferenceChanged,
@@ -392,7 +393,8 @@ class DriveIntegrationService::PreferenceWatcher
           base::BindRepeating(&PreferenceWatcher::ToggleLocalMirroring,
                               weak_ptr_factory_.GetWeakPtr()));
     }
-    if (ash::features::IsDriveFsBulkPinningEnabled()) {
+
+    if (util::IsDriveFsBulkPinningEnabled(profile_)) {
       pref_change_registrar_.Add(
           prefs::kDriveFsBulkPinningEnabled,
           base::BindRepeating(&PreferenceWatcher::ToggleBulkPinning,
@@ -514,7 +516,8 @@ class DriveIntegrationService::PreferenceWatcher
     }
   }
 
-  raw_ptr<PrefService, ExperimentalAsh> pref_service_;
+  const raw_ptr<const Profile, ExperimentalAsh> profile_;
+  const raw_ptr<PrefService, ExperimentalAsh> pref_service_;
   PrefChangeRegistrar pref_change_registrar_;
   raw_ptr<DriveIntegrationService, ExperimentalAsh> integration_service_ =
       nullptr;
@@ -765,8 +768,7 @@ DriveIntegrationService::DriveIntegrationService(
        base::WithBaseSyncPrimitives()});
 
   if (util::IsDriveAvailableForProfile(profile)) {
-    preference_watcher_ =
-        std::make_unique<PreferenceWatcher>(profile->GetPrefs());
+    preference_watcher_ = std::make_unique<PreferenceWatcher>(profile);
     preference_watcher_->SetIntegrationService(this);
   }
 
@@ -1032,13 +1034,13 @@ void DriveIntegrationService::MaybeMountDrive(const base::FilePath& data_dir,
     LOG(WARNING) << "DriveFS data directory '" << data_dir
                  << "' was missing and got created again";
 
-    // TODO(b/263185253) Remove this IsDriveFsBulkPinningEnabled() condition.
-    if (ash::features::IsDriveFsBulkPinningEnabled()) {
+    if (util::IsDriveFsBulkPinningEnabled(profile_)) {
+      VLOG(1) << "Displaying system notification";
       // Show system notification.
       file_manager::SystemNotificationManager snm(profile_);
       const std::unique_ptr<const message_center::Notification> notification =
           snm.CreateNotification("drive_data_dir_missing",
-                                 IDS_FILE_BROWSER_DRIVE_DIRECTORY_LABEL,
+                                 IDS_FILE_BROWSER_DRIVE_SYNC_ERROR_TITLE,
                                  IDS_FILE_BROWSER_DRIVE_DATA_DIR_MISSING);
       DCHECK(notification);
       snm.GetNotificationDisplayService()->Display(
@@ -1185,10 +1187,10 @@ void DriveIntegrationService::OnMounted(const base::FilePath& mount_path) {
   }
 
   // Enable bulk-pinning if the feature is enabled.
-  if (ash::features::IsDriveFsBulkPinningEnabled()) {
+  if (util::IsDriveFsBulkPinningEnabled(profile_)) {
     DCHECK_CURRENTLY_ON(BrowserThread::UI);
     DCHECK(!pin_manager_);
-    pin_manager_ = std::make_unique<PinManager>(profile_->GetPath(),
+    pin_manager_ = std::make_unique<PinManager>(profile_->GetPath(), mount_path,
                                                 GetDriveFsInterface());
     pin_manager_->AddObserver(this);
     DCHECK(!bulk_pinning_pref_updater_);
@@ -1332,7 +1334,7 @@ void DriveIntegrationService::ToggleBulkPinning() {
 
 void DriveIntegrationService::GetTotalPinnedSize(
     base::OnceCallback<void(int64_t)> callback) {
-  if (!ash::features::IsDriveFsBulkPinningEnabled() || !IsMounted() ||
+  if (!util::IsDriveFsBulkPinningEnabled(profile_) || !IsMounted() ||
       !GetDriveFsInterface()) {
     std::move(callback).Run(-1);
     return;
@@ -1353,7 +1355,7 @@ void DriveIntegrationService::GetTotalPinnedSize(
 
 void DriveIntegrationService::ClearOfflineFiles(
     base::OnceCallback<void(drive::FileError)> callback) {
-  if (!ash::features::IsDriveFsBulkPinningEnabled() || !IsMounted() ||
+  if (!util::IsDriveFsBulkPinningEnabled(profile_) || !IsMounted() ||
       !GetDriveFsInterface()) {
     std::move(callback).Run(drive::FILE_ERROR_SERVICE_UNAVAILABLE);
     return;
@@ -1663,16 +1665,47 @@ void DriveIntegrationService::PollHostedFilePinStates() {
 void DriveIntegrationService::ForceReSyncFile(const base::FilePath& local_path,
                                               base::OnceClosure callback) {
   base::FilePath drive_path;
-  if (!ash::features::IsForceReSyncDriveEnabled() || !IsMounted() ||
-      !GetDriveFsInterface() ||
+  bool is_feature_enabled = ash::features::IsForceReSyncDriveEnabled() &&
+                            chromeos::features::IsUploadOfficeToCloudEnabled();
+  if (!is_feature_enabled || !IsMounted() || !GetDriveFsInterface() ||
       !GetRelativeDrivePath(local_path, &drive_path)) {
     std::move(callback).Run();
     return;
   }
 
-  // TODO(b/234921400): Replace this with a call to DriveFS once implemented.
-  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(FROM_HERE,
-                                                           std::move(callback));
+  GetDriveFsInterface()->UpdateFromPairedDoc(
+      drive_path,
+      base::BindOnce(&DriveIntegrationService::OnUpdateFromPairedDocComplete,
+                     weak_ptr_factory_.GetWeakPtr(), drive_path,
+                     std::move(callback)));
+}
+
+void DriveIntegrationService::OnUpdateFromPairedDocComplete(
+    const base::FilePath& drive_path,
+    base::OnceClosure callback,
+    drive::FileError error) {
+  if (error != drive::FileError::FILE_ERROR_OK) {
+    LOG(ERROR) << "Error in UpdateFromPairedDoc: " << error;
+    std::move(callback).Run();
+    return;
+  }
+
+  GetDriveFsInterface()->GetItemFromCloudStore(
+      drive_path, base::BindOnce([](drive::FileError error) {
+                    LOG_IF(ERROR, error != drive::FileError::FILE_ERROR_OK)
+                        << "Error in GetItemFromCloudStore: " << error;
+                  }).Then(std::move(callback)));
+}
+
+void DriveIntegrationService::ImmediatelyUpload(
+    const base::FilePath& path,
+    drivefs::mojom::DriveFs::ImmediatelyUploadCallback callback) {
+  if (!IsMounted() || !GetDriveFsInterface()) {
+    std::move(callback).Run(drive::FILE_ERROR_SERVICE_UNAVAILABLE);
+    return;
+  }
+
+  GetDriveFsInterface()->ImmediatelyUpload(path, std::move(callback));
 }
 
 void DriveIntegrationService::GetReadOnlyAuthenticationToken(
@@ -1702,6 +1735,17 @@ void DriveIntegrationService::RegisterDriveFsNativeMessageHostBridge(
     mojo::PendingRemote<crosapi::mojom::DriveFsNativeMessageHostBridge>
         bridge) {
   drivefs_holder_->RegisterDriveFsNativeMessageHostBridge(std::move(bridge));
+}
+
+void DriveIntegrationService::GetDocsOfflineStats(
+    DriveFs::GetDocsOfflineStatsCallback callback) {
+  if (!IsMounted() || !GetDriveFsInterface()) {
+    std::move(callback).Run(drive::FILE_ERROR_SERVICE_UNAVAILABLE,
+                            drivefs::mojom::DocsOfflineStats::New());
+    return;
+  }
+
+  GetDriveFsInterface()->GetDocsOfflineStats(std::move(callback));
 }
 
 //===================== DriveIntegrationServiceFactory =======================
@@ -1743,7 +1787,12 @@ DriveIntegrationServiceFactory* DriveIntegrationServiceFactory::GetInstance() {
 DriveIntegrationServiceFactory::DriveIntegrationServiceFactory()
     : ProfileKeyedServiceFactory(
           "DriveIntegrationService",
-          ProfileSelections::BuildRedirectedInIncognito()) {
+          ProfileSelections::Builder()
+              .WithRegular(ProfileSelection::kRedirectedToOriginal)
+              // TODO(crbug.com/1418376): Check if this service is needed in
+              // Guest mode.
+              .WithGuest(ProfileSelection::kRedirectedToOriginal)
+              .Build()) {
   DependsOn(IdentityManagerFactory::GetInstance());
   DependsOn(DriveNotificationManagerFactory::GetInstance());
   DependsOn(DownloadCoreServiceFactory::GetInstance());

@@ -7,7 +7,7 @@ import {NativeEventTarget as EventTarget} from 'chrome://resources/ash/common/ev
 import {loadTimeData} from 'chrome://resources/ash/common/load_time_data.m.js';
 import {startColorChangeUpdater} from 'chrome://resources/cr_components/color_change_listener/colors_css_updater.js';
 
-import {getDialogCaller, getDlpBlockedComponents, getPreferences} from '../../common/js/api.js';
+import {getBulkPinProgress, getDialogCaller, getDlpBlockedComponents, getPreferences} from '../../common/js/api.js';
 import {ArrayDataModel} from '../../common/js/array_data_model.js';
 import {DialogType, isFolderDialogType} from '../../common/js/dialog_type.js';
 import {getKeyModifiers, queryDecoratedElement, queryRequiredElement} from '../../common/js/dom_utils.js';
@@ -752,9 +752,36 @@ export class FileManager extends EventTarget {
     // store containing the updated data.
     // TODO(b/275635808): Depending on the users corpus size, this API could be
     // quite chatty, consider wrapping it in a concurrency model.
+    this.initBulkPinning_();
+  }
+
+  /**
+   * Subscribes to bulk-pinning events to ensure the store is kept up to date.
+   * Also tries to retrieve a first bulk pinning progress to populate the store.
+   * Does nothing if bulk-pinning is disabled.
+   * @private
+   */
+  async initBulkPinning_() {
+    if (!util.isDriveFsBulkPinningEnabled()) {
+      return;
+    }
+
+    const promise = getBulkPinProgress();
+
     chrome.fileManagerPrivate.onBulkPinProgress.addListener((progress) => {
+      console.debug('Got bulk-pinning event:', progress);
       this.store_.dispatch(updateBulkPinProgress(progress));
     });
+
+    try {
+      const progress = await promise;
+      if (progress) {
+        console.debug('Got initial bulk-pinning state:', progress);
+        this.store_.dispatch(updateBulkPinProgress(progress));
+      }
+    } catch (e) {
+      console.error('Cannot get initial bulk-pinning state:', e);
+    }
   }
 
   /**
@@ -1156,7 +1183,7 @@ export class FileManager extends EventTarget {
 
     // Create task controller.
     this.taskController_ = new TaskController(
-        this.dialogType, this.volumeManager_, this.ui_, this.metadataModel_,
+        this.volumeManager_, this.ui_, this.metadataModel_,
         this.directoryModel_, this.selectionHandler_,
         this.metadataUpdateController_, assert(this.crostini_),
         this.progressCenter);
@@ -1191,7 +1218,8 @@ export class FileManager extends EventTarget {
         this.ui_.fileTypeFilterContainer, this.directoryModel_,
         this.recentEntry_, /** @type {!A11yAnnounce} */ (this.ui_));
     this.emptyFolderController_ = new EmptyFolderController(
-        this.ui_.emptyFolder, this.directoryModel_, this.recentEntry_);
+        this.ui_.emptyFolder, this.directoryModel_,
+        assert(this.providersModel_), this.recentEntry_);
 
 
     return directoryTreePromise;

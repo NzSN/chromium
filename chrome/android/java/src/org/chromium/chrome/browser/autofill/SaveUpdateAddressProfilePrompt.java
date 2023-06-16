@@ -17,11 +17,11 @@ import androidx.annotation.VisibleForTesting;
 import com.google.android.material.textfield.TextInputLayout;
 
 import org.chromium.base.annotations.CalledByNative;
-import org.chromium.base.annotations.JNIAdditionalImport;
 import org.chromium.base.annotations.JNINamespace;
 import org.chromium.chrome.R;
-import org.chromium.chrome.browser.autofill.prefeditor.EditorDialog;
+import org.chromium.chrome.browser.autofill.editors.EditorDialog;
 import org.chromium.chrome.browser.autofill.settings.AddressEditor;
+import org.chromium.chrome.browser.feedback.HelpAndFeedbackLauncherImpl;
 import org.chromium.chrome.browser.flags.ChromeFeatureList;
 import org.chromium.chrome.browser.payments.AutofillAddress;
 import org.chromium.chrome.browser.profiles.Profile;
@@ -38,7 +38,6 @@ import org.chromium.ui.modelutil.PropertyModel;
  * TODO(crbug.com/1432549): cover with render tests.
  */
 @JNINamespace("autofill")
-@JNIAdditionalImport(PersonalDataManager.class)
 public class SaveUpdateAddressProfilePrompt {
     private final SaveUpdateAddressProfilePromptController mController;
     private final ModalDialogManager mModalDialogManager;
@@ -79,14 +78,20 @@ public class SaveUpdateAddressProfilePrompt {
                         .with(ModalDialogProperties.CUSTOM_VIEW, mDialogView);
         mDialogModel = builder.build();
 
-        mEditorDialog = new EditorDialog(activity, /*deleteRunnable=*/null, browserProfile);
+        mEditorDialog = new EditorDialog(activity, /*deleteRunnable=*/null,
+                HelpAndFeedbackLauncherImpl.getForProfile(browserProfile));
         mEditorDialog.setShouldTriggerDoneCallbackBeforeCloseAnimation(true);
-        mAddressEditor = new AddressEditor(/*saveToDisk=*/false, isUpdate, isMigrationToAccount);
-        mAddressEditor.setEditorDialog(mEditorDialog);
-        AutofillAddress autofillAddress = new AutofillAddress(activity, autofillProfile);
+        AddressEditor.Delegate delegate = new AddressEditor.Delegate() {
+            @Override
+            public void onDone(AutofillAddress address) {
+                onEdited(address);
+            }
+        };
+        mAddressEditor = new AddressEditor(mEditorDialog, delegate, browserProfile,
+                new AutofillAddress(activity, autofillProfile),
+                /*saveToDisk=*/false, isUpdate, isMigrationToAccount);
         mDialogView.findViewById(R.id.edit_button).setOnClickListener(v -> {
-            mAddressEditor.edit(autofillAddress, /*doneCallback=*/this::onEdited,
-                    /*cancelCallback=*/unused -> {});
+            mAddressEditor.showEditorDialog();
         });
     }
 
@@ -249,7 +254,7 @@ public class SaveUpdateAddressProfilePrompt {
                 (v, hasFocus)
                         -> nicknameInputLayout.setHint(
                                 !hasFocus && TextUtils.isEmpty(nicknameInput.getText())
-                                        // TODO(crbug.com/1167061): Use localized strings.
+                                        // TODO(crbug.com/1445020): Use localized strings.
                                         ? "Add a label"
                                         : "Label"));
 

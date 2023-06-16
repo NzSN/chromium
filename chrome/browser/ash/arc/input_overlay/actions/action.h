@@ -18,9 +18,7 @@
 #include "chrome/browser/ash/arc/input_overlay/actions/position.h"
 #include "chrome/browser/ash/arc/input_overlay/constants.h"
 #include "chrome/browser/ash/arc/input_overlay/db/proto/app_data.pb.h"
-#include "chrome/browser/ash/arc/input_overlay/touch_injector.h"
 #include "chrome/browser/ash/arc/input_overlay/ui/action_label.h"
-#include "chrome/browser/ash/arc/input_overlay/ui/action_view.h"
 #include "ui/aura/window_tree_host.h"
 #include "ui/gfx/geometry/point_f.h"
 #include "ui/gfx/geometry/rect_f.h"
@@ -87,6 +85,7 @@ class Action {
   // |input_element| should overlap the current displayed binding. If it is
   // partially overlapped, then we only unbind the overlapped input.
   virtual void UnbindInput(const InputElement& input_element) = 0;
+  virtual ActionType GetType() = 0;
 
   // This is called for editing the actions before change is saved. Or for
   // loading the customized data to override the default input mapping.
@@ -229,9 +228,6 @@ class Action {
   // Mainly for default action to mark if it is deleted.
   bool deleted_ = false;
 
-  // TODO(b/260937747): Update or remove when removing flags
-  // |kArcInputOverlayAlphaV2| or |kArcInputOverlayBeta|.
-  bool allow_reposition_;
   // Corresponds to |kArcInputOverlayBeta| flag to turn on/off the editor
   // feature of adding or removing actions.
   bool beta_;

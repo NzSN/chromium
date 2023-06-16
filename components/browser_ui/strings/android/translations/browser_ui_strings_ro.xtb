@@ -148,6 +148,7 @@
 <translation id="3600792891314830896">Dezactivează sunetul pentru site-urile care îl redau</translation>
 <translation id="3602290021589620013">Previzualizare</translation>
 <translation id="3628308229821498208">Căutări sugerate</translation>
+<translation id="3707034683772193706">Un site pe care îl accesezi poate salva un mic volum de informații în Chrome, în principal pentru a valida că nu ești o aplicație bot</translation>
 <translation id="3721953990244350188">Închide și afișează următoarea acțiune disponibilă</translation>
 <translation id="3744111561329211289">Sincronizare în fundal</translation>
 <translation id="3763247130972274048">Atinge de două ori videoclipul spre stânga sau spre dreapta pentru a derula cu 10 secunde</translation>
@@ -188,7 +189,6 @@
 <translation id="4412992751769744546">Permite cookie-urile terță parte</translation>
 <translation id="4428065317363009941">Personalizarea anunțurilor</translation>
 <translation id="4434045419905280838">Ferestre pop-up și redirecționări</translation>
-<translation id="4440642537584213025">Extinde <ph name="TARGET_DESCRIPTION" /></translation>
 <translation id="4468959413250150279">Dezactivează sunetul pentru un anumit site.</translation>
 <translation id="4475912480633855319">{COOKIES,plural, =1{# cookie}few{# cookie-uri}other{# de cookie-uri}}</translation>
 <translation id="4478158430052450698">Simplifică personalizarea zoomului pentru diferite site-uri</translation>
@@ -310,6 +310,7 @@
 <translation id="6612358246767739896">Conținut protejat</translation>
 <translation id="662080504995468778">Rămâi pe pagină</translation>
 <translation id="6643016212128521049">Șterge</translation>
+<translation id="6653342741369270081">Apasă butonul Înapoi pentru a ieși din ecranul complet.</translation>
 <translation id="6689172468748959065">Fotografii de profil</translation>
 <translation id="6697925417670533197">Descărcări active</translation>
 <translation id="6722828510648505498">Blochează solicitările de conectare de la serviciile de identitate.</translation>
@@ -344,6 +345,7 @@
 <translation id="7302486331832100261">De obicei blochezi notificările. Ca să le permiți, atinge Detalii.</translation>
 <translation id="7366415735885268578">Adaugă un site</translation>
 <translation id="7383715096023715447">Setări pentru <ph name="DOMAIN" /></translation>
+<translation id="7406113532070524618">Această setare funcționează fără a te identifica și fără a permite site-urilor să-ți vadă istoricul de navigare, deși acestea pot trimite un volum mic de informații în cadrul verificării</translation>
 <translation id="7423098979219808738">Mai întâi întreabă</translation>
 <translation id="7423538860840206698">Citirea clipboardului este blocată</translation>
 <translation id="7425915948813553151">Tema întunecată pentru site-uri</translation>
@@ -369,6 +371,7 @@
 <translation id="7846076177841592234">Anulează selecția</translation>
 <translation id="7882806643839505685">Permite sunetul pentru un anumit site.</translation>
 <translation id="789180354981963912">Blochează cookie-urile terță parte în modul incognito:</translation>
+<translation id="7895868624847501462">Astfel se vor șterge toate datele locale, inclusiv cookie-urile, și se vor reseta toate permisiunile pentru <ph name="DOMAIN" /> și pentru toate site-urile asociate</translation>
 <translation id="7940722705963108451">Reamintește-mi</translation>
 <translation id="7974024493641668069">{COUNT,plural, =1{<ph name="FPS_MEMBERS_COUNT" /> site din grupul utilizatorului <ph name="FPS_OWNER" /> care îți poate vedea activitatea în grup}few{<ph name="FPS_MEMBERS_COUNT" /> site-uri din grupul utilizatorului <ph name="FPS_OWNER" /> care îți pot vedea activitatea în grup}other{<ph name="FPS_MEMBERS_COUNT" /> de site-uri din grupul utilizatorului <ph name="FPS_OWNER" /> care îți pot vedea activitatea în grup}}</translation>
 <translation id="7986741934819883144">Selectează o persoană de contact</translation>
@@ -394,6 +397,7 @@
 <translation id="8284326494547611709">Subtitrări</translation>
 <translation id="8300705686683892304">Gestionate de aplicație</translation>
 <translation id="8324158725704657629">Nu mai întreba</translation>
+<translation id="8338445138528827481">Această acțiune va șterge toate datele locale, inclusiv cookie-urile, și va reseta toate permisiunile pentru <ph name="ORIGIN" /></translation>
 <translation id="8362795839483915693">Poți să mărești sau să micșorezi site-urile pe care le accesezi</translation>
 <translation id="8372893542064058268">Permite sincronizarea în fundal pentru un anumit site.</translation>
 <translation id="8376384591331888629">Inclusiv cookie-urile terță parte de pe acest site</translation>
@@ -433,6 +437,7 @@
 <translation id="8816026460808729765">Blochează întotdeauna accesul site-urilor la senzori</translation>
 <translation id="8823559166155093873">Blochează cookie-urile</translation>
 <translation id="8847988622838149491">USB</translation>
+<translation id="8889294078294184559">În timp ce navighezi, site-urile pot să solicite informații de la Chrome și să confirme cu ajutorul unui site pe care l-ai accesat anterior că ești o persoană reală</translation>
 <translation id="8899807382908246773">Anunțuri deranjante</translation>
 <translation id="8903921497873541725">Mărește</translation>
 <translation id="8921772741368021346"><ph name="POSITION" />/<ph name="DURATION" /></translation>

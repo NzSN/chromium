@@ -52,6 +52,8 @@ std::ostream& operator<<(std::ostream& os, ManifestUpdateResult result) {
       return os << "kSystemShutdown";
     case ManifestUpdateResult::kAppIdentityUpdateRejectedAndUninstalled:
       return os << "kAppIdentityUpdateRejectedAndUninstalled";
+    case ManifestUpdateResult::kAppIsIsolatedWebApp:
+      return os << "kAppIsIsolatedWebApp";
   }
 }
 
@@ -313,8 +315,18 @@ ManifestDataChanges GetManifestDataChanges(
             new_install_info.shortcuts_menu_icon_bitmaps) {
       return true;
     }
-    // TODO(crbug.com/897314): Check changes to tab_strip field once
-    // icons are stored.
+    if (existing_web_app.scope_extensions() !=
+        new_install_info.scope_extensions) {
+      return true;
+    }
+    if (new_install_info.validated_scope_extensions.has_value() &&
+        existing_web_app.validated_scope_extensions() !=
+            new_install_info.validated_scope_extensions.value()) {
+      return true;
+    }
+    if (existing_web_app.tab_strip() != new_install_info.tab_strip) {
+      return true;
+    }
     // TODO(crbug.com/926083): Check more manifest fields.
     return false;
   }();

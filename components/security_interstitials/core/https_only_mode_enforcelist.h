@@ -8,9 +8,14 @@
 #include <set>
 
 #include "base/memory/raw_ptr.h"
+#include "base/time/time.h"
 #include "base/values.h"
 #include "components/content_settings/core/browser/host_content_settings_map.h"
 #include "url/gurl.h"
+
+namespace base {
+class Clock;
+}
 
 namespace security_interstitials {
 
@@ -22,19 +27,22 @@ namespace security_interstitials {
 class HttpsOnlyModeEnforcelist {
  public:
   explicit HttpsOnlyModeEnforcelist(
-      HostContentSettingsMap* host_content_settings_map);
+      HostContentSettingsMap* host_content_settings_map,
+      base::Clock* clock);
 
   HttpsOnlyModeEnforcelist(const HttpsOnlyModeEnforcelist&) = delete;
   HttpsOnlyModeEnforcelist& operator=(const HttpsOnlyModeEnforcelist&) = delete;
 
   ~HttpsOnlyModeEnforcelist();
 
-  // Adds host to the list of sites not allowed to load over HTTP.
+  // Adds host to the list of sites not allowed to load over HTTP. Should only
+  // be called if HFM isn't already enforced for this host.
   void EnforceForHost(const std::string& host, bool is_nondefault_storage);
 
   // Marks host so that HTTPS-First Mode isn't enabled on it. Doesn't actually
   // remove the website setting for the host, so that we can record metrics
-  // about accumulated host count.
+  // about accumulated host count. Should only be called if HFM is already
+  // enforced for this host.
   void UnenforceForHost(const std::string& host, bool is_nondefault_storage);
 
   // Returns true if host is not allowed to be loaded over HTTP.
@@ -56,8 +64,15 @@ class HttpsOnlyModeEnforcelist {
   // delete_end are removed.
   void ClearEnforcements(base::Time delete_begin, base::Time delete_end);
 
+  // Sets the test clock.
+  void SetClockForTesting(base::Clock* clock);
+
  private:
+  // Records metrics about the host list.
+  void RecordMetrics(bool is_nondefault_storage);
+
   raw_ptr<HostContentSettingsMap> host_content_settings_map_;
+  raw_ptr<base::Clock, DanglingUntriaged> clock_;
 
   // Tracks sites that are not allowed to load over HTTP, for non-default
   // storage partitions. Enforced hosts are exact hostname matches -- subdomains

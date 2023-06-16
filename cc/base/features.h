@@ -15,12 +15,6 @@ CC_BASE_EXPORT BASE_DECLARE_FEATURE(kAnimatedImageResume);
 CC_BASE_EXPORT extern bool IsImpulseScrollAnimationEnabled();
 CC_BASE_EXPORT BASE_DECLARE_FEATURE(kSynchronizedScrolling);
 
-// Elastic overscroll on Android can change scale causing a lot of raster.
-// This is wasteful and visually unnecessary since it's a short animation
-// that resets the scale at the end. When enabled, this aovids recomputing
-// raster scale during elastic overscroll.
-CC_BASE_EXPORT BASE_DECLARE_FEATURE(kAvoidRasterDuringElasticOverscroll);
-
 // When enabled, the double tap to zoom will be disabled when the viewport
 // meta tag is properly set for mobile using content=width=device-width
 // or content=initial-scale=1.0
@@ -71,6 +65,12 @@ CC_BASE_EXPORT BASE_DECLARE_FEATURE(
 // commit is running concurrently on the impl thread.
 CC_BASE_EXPORT BASE_DECLARE_FEATURE(kNonBlockingCommit);
 
+// When enabled, LayerTreeImpl will not preserve the last mutation. This map
+// of the last mutated value should not be necessary as animations are always
+// ticked after the commit which should restore their animated values. Removing
+// this should improve performance and reduce technical complexity.
+CC_BASE_EXPORT BASE_DECLARE_FEATURE(kNoPreserveLastMutation);
+
 // When enabled, DroppedFrameCounter will use an adjusted sliding window
 // interval specified by field trial params.
 CC_BASE_EXPORT BASE_DECLARE_FEATURE(kSlidingWindowForDroppedFrameCounter);
@@ -102,6 +102,10 @@ CC_BASE_EXPORT BASE_DECLARE_FEATURE(kUIEnableSharedImageCacheForGpu);
 // flush to actually reclaim resources.
 CC_BASE_EXPORT BASE_DECLARE_FEATURE(kReclaimResourcesFlushInBackground);
 
+// When LayerTreeHostImpl::ReclaimResources() is called in background, trigger a
+// additional delayed flush to reclaim resources.
+CC_BASE_EXPORT BASE_DECLARE_FEATURE(kReclaimResourcesDelayedFlushInBackground);
+
 // Try to play a longer list of ops before giving up in solid color analysis for
 // tiles.
 CC_BASE_EXPORT BASE_DECLARE_FEATURE(kMoreAggressiveSolidColorDetection);
@@ -109,6 +113,9 @@ CC_BASE_EXPORT BASE_DECLARE_FEATURE(kMoreAggressiveSolidColorDetection);
 // Allow CC FrameRateEstimater to reduce the frame rate to half of the default
 // if the condition meets the requirement.
 CC_BASE_EXPORT BASE_DECLARE_FEATURE(kReducedFrameRateEstimation);
+
+// Use 4x MSAA (vs 8) on High DPI screens.
+CC_BASE_EXPORT BASE_DECLARE_FEATURE(kDetectHiDpiForMsaa);
 
 }  // namespace features
 

@@ -5,9 +5,11 @@
 #ifndef ASH_AMBIENT_METRICS_AMBIENT_METRICS_H_
 #define ASH_AMBIENT_METRICS_AMBIENT_METRICS_H_
 
+#include <string>
+
 #include "ash/ash_export.h"
-#include "ash/constants/ambient_theme.h"
 #include "ash/public/cpp/ambient/ambient_mode_photo_source.h"
+#include "base/functional/callback.h"
 #include "base/scoped_observation.h"
 #include "base/strings/string_piece.h"
 #include "base/time/time.h"
@@ -19,9 +21,25 @@
 namespace ash {
 
 struct AmbientSettings;
+class AmbientUiSettings;
+class AshWebView;
 enum class AmbientUiMode;
 
 namespace ambient {
+
+// These values are persisted to UMA logs. Entries should not be renumbered and
+// numeric values should never be reused.
+enum class AmbientVideoSessionStatus {
+  // Confirmed playback started successfully.
+  kSuccess = 0,
+  // Confirmed playback failed with a hard error.
+  kFailed = 1,
+  // User terminated ambient session while video was still loading. Unknown
+  // whether playback would have ultimately succeeded or not. This should be
+  // rare.
+  kLoading = 2,
+  kMaxValue = kLoading,
+};
 
 // Duration after which ambient mode is considered to have failed to start.
 // See summary in histograms.xml for why 15 seconds is used.
@@ -33,22 +51,38 @@ AmbientSettingsToPhotoSource(const AmbientSettings& settings);
 ASH_EXPORT void RecordAmbientModeActivation(AmbientUiMode ui_mode,
                                             bool tablet_mode);
 
-ASH_EXPORT void RecordAmbientModeTimeElapsed(base::TimeDelta time_delta,
-                                             bool tablet_mode,
-                                             AmbientTheme theme);
+ASH_EXPORT void RecordAmbientModeTimeElapsed(
+    base::TimeDelta time_delta,
+    bool tablet_mode,
+    const AmbientUiSettings& ui_settings);
 
 ASH_EXPORT void RecordAmbientModeTotalNumberOfAlbums(int num_albums);
 
 ASH_EXPORT void RecordAmbientModeSelectedNumberOfAlbums(int num_albums);
 
-ASH_EXPORT void RecordAmbientModeAnimationSmoothness(int smoothness,
-                                                     AmbientTheme theme);
+ASH_EXPORT void RecordAmbientModeAnimationSmoothness(
+    int smoothness,
+    const AmbientUiSettings& ui_settings);
 
-ASH_EXPORT void RecordAmbientModePhotoOrientationMatch(int percentage_match,
-                                                       AmbientTheme theme);
+ASH_EXPORT void RecordAmbientModePhotoOrientationMatch(
+    int percentage_match,
+    const AmbientUiSettings& ui_settings);
 
-ASH_EXPORT void RecordAmbientModeStartupTime(base::TimeDelta startup_time,
-                                             AmbientTheme theme);
+ASH_EXPORT void RecordAmbientModeStartupTime(
+    base::TimeDelta startup_time,
+    const AmbientUiSettings& ui_settings);
+
+ASH_EXPORT void GetAmbientModeVideoSessionStatus(
+    AshWebView* web_view,
+    base::OnceCallback<void(AmbientVideoSessionStatus)> completion_cb);
+
+ASH_EXPORT void RecordAmbientModeVideoSessionStatus(
+    AshWebView* web_view,
+    const AmbientUiSettings& ui_settings);
+
+ASH_EXPORT void RecordAmbientModeVideoSmoothness(
+    AshWebView* web_view,
+    const AmbientUiSettings& ui_settings);
 
 // Records metrics that track the total usage of each orientation in ambient
 // mode.
@@ -56,7 +90,7 @@ class ASH_EXPORT AmbientOrientationMetricsRecorder
     : public views::ViewObserver {
  public:
   AmbientOrientationMetricsRecorder(views::View* root_rendering_view,
-                                    AmbientTheme theme);
+                                    const AmbientUiSettings& ui_settings);
   AmbientOrientationMetricsRecorder(const AmbientOrientationMetricsRecorder&) =
       delete;
   AmbientOrientationMetricsRecorder& operator=(
@@ -67,7 +101,7 @@ class ASH_EXPORT AmbientOrientationMetricsRecorder
   void OnViewBoundsChanged(views::View* observed_view) override;
   void SaveCurrentOrientationDuration();
 
-  const base::StringPiece theme_;
+  const std::string settings_;
   base::ScopedObservation<views::View, ViewObserver>
       root_rendering_view_observer_{this};
   // Null until a non-empty view boundary is provided (i.e. the initial view

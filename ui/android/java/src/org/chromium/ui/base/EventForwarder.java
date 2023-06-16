@@ -82,7 +82,8 @@ public class EventForwarder {
     @CalledByNative
     private static EventForwarder create(long nativeEventForwarder, boolean isDragDropEnabled) {
         return new EventForwarder(nativeEventForwarder, isDragDropEnabled,
-                UiAndroidFeatureList.isEnabled(UiAndroidFeatures.CONVERT_TRACKPAD_EVENTS_TO_MOUSE));
+                UiAndroidFeatureMap.getInstance().isEnabled(
+                        UiAndroidFeatures.CONVERT_TRACKPAD_EVENTS_TO_MOUSE));
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
@@ -386,6 +387,14 @@ public class EventForwarder {
         assert mNativeEventForwarder != 0;
 
         int eventAction = event.getActionMasked();
+
+        // Ignore ACTION_HOVER_ENTER & ACTION_HOVER_EXIT because every mouse-down on Android
+        // follows a hover-exit and is followed by a hover-enter.  https://crbug.com/715114
+        // filed on distinguishing actual hover enter/exit from these bogus ones.
+        if (eventAction == MotionEvent.ACTION_HOVER_ENTER
+                || eventAction == MotionEvent.ACTION_HOVER_EXIT) {
+            return false;
+        }
 
         // For mousedown and mouseup events, we use ACTION_BUTTON_PRESS
         // and ACTION_BUTTON_RELEASE respectively because they provide

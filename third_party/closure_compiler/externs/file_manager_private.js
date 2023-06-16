@@ -285,6 +285,8 @@ chrome.fileManagerPrivate.EntryPropertyName = {
   IS_ARBITRARY_SYNC_FOLDER: 'isArbitrarySyncFolder',
   SYNC_STATUS: 'syncStatus',
   PROGRESS: 'progress',
+  SHORTCUT: 'shortcut',
+  SYNC_COMPLETED_TIME: 'syncCompletedTime',
 };
 
 /**
@@ -372,6 +374,23 @@ chrome.fileManagerPrivate.IOTaskType = {
   RESTORE_TO_DESTINATION: 'restore_to_destination',
   TRASH: 'trash',
   ZIP: 'zip',
+};
+
+/**
+ * @enum {string}
+ */
+chrome.fileManagerPrivate.PolicyErrorType = {
+  DLP: 'dlp',
+  ENTERPRISE_CONNECTORS: 'enterprise_connectors',
+  DLP_WARNING_TIMEOUT: 'dlp_warning_timeout',
+};
+
+/**
+ * @enum {string}
+ */
+chrome.fileManagerPrivate.PolicyDialogType = {
+  WARNING: 'warning',
+  ERROR: 'error',
 };
 
 /**
@@ -515,6 +534,7 @@ chrome.fileManagerPrivate.ResultingTasks;
  *   isArbitrarySyncFolder: (boolean|undefined),
  *   syncStatus: (!chrome.fileManagerPrivate.SyncStatus|undefined),
  *   progress: (number|undefined),
+ *   syncCompletedTime: (number|undefined),
  *   shortcut: (boolean|undefined)
  * }}
  */
@@ -860,6 +880,21 @@ chrome.fileManagerPrivate.IOTaskParams;
  *   conflictTargetUrl: (string|undefined)
  * }}
  */
+chrome.fileManagerPrivate.ConflictPauseParams;
+
+/**
+ * @typedef {{
+ *   type: !chrome.fileManagerPrivate.PolicyErrorType
+ * }}
+ */
+chrome.fileManagerPrivate.PolicyPauseParams;
+
+/**
+ * @typedef {{
+ *   conflictParams: (!chrome.fileManagerPrivate.ConflictPauseParams|undefined),
+ *   policyParams: (!chrome.fileManagerPrivate.PolicyPauseParams|undefined)
+ * }}
+ */
 chrome.fileManagerPrivate.PauseParams;
 
 /**
@@ -868,12 +903,28 @@ chrome.fileManagerPrivate.PauseParams;
  *   conflictApplyToAll: (boolean|undefined)
  * }}
  */
+chrome.fileManagerPrivate.ConflictResumeParams;
+
+/**
+ * @typedef {{
+ *   type: !chrome.fileManagerPrivate.PolicyErrorType
+ * }}
+ */
+chrome.fileManagerPrivate.PolicyResumeParams;
+
+/**
+ * @typedef {{
+ *   conflictParams: (!chrome.fileManagerPrivate.ConflictResumeParams|undefined),
+ *   policyParams: (!chrome.fileManagerPrivate.PolicyResumeParams|undefined)
+ * }}
+ */
 chrome.fileManagerPrivate.ResumeParams;
 
 /**
  * @typedef {{
  *   type: !chrome.fileManagerPrivate.IOTaskType,
  *   state: !chrome.fileManagerPrivate.IOTaskState,
+ *   policyError: (!chrome.fileManagerPrivate.PolicyErrorType|undefined),
  *   sourceName: string,
  *   numRemainingItems: number,
  *   itemCount: number,
@@ -882,6 +933,7 @@ chrome.fileManagerPrivate.ResumeParams;
  *   totalBytes: number,
  *   taskId: number,
  *   remainingSeconds: number,
+ *   sourcesScanned: number,
  *   showNotification: boolean,
  *   errorName: string,
  *   pauseParams: (!chrome.fileManagerPrivate.PauseParams|undefined),
@@ -1300,42 +1352,6 @@ chrome.fileManagerPrivate.searchFilesByHashes = function(volumeId, hashList, cal
 chrome.fileManagerPrivate.searchFiles = function(searchParams, callback) {};
 
 /**
- * Creates a ZIP file for the selected files and folders. Folders are
- * recursively explored and zipped. Hidden files and folders (with names
- * starting with a dot) found during recursive exploration are included too.
- * |entries| Entries of the selected files and folders to zip. They must be
- * under the |parentEntry| directory. |parentEntry| Entry of the directory
- * containing the selected files and     folders. This is where the ZIP file
- * will be created, too. |destName| Name of the destination ZIP file. The ZIP
- * file will be created     in the directory specified by |parentEntry|.
- * |callback| Callback called on completion.
- * @param {!Array<Entry>} entries
- * @param {DirectoryEntry} parentEntry
- * @param {string} destName
- * @param {function(number, number): void} callback |zipId| The ID of the ZIP
- *     operation. |totalBytes| Total number of bytes to be zipped.
- */
-chrome.fileManagerPrivate.zipSelection = function(entries, parentEntry, destName, callback) {};
-
-/**
- * Cancels an ongoing ZIP operation. Does nothing if there is no matching
- * ongoing ZIP operation. |zipId| ID of the ZIP operation.
- * @param {number} zipId
- */
-chrome.fileManagerPrivate.cancelZip = function(zipId) {};
-
-/**
- * Gets the progress of an ongoing ZIP operation. |zipId| ID of the ZIP
- * operation.
- * @param {number} zipId
- * @param {function(number, number): void} callback |result| Less than 0 if the
- *     operation is still in progress, 0 if the operation finished successfully,
- *     or greater than 0 if the operation finished with an error. |bytes| Total
- *     number of bytes having been zipped so far.
- */
-chrome.fileManagerPrivate.getZipProgress = function(zipId, callback) {};
-
-/**
  * Retrieves the state of the current drive connection. |callback|
  * @param {function(!chrome.fileManagerPrivate.DriveConnectionState): void}
  *     callback
@@ -1358,21 +1374,6 @@ chrome.fileManagerPrivate.validatePathNameLength = function(parentEntry, name, c
  * @param {!chrome.fileManagerPrivate.ZoomOperationType} operation
  */
 chrome.fileManagerPrivate.zoom = function(operation) {};
-
-/**
- * Requests a Webstore API OAuth2 access token. |callback|
- * @param {function(string): void} callback |accessToken| OAuth2 access token,
- *     or an empty string if failed to fetch.
- */
-chrome.fileManagerPrivate.requestWebStoreAccessToken = function(callback) {};
-
-/**
- * Requests a download url to download the file contents. |entry| The entry to
- * download. |callback|
- * @param {Entry} entry
- * @param {function(string): void} callback |url| Result url.
- */
-chrome.fileManagerPrivate.getDownloadUrl = function(entry, callback) {};
 
 /**
  * Obtains a list of profiles that are logged-in.
@@ -1692,6 +1693,14 @@ chrome.fileManagerPrivate.cancelIOTask = function(taskId) {};
 chrome.fileManagerPrivate.resumeIOTask = function(taskId, params) {};
 
 /**
+ * Shows a policy dialog for a task. Task ids are communicated to the Files App
+ * in each I/O task's progress status.
+ * @param {number} taskId
+ * @param {!chrome.fileManagerPrivate.PolicyDialogType} type
+ */
+chrome.fileManagerPrivate.showPolicyDialog = function(taskId, type) {};
+
+/**
  * Makes I/O tasks in state::PAUSED emit (broadcast) their current I/O task
  * progress status.
  */
@@ -1734,6 +1743,13 @@ chrome.fileManagerPrivate.parseTrashInfoFiles = function(entries, callback) {};
  * @param {function(!chrome.fileManagerPrivate.BulkPinProgress): void} callback
  */
 chrome.fileManagerPrivate.getBulkPinProgress = function(callback) {};
+
+/**
+ * Starts calculating the space required to pin all the items in a users My
+ * drive.
+ * @param {function(): void} callback Callback that does not take arguments.
+ */
+chrome.fileManagerPrivate.calculateBulkPinRequiredSpace = function(callback) {};
 
 /**
  * @type {!ChromeEvent}

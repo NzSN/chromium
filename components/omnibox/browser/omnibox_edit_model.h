@@ -33,7 +33,6 @@
 
 class AutocompleteResult;
 class OmniboxClient;
-class OmniboxEditModelDelegate;
 class OmniboxPopupView;
 
 namespace gfx {
@@ -67,16 +66,12 @@ class OmniboxEditModel {
     const AutocompleteInput autocomplete_input;
   };
 
-  OmniboxEditModel(OmniboxView* view,
-                   OmniboxEditModelDelegate* edit_model_delegate,
-                   OmniboxClient* client);
+  OmniboxEditModel(OmniboxController* omnibox_controller, OmniboxView* view);
   virtual ~OmniboxEditModel();
   OmniboxEditModel(const OmniboxEditModel&) = delete;
   OmniboxEditModel& operator=(const OmniboxEditModel&) = delete;
 
-  void set_omnibox_controller(OmniboxController* omnibox_controller) {
-    omnibox_controller_ = omnibox_controller;
-  }
+  OmniboxController* omnibox_controller() const { return omnibox_controller_; }
 
   // TODO(jdonnelly): Remove this accessor when the AutocompleteController has
   //     completely moved to OmniboxController.
@@ -85,11 +80,10 @@ class OmniboxEditModel {
   }
 
   void set_popup_view(OmniboxPopupView* popup_view);
-  OmniboxPopupView* get_popup_view();
+  OmniboxPopupView* get_popup_view() { return popup_view_; }
+  const OmniboxPopupView* get_popup_view() const { return popup_view_; }
 
-  OmniboxEditModelDelegate* delegate() const { return edit_model_delegate_; }
-
-  OmniboxClient* client() const { return client_.get(); }
+  OmniboxClient* client() const { return omnibox_controller_->client(); }
 
   metrics::OmniboxEventProto::PageClassification GetPageClassification() const;
 
@@ -529,13 +523,6 @@ class OmniboxEditModel {
       WindowOpenDisposition disposition,
       base::TimeTicks match_selection_timestamp = base::TimeTicks());
 
-  // If the match in result() specified by `match_index` has an
-  // action that takes over the match, this executes that action
-  // with given `disposition` and returns true. Returns false otherwise.
-  bool ExecuteTakeoverAction(size_t match_index,
-                             WindowOpenDisposition disposition,
-                             base::TimeTicks match_selection_timestamp);
-
   // Executes the action associated with match at given `selection`
   // within result(). `disposition` may be used by actions to open
   // in another tab, a new window, etc.
@@ -643,12 +630,6 @@ class OmniboxEditModel {
 
   // Owns `OmniboxController` which owns this.
   raw_ptr<OmniboxView> view_;
-
-  // Implemented by `LocationBarView` which owns `OmniboxView`.
-  raw_ptr<OmniboxEditModelDelegate> edit_model_delegate_;
-
-  // Owned by `omnibox_controller_` which owns this.
-  raw_ptr<OmniboxClient> client_;
 
   OmniboxFocusState focus_state_ = OMNIBOX_FOCUS_NONE;
 

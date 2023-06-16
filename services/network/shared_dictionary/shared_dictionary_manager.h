@@ -8,9 +8,22 @@
 #include <map>
 
 #include "base/component_export.h"
+#include "base/functional/callback.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/memory/weak_ptr.h"
+#include "base/time/time.h"
 #include "net/extras/shared_dictionary/shared_dictionary_storage_isolation_key.h"
+
+namespace base {
+namespace android {
+class ApplicationStatusListener;
+}  // namespace android
+class FilePath;
+}  //  namespace base
+
+namespace disk_cache {
+class BackendFileOperationsFactory;
+}  // namespace disk_cache
 
 namespace network {
 
@@ -22,13 +35,20 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) SharedDictionaryManager {
  public:
   // Returns a SharedDictionaryManager which keeps the whole dictionary
   // information in memory.
-  static std::unique_ptr<SharedDictionaryManager> CreateInMemory();
+  static std::unique_ptr<SharedDictionaryManager> CreateInMemory(
+      uint64_t cache_max_size);
 
-  // TODO(crbug.com/1413922): Implement a manager which supports persistence
-  // and use if for non-incognito mode. Also, if preventing incognito mode
-  // detection isn't that important, and the maintenance cost of two storagee is
-  // large, consider removing  SharedDictionaryManager and stopping incognito
-  // mode support.
+  // Returns a SharedDictionaryManager which keeps the dictionary information
+  // on disk.
+  static std::unique_ptr<SharedDictionaryManager> CreateOnDisk(
+      const base::FilePath& database_path,
+      const base::FilePath& cache_directory_path,
+      uint64_t cache_max_size,
+#if BUILDFLAG(IS_ANDROID)
+      base::android::ApplicationStatusListener* app_status_listener,
+#endif  // BUILDFLAG(IS_ANDROID)
+      scoped_refptr<disk_cache::BackendFileOperationsFactory>
+          file_operations_factory);
 
   SharedDictionaryManager(const SharedDictionaryManager&) = delete;
   SharedDictionaryManager& operator=(const SharedDictionaryManager&) = delete;
@@ -39,14 +59,17 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) SharedDictionaryManager {
   scoped_refptr<SharedDictionaryStorage> GetStorage(
       const net::SharedDictionaryStorageIsolationKey& isolation_key);
 
-  // TODO(crbug.com/1413922): Add a method to delete dictionaries when the user
-  // clears the browsing data (BrowsingDataRemover::DATA_TYPE_CACHE and
-  // DATA_TYPE_SITE_DATA).
-
   // Called when the SharedDictionaryStorage for the `isolation_key` is
   // deleted.
   void OnStorageDeleted(
       const net::SharedDictionaryStorageIsolationKey& isolation_key);
+
+  // Sets the max size of shared dictionary cache.
+  virtual void SetCacheMaxSize(uint64_t cache_max_size) = 0;
+  virtual void ClearData(base::Time start_time,
+                         base::Time end_time,
+                         base::RepeatingCallback<bool(const GURL&)> url_matcher,
+                         base::OnceClosure callback) = 0;
 
  protected:
   SharedDictionaryManager();
@@ -57,6 +80,12 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) SharedDictionaryManager {
       const net::SharedDictionaryStorageIsolationKey& isolation_key) = 0;
 
   base::WeakPtr<SharedDictionaryManager> GetWeakPtr();
+
+  std::map<net::SharedDictionaryStorageIsolationKey,
+           raw_ptr<SharedDictionaryStorage>>&
+  storages() {
+    return storages_;
+  }
 
  private:
   std::map<net::SharedDictionaryStorageIsolationKey,

@@ -148,6 +148,7 @@
 <translation id="3600792891314830896">Elnémítja a hangot lejátszó webhelyeket</translation>
 <translation id="3602290021589620013">Előnézet</translation>
 <translation id="3628308229821498208">Javasolt keresések</translation>
+<translation id="3707034683772193706">A felkeresett webhelyek menthetnek kis mennyiségű adatot a Chrome-ban, elsősorban annak ellenőrzéséhez, hogy Ön nem robot.</translation>
 <translation id="3721953990244350188">Elvetés és a következő rendelkezésre álló művelet megjelenítése</translation>
 <translation id="3744111561329211289">Szinkronizálás a háttérben</translation>
 <translation id="3763247130972274048">A videó jobb vagy bal oldalán duplán koppintva ugorhat előre vagy vissza 10 másodpercet</translation>
@@ -188,7 +189,6 @@
 <translation id="4412992751769744546">Harmadik felektől származó cookie-k engedélyezése</translation>
 <translation id="4428065317363009941">Hirdetések személyre szabása</translation>
 <translation id="4434045419905280838">Előugró ablakok és átirányítások</translation>
-<translation id="4440642537584213025"><ph name="TARGET_DESCRIPTION" /> kibontása</translation>
 <translation id="4468959413250150279">Egy adott webhely hangjának némítása.</translation>
 <translation id="4475912480633855319">{COOKIES,plural, =1{# cookie}other{# cookie}}</translation>
 <translation id="4478158430052450698">Megkönnyítheti a különböző webhelyek nagyításának személyre szabását</translation>
@@ -310,6 +310,7 @@
 <translation id="6612358246767739896">Védett tartalom</translation>
 <translation id="662080504995468778">Mégse</translation>
 <translation id="6643016212128521049">Törlés</translation>
+<translation id="6653342741369270081">A teljes képernyős megjelenítésből való kilépéshez nyomja le a vissza gombot.</translation>
 <translation id="6689172468748959065">Profilfotók</translation>
 <translation id="6697925417670533197">Aktív letöltések</translation>
 <translation id="6722828510648505498">Letilthatja az identitásszolgáltatásoktól származó bejelentkezési értesítéseket.</translation>
@@ -344,6 +345,7 @@
 <translation id="7302486331832100261">Ön általában letiltja az értesítéseket. Az engedélyezéshez koppintson a Részletek elemre.</translation>
 <translation id="7366415735885268578">Webhely hozzáadása</translation>
 <translation id="7383715096023715447">Beállítások – <ph name="DOMAIN" /></translation>
+<translation id="7406113532070524618">Ez a beállítás a személyazonosságának azonosítása nélkül, és anélkül is működik, hogy a webhelyek számára engedélyezné a böngészési előzményei megtekintését. A webhelyek ugyanakkor megoszthatnak kis mennyiségű adatot az ellenőrzés részeként.</translation>
 <translation id="7423098979219808738">Kérdezzen rá</translation>
 <translation id="7423538860840206698">Le van tiltva a vágólap megtekintése</translation>
 <translation id="7425915948813553151">Sötét téma a webhelyeknél</translation>
@@ -369,6 +371,7 @@
 <translation id="7846076177841592234">Kijelölés törlése</translation>
 <translation id="7882806643839505685">Egy adott webhely hangjának engedélyezése.</translation>
 <translation id="789180354981963912">Harmadik felektől származó cookie-k letiltása Inkognitó módban:</translation>
+<translation id="7895868624847501462">A művelet törli az összes helyi adatot, beleértve a cookie-kat is, és visszaállítja a(z) <ph name="DOMAIN" /> és az alá tartozó webhelyek összes engedélyét</translation>
 <translation id="7940722705963108451">Emlékeztessen</translation>
 <translation id="7974024493641668069">{COUNT,plural, =1{A(z) <ph name="FPS_OWNER" /> webhelycsoportjában <ph name="FPS_MEMBERS_COUNT" /> webhely található, amely láthatja az Ön által a csoportban végzett tevékenységeket}other{A(z) <ph name="FPS_OWNER" /> webhelycsoportjában <ph name="FPS_MEMBERS_COUNT" /> webhely található, amelyek láthatják az Ön által a csoportban végzett tevékenységeket}}</translation>
 <translation id="7986741934819883144">Válasszon ki egy névjegyet</translation>
@@ -394,6 +397,7 @@
 <translation id="8284326494547611709">Feliratok</translation>
 <translation id="8300705686683892304">Alkalmazás által kezelt</translation>
 <translation id="8324158725704657629">Ne jelenjen meg többé</translation>
+<translation id="8338445138528827481">A művelet törli az összes helyi adatot, beleértve a cookie-kat is, és visszaállítja a(z) <ph name="ORIGIN" /> összes engedélyét</translation>
 <translation id="8362795839483915693">A felkeresett webhelyeket felnagyíthatja és lekicsinyítheti</translation>
 <translation id="8372893542064058268">Háttérben történő szinkronizálás engedélyezése adott webhely esetében.</translation>
 <translation id="8376384591331888629">Az ezen a webhelyen található, harmadik felektől származó cookie-k is</translation>
@@ -433,6 +437,7 @@
 <translation id="8816026460808729765">Az érzékelőkhöz való hozzáférés tiltása a webhelyek számára</translation>
 <translation id="8823559166155093873">Cookie-k tiltása</translation>
 <translation id="8847988622838149491">USB</translation>
+<translation id="8889294078294184559">Böngészési tevékenységei során a webhelyek egyeztethetnek a Chrome-mal, és az előzőleg felkeresett webhely segítségével meggyőződhetnek arról, hogy Ön valószínűleg valódi felhasználó.</translation>
 <translation id="8899807382908246773">Tolakodó hirdetések</translation>
 <translation id="8903921497873541725">Nagyítás</translation>
 <translation id="8921772741368021346"><ph name="POSITION" />/<ph name="DURATION" /></translation>

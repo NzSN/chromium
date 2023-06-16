@@ -175,6 +175,16 @@ void AppBannerManagerAndroid::PerformWorkerCheckForAmbientBadge(
   manager()->GetData(params, std::move(callback));
 }
 
+bool AppBannerManagerAndroid::IsWebAppConsideredInstalled() const {
+  // Also check if a WebAPK is currently being installed. Installation may take
+  // some time, so ensure we don't accidentally allow a new installation whilst
+  // one is in flight for the current site.
+  return WebappsUtils::IsWebApkInstalled(web_contents()->GetBrowserContext(),
+                                         manifest().start_url) ||
+         WebappsClient::Get()->IsInstallationInProgress(web_contents(),
+                                                        manifest_id_);
+}
+
 void AppBannerManagerAndroid::ResetCurrentPageData() {
   AppBannerManager::ResetCurrentPageData();
   native_app_data_.Reset();
@@ -190,9 +200,9 @@ AppBannerManagerAndroid::CreateAddToHomescreenParams(
   if (native_app_data_.is_null()) {
     a2hs_params->app_type = AddToHomescreenParams::AppType::WEBAPK;
     a2hs_params->shortcut_info = ShortcutInfo::CreateShortcutInfo(
-        manifest_url_, manifest(), primary_icon_url_);
+        manifest_url_, manifest(), primary_icon_url_,
+        has_maskable_primary_icon_);
     a2hs_params->install_source = install_source;
-    a2hs_params->has_maskable_primary_icon = has_maskable_primary_icon_;
   } else {
     a2hs_params->app_type = AddToHomescreenParams::AppType::NATIVE;
     a2hs_params->native_app_data = native_app_data_;
@@ -247,13 +257,6 @@ void AppBannerManagerAndroid::OnInstallEvent(
       (a2hs_params.install_source == WebappInstallSource::MENU_BROWSER_TAB ||
        a2hs_params.install_source == WebappInstallSource::MENU_CUSTOM_TAB)) {
     switch (event) {
-      case AddToHomescreenInstaller::Event::INSTALL_STARTED:
-        AppBannerSettingsHelper::RecordBannerEvent(
-            web_contents(), web_contents()->GetVisibleURL(),
-            a2hs_params.shortcut_info->url.spec(),
-            AppBannerSettingsHelper::APP_BANNER_EVENT_DID_ADD_TO_HOMESCREEN,
-            base::Time::Now());
-        break;
       case AddToHomescreenInstaller::Event::INSTALL_REQUEST_FINISHED:
         SendBannerAccepted();
         OnInstall(a2hs_params.shortcut_info->display);
@@ -518,18 +521,6 @@ void AppBannerManagerAndroid::Install(
                                     std::move(a2hs_event_callback));
 }
 
-void AppBannerManagerAndroid::MaybeShowAmbientBadge() {
-  ambient_badge_manager_ = std::make_unique<AmbientBadgeManager>(
-      web_contents(), GetAndroidWeakPtr(),
-      nullptr /* segmentation_platform_service */);
-  ambient_badge_manager_->MaybeShow(
-      validated_url_, GetAppName(),
-      CreateAddToHomescreenParams(InstallableMetrics::GetInstallSource(
-          web_contents(), InstallTrigger::AMBIENT_BADGE)),
-      base::BindOnce(&AppBannerManagerAndroid::ShowBannerFromBadge,
-                     AppBannerManagerAndroid::GetAndroidWeakPtr()));
-}
-
 bool AppBannerManagerAndroid::IsSupportedNonWebAppPlatform(
     const std::u16string& platform) const {
   return base::EqualsASCII(platform, kPlatformPlay);
@@ -547,14 +538,33 @@ bool AppBannerManagerAndroid::IsRelatedNonWebAppInstalled(
   return Java_AppBannerManager_isRelatedNonWebAppInstalled(env, java_id);
 }
 
-bool AppBannerManagerAndroid::IsWebAppConsideredInstalled() const {
-  // Also check if a WebAPK is currently being installed. Installation may take
-  // some time, so ensure we don't accidentally allow a new installation whilst
-  // one is in flight for the current site.
-  return WebappsUtils::IsWebApkInstalled(web_contents()->GetBrowserContext(),
-                                         manifest().start_url) ||
-         WebappsClient::Get()->IsInstallationInProgress(
-             web_contents(), manifest_url_, manifest_id_);
+// TODO(eirage): Implement for Android.
+bool AppBannerManagerAndroid::IsAppFullyInstalledForSiteUrl(
+    const GURL& site_url) const {
+  return false;
+}
+
+bool AppBannerManagerAndroid::IsAppPartiallyInstalledForSiteUrl(
+    const GURL& site_url) const {
+  return false;
+}
+
+void AppBannerManagerAndroid::SaveInstallationDismissedForMl(
+    const GURL& manifest_id) {
+  // TODO(https://crbug.com/1449993): Implement.
+}
+void AppBannerManagerAndroid::SaveInstallationIgnoredForMl(
+    const GURL& manifest_id) {
+  // TODO(https://crbug.com/1449993): Implement.
+}
+void AppBannerManagerAndroid::SaveInstallationAcceptedForMl(
+    const GURL& manifest_id) {
+  // TODO(https://crbug.com/1449993): Implement.
+}
+bool AppBannerManagerAndroid::IsMlPromotionBlockedByHistoryGuardrail(
+    const GURL& manifest_id) {
+  // TODO(https://crbug.com/1449993): Implement.
+  return false;
 }
 
 void AppBannerManagerAndroid::RecordExtraMetricsForInstallEvent(

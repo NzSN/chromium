@@ -49,9 +49,6 @@ const CGFloat kHeaderMenuButtonInsetSides = 2;
 const CGFloat kDiscoverFeedHeaderHeight = 40;
 const CGFloat kCustomSearchEngineLabelHeight = 18;
 // * Values below are exclusive to Web Channels.
-// The width of the segmented control to toggle between feeds.
-// TODO(crbug.com/1277974): See how segments react to longer words.
-const CGFloat kHeaderSegmentWidth = 300;
 // The height and width of the header menu button. Based on the default
 // UISegmentedControl height.
 const CGFloat kButtonSize = 28;
@@ -128,8 +125,12 @@ NSInteger kFeedSymbolPointSize = 17;
 
   // Applies an opacity to the background. If ReduceTransparency is enabled,
   // then this replaces the blur effect.
-  self.view.backgroundColor =
-      [[UIColor colorNamed:kBackgroundColor] colorWithAlphaComponent:0.95];
+  // With the Magic Stack enabled, the background color will
+  // be clear for continuity with the overall NTP gradient view.
+  self.view.backgroundColor = IsMagicStackEnabled()
+                                  ? [UIColor clearColor]
+                                  : [[UIColor colorNamed:kBackgroundColor]
+                                        colorWithAlphaComponent:0.95];
 
   self.container = [[UIView alloc] init];
 
@@ -153,15 +154,10 @@ NSInteger kFeedSymbolPointSize = 17;
     return;
   }
 
-  // Applies blur to header background. Also reduces opacity when blur is
-  // applied so that the blur is still transluscent.
-  // With ContentSuggestionsUIModuleRefresh enabled, the background color will
-  // be clear for continuity with the overall NTP gradient view when not
-  // blurred.
+  // Applies blur to header background.
   if (!animated) {
     self.blurBackgroundView.hidden = !blurred;
-    self.view.backgroundColor = [[UIColor colorNamed:kBackgroundColor]
-        colorWithAlphaComponent:(blurred ? 0.1 : 0.95)];
+    self.view.backgroundColor = [self backgroundColorForBlurredState:blurred];
     return;
   }
   [UIView transitionWithView:self.blurBackgroundView
@@ -173,8 +169,8 @@ NSInteger kFeedSymbolPointSize = 17;
       completion:^(BOOL finished) {
         // Only reduce opacity after the animation is complete to avoid showing
         // content suggestions tiles momentarily.
-        self.view.backgroundColor = [[UIColor colorNamed:kBackgroundColor]
-            colorWithAlphaComponent:(blurred ? 0.1 : 0.95)];
+        self.view.backgroundColor =
+            [self backgroundColorForBlurredState:blurred];
       }];
 }
 
@@ -596,8 +592,6 @@ NSInteger kFeedSymbolPointSize = 17;
     [self.segmentedControl.leadingAnchor
         constraintEqualToAnchor:self.sortButton.trailingAnchor
                        constant:kButtonHorizontalMargin],
-    [self.segmentedControl.widthAnchor
-        constraintLessThanOrEqualToConstant:kHeaderSegmentWidth],
   ]];
 
   // Set Following segment dot size.
@@ -767,6 +761,21 @@ NSInteger kFeedSymbolPointSize = 17;
   }
 
   return feedHeaderTitleText;
+}
+
+// Returns the background color for this view.
+// Applies an opacity to the background. If ReduceTransparency is enabled,
+// then this replaces the blur effect.
+// With the Magic Stack enabled, the background color will
+// be clear for continuity with the overall NTP gradient view.
+- (UIColor*)backgroundColorForBlurredState:(BOOL)blurred {
+  if (blurred) {
+    return [[UIColor colorNamed:kBackgroundColor] colorWithAlphaComponent:0.1];
+  } else if (IsMagicStackEnabled()) {
+    return [UIColor clearColor];
+  } else {
+    return [[UIColor colorNamed:kBackgroundColor] colorWithAlphaComponent:0.95];
+  }
 }
 
 @end

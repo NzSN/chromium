@@ -7,8 +7,8 @@
 #import "base/check_op.h"
 #import "ios/chrome/browser/sessions/ios_chrome_session_tab_helper.h"
 #import "ios/chrome/browser/shared/model/browser_state/chrome_browser_state.h"
+#import "ios/chrome/browser/shared/model/web_state_list/web_state_list.h"
 #import "ios/chrome/browser/sync/ios_chrome_synced_tab_delegate.h"
-#import "ios/chrome/browser/web_state_list/web_state_list.h"
 #import "ios/web/public/navigation/navigation_manager.h"
 
 #if !defined(__has_feature) || !__has_feature(objc_arc)
@@ -85,6 +85,23 @@ sync_sessions::SyncedTabDelegate* SyncedWindowDelegateBrowserAgent::GetTabAt(
       web_state_list_->GetWebStateAt(index));
 }
 
+#pragma mark - WebStateListObserver
+
+void SyncedWindowDelegateBrowserAgent::WebStateListChanged(
+    WebStateList* web_state_list,
+    const WebStateListChange& change,
+    const WebStateSelection& selection) {
+  DCHECK_EQ(web_state_list_, web_state_list);
+  switch (change.type()) {
+    case WebStateListChange::Type::kReplace: {
+      const WebStateListChangeReplace& replace_change =
+          change.As<WebStateListChangeReplace>();
+      SetWindowIdForWebState(replace_change.inserted_web_state());
+      break;
+    }
+  }
+}
+
 void SyncedWindowDelegateBrowserAgent::WebStateInsertedAt(
     WebStateList* web_state_list,
     web::WebState* web_state,
@@ -92,15 +109,6 @@ void SyncedWindowDelegateBrowserAgent::WebStateInsertedAt(
     bool activating) {
   DCHECK_EQ(web_state_list_, web_state_list);
   SetWindowIdForWebState(web_state);
-}
-
-void SyncedWindowDelegateBrowserAgent::WebStateReplacedAt(
-    WebStateList* web_state_list,
-    web::WebState* old_web_state,
-    web::WebState* new_web_state,
-    int index) {
-  DCHECK_EQ(web_state_list_, web_state_list);
-  SetWindowIdForWebState(new_web_state);
 }
 
 void SyncedWindowDelegateBrowserAgent::SetWindowIdForWebState(

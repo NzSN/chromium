@@ -11,18 +11,19 @@
 #import "base/time/time.h"
 #import "components/favicon/ios/web_favicon_driver.h"
 #import "components/previous_session_info/previous_session_info.h"
-#import "ios/chrome/browser/main/browser.h"
 #import "ios/chrome/browser/sessions/session_ios.h"
 #import "ios/chrome/browser/sessions/session_ios_factory.h"
 #import "ios/chrome/browser/sessions/session_restoration_observer.h"
 #import "ios/chrome/browser/sessions/session_service_ios.h"
 #import "ios/chrome/browser/sessions/session_window_ios.h"
+#import "ios/chrome/browser/shared/model/browser/browser.h"
 #import "ios/chrome/browser/shared/model/browser_state/chrome_browser_state.h"
-#import "ios/chrome/browser/url/chrome_url_constants.h"
+#import "ios/chrome/browser/shared/model/url/chrome_url_constants.h"
+#import "ios/chrome/browser/shared/model/web_state_list/all_web_state_observation_forwarder.h"
+#import "ios/chrome/browser/shared/model/web_state_list/web_state_list.h"
+#import "ios/chrome/browser/web/features.h"
 #import "ios/chrome/browser/web/page_placeholder_tab_helper.h"
 #import "ios/chrome/browser/web/session_state/web_session_state_tab_helper.h"
-#import "ios/chrome/browser/web_state_list/all_web_state_observation_forwarder.h"
-#import "ios/chrome/browser/web_state_list/web_state_list.h"
 #import "ios/chrome/browser/web_state_list/web_state_list_serialization.h"
 #import "ios/chrome/browser/web_state_list/web_usage_enabler/web_usage_enabler_browser_agent.h"
 #import "ios/web/public/navigation/navigation_item.h"
@@ -260,10 +261,12 @@ void SessionRestorationBrowserAgent::SaveSession(bool immediately) {
                       directory:browser_state_->GetStatePath()
                     immediately:immediately];
 
-  for (int i = 0; i < web_state_list_->count(); ++i) {
-    web::WebState* web_state = web_state_list_->GetWebStateAt(i);
-    WebSessionStateTabHelper::FromWebState(web_state)
-        ->SaveSessionStateIfStale();
+  if (web::UseNativeSessionRestorationCache()) {
+    for (int i = 0; i < web_state_list_->count(); ++i) {
+      web::WebState* web_state = web_state_list_->GetWebStateAt(i);
+      WebSessionStateTabHelper::FromWebState(web_state)
+          ->SaveSessionStateIfStale();
+    }
   }
 }
 
@@ -308,7 +311,8 @@ bool SessionRestorationBrowserAgent::CanSaveSession() {
   return true;
 }
 
-// Browser Observer methods:
+#pragma mark - BrowserObserver
+
 void SessionRestorationBrowserAgent::BrowserDestroyed(Browser* browser) {
   DCHECK_EQ(browser->GetWebStateList(), web_state_list_);
   // Stop observing web states.
@@ -318,7 +322,8 @@ void SessionRestorationBrowserAgent::BrowserDestroyed(Browser* browser) {
   browser->RemoveObserver(this);
 }
 
-// WebStateList Observer methods:
+#pragma mark - WebStateListObserver
+
 void SessionRestorationBrowserAgent::WebStateActivatedAt(
     WebStateList* web_state_list,
     web::WebState* old_web_state,
@@ -331,6 +336,25 @@ void SessionRestorationBrowserAgent::WebStateActivatedAt(
   // Persist the session state if the new web state is not loading (or if
   // the last tab was closed).
   SaveSession(/*immediately=*/false);
+}
+
+void SessionRestorationBrowserAgent::WebStateListChanged(
+    WebStateList* web_state_list,
+    const WebStateListChange& change,
+    const WebStateSelection& selection) {
+  switch (change.type()) {
+    case WebStateListChange::Type::kReplace: {
+      const WebStateListChangeReplace& replace_change =
+          change.As<WebStateListChangeReplace>();
+      if (replace_change.inserted_web_state()->IsLoading()) {
+        return;
+      }
+
+      // Persist the session state if the new web state is not loading.
+      SaveSession(/*immediately=*/false);
+      break;
+    }
+  }
 }
 
 void SessionRestorationBrowserAgent::WillDetachWebStateAt(
@@ -363,18 +387,6 @@ void SessionRestorationBrowserAgent::WebStateInsertedAt(
     int index,
     bool activating) {
   if (activating || web_state->IsLoading())
-    return;
-
-  // Persist the session state if the new web state is not loading.
-  SaveSession(/*immediately=*/false);
-}
-
-void SessionRestorationBrowserAgent::WebStateReplacedAt(
-    WebStateList* web_state_list,
-    web::WebState* old_web_state,
-    web::WebState* new_web_state,
-    int index) {
-  if (new_web_state->IsLoading())
     return;
 
   // Persist the session state if the new web state is not loading.

@@ -15,6 +15,7 @@
 #include "base/trace_event/traced_value.h"
 #include "cc/cc_export.h"
 #include "cc/metrics/frame_info.h"
+#include "components/viz/common/frame_sinks/begin_frame_args.h"
 
 namespace viz {
 struct BeginFrameArgs;
@@ -85,18 +86,6 @@ class CC_EXPORT FrameSequenceMetrics {
         const ThroughputData& main,
         FrameInfo::SmoothEffectDrivingThread effective_thred);
 
-    static bool CanReportHistogram(
-        FrameSequenceMetrics* metrics,
-        FrameInfo::SmoothEffectDrivingThread thread_type,
-        const ThroughputData& data);
-
-    // Returns the missed deadline throughput in percent
-    static int ReportMissedDeadlineFramePercentHistogram(
-        FrameSequenceMetrics* metrics,
-        FrameInfo::SmoothEffectDrivingThread thread_type,
-        int metric_index,
-        const ThroughputData& data);
-
     static void ReportCheckerboardingHistogram(
         FrameSequenceMetrics* metrics,
         FrameInfo::SmoothEffectDrivingThread thread_type,
@@ -105,14 +94,6 @@ class CC_EXPORT FrameSequenceMetrics {
     void Merge(const ThroughputData& data) {
       frames_expected += data.frames_expected;
       frames_produced += data.frames_produced;
-      frames_ontime += data.frames_ontime;
-    }
-
-    int MissedDeadlineFramePercent() const {
-      if (frames_produced == 0)
-        return 0;
-      return std::ceil(100 * (frames_produced - frames_ontime) /
-                       static_cast<double>(frames_produced));
     }
 
     // Tracks the number of frames that were expected to be shown during this
@@ -122,10 +103,6 @@ class CC_EXPORT FrameSequenceMetrics {
     // Tracks the number of frames that were actually presented to the user
     // during this frame-sequence.
     uint32_t frames_produced = 0;
-
-    // Tracks the number of frames that were actually presented to the user
-    // that didn't miss the vsync deadline during this frame-sequence.
-    uint32_t frames_ontime = 0;
   };
 
   void SetScrollingThread(FrameInfo::SmoothEffectDrivingThread thread);
@@ -183,6 +160,8 @@ class CC_EXPORT FrameSequenceMetrics {
       base::TimeDelta frame_interval);
 
  private:
+  void CalculateCheckerboardingV3(const FrameInfo& frame_info);
+
   const FrameSequenceTrackerType type_;
 
   // Tracks some data to generate useful trace events.
@@ -205,6 +184,9 @@ class CC_EXPORT FrameSequenceMetrics {
   struct {
     uint32_t frames_expected = 0;
     uint32_t frames_dropped = 0;
+    uint32_t frames_missing_content = 0;
+    viz::BeginFrameArgs last_begin_frame_args;
+    FrameInfo last_presented_frame;
   } v3_;
 
   ThroughputData impl_throughput_;

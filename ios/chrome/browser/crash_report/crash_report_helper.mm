@@ -21,9 +21,9 @@
 #import "ios/chrome/browser/crash_report/crash_report_user_application_state.h"
 #import "ios/chrome/browser/crash_report/crash_reporter_url_observer.h"
 #import "ios/chrome/browser/paths/paths.h"
-#import "ios/chrome/browser/web_state_list/all_web_state_observation_forwarder.h"
-#import "ios/chrome/browser/web_state_list/web_state_list.h"
-#import "ios/chrome/browser/web_state_list/web_state_list_observer_bridge.h"
+#import "ios/chrome/browser/shared/model/web_state_list/all_web_state_observation_forwarder.h"
+#import "ios/chrome/browser/shared/model/web_state_list/web_state_list.h"
+#import "ios/chrome/browser/shared/model/web_state_list/web_state_list_observer_bridge.h"
 #import "ios/web/public/navigation/navigation_context.h"
 #import "ios/web/public/thread/web_thread.h"
 #import "ios/web/public/web_state.h"
@@ -160,17 +160,24 @@ const NSString* kDocumentMimeType = @"application/pdf";
 
 #pragma mark - WebStateListObserving protocol
 
+- (void)didChangeWebStateList:(WebStateList*)webStateList
+                       change:(const WebStateListChange&)change
+                    selection:(const WebStateSelection&)selection {
+  switch (change.type()) {
+    case WebStateListChange::Type::kReplace: {
+      const WebStateListChangeReplace& replaceChange =
+          change.As<WebStateListChangeReplace>();
+      [self removeTabId:replaceChange.replaced_web_state()
+                            ->GetStableIdentifier()];
+      break;
+    }
+  }
+}
+
 - (void)webStateList:(WebStateList*)webStateList
     didDetachWebState:(web::WebState*)webState
               atIndex:(int)atIndex {
   [self removeTabId:webState->GetStableIdentifier()];
-}
-
-- (void)webStateList:(WebStateList*)webStateList
-    didReplaceWebState:(web::WebState*)oldWebState
-          withWebState:(web::WebState*)newWebState
-               atIndex:(int)atIndex {
-  [self removeTabId:oldWebState->GetStableIdentifier()];
 }
 
 #pragma mark - CRWWebStateObserver protocol

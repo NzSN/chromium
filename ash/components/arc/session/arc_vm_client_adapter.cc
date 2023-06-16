@@ -301,10 +301,6 @@ vm_tools::concierge::StartArcVmRequest CreateStartArcVmRequest(
   // Request guest memory locking, if configured.
   request.set_lock_guest_memory(base::FeatureList::IsEnabled(kLockGuestMemory));
 
-  // Add update_o4c_list_via_a2c2.
-  request.set_update_o4c_list_via_a2c2(
-      base::FeatureList::IsEnabled(kArcUpdateO4CListViaA2C2));
-
   // Controls whether WebView Zygote is lazily initialized in ARC.
   request.set_enable_web_view_zygote_lazy_init(
       base::FeatureList::IsEnabled(arc::kEnableLazyWebViewInit));
@@ -379,12 +375,14 @@ vm_tools::concierge::StartArcVmRequest CreateStartArcVmRequest(
     request.set_mglru_reclaim_swappiness(0);
   }
 
-  request.set_enable_consumer_auto_update_toggle(base::FeatureList::IsEnabled(
-      ash::features::kConsumerAutoUpdateToggleAllowed));
   if (base::FeatureList::IsEnabled(kVmMemoryPSIReports))
     request.set_vm_memory_psi_period(kVmMemoryPSIReportsPeriod.Get());
   else
     request.set_vm_memory_psi_period(-1);
+
+  request.set_enable_vmm_swap(
+      base::FeatureList::IsEnabled(kVmmSwapPolicy) ||
+      base::FeatureList::IsEnabled(kVmmSwapKeyboardShortcut));
 
   auto orientation = display::PanelOrientation::kNormal;
   if (auto* screen = display::Screen::GetScreen()) {

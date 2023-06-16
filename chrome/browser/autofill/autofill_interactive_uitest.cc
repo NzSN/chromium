@@ -160,50 +160,8 @@ static const char kTestShippingFormString[] = R"(
 // <select>.
 std::string GenerateTestShippingFormWithSelectMenu() {
   std::string out = kTestShippingFormString;
-
-  // Remove everything inside <select></select> tags including the tags.
-  std::string kSelectOpenTag("<select");
-  std::string kSelectCloseTag("</select>");
-  size_t open_tag_index = out.find(kSelectOpenTag);
-  while (open_tag_index != std::string::npos) {
-    size_t end_tag_index = out.find(kSelectCloseTag, open_tag_index);
-    if (end_tag_index == std::string::npos) {
-      return "";
-    }
-    out = out.substr(0u, open_tag_index) +
-          out.substr(end_tag_index + kSelectCloseTag.length());
-    open_tag_index = out.find(kSelectOpenTag, open_tag_index);
-  }
-
-  std::string kFormCloseTag("</form>");
-  size_t form_end_tag_index = out.find(kFormCloseTag);
-
-  // TODO(crbug.com/1422650): Remove "autocomplete" attributes once they are no
-  // longer necessary.
-  // TODO(crbug.com/1422370): Remove <button> inside <selectmenu> once button
-  // slot is focused by default.
-  std::string form_suffix = R"(
-   <selectmenu id="state" tabindex="0" autocomplete="address-level1">
-     <button type="button" slot="button" behavior="button"
-             id="selectmenu-button-state">
-       Button
-     </button>
-     <option value="" selected="yes">--</option>
-     <option value="CA">California</option>
-     <option value="TX">Texas</option>
-   </selectmenu><br>
-   <selectmenu id="country" tabindex="1" autocomplete="country">
-     <button type="button" slot="button" behavior="button"
-             id="selectmenu-button-country">
-       Button
-     </button>
-     <option value="" selected="yes">--</option>
-     <option value="CA">Canada</option>
-     <option value="US">United States</option>
-   </selectmenu><br>
-  )";
-
-  return out.insert(form_end_tag_index, form_suffix);
+  RE2::GlobalReplace(&out, "<(/?)select", "<\\1selectmenu");
+  return out;
 }
 
 // Searches all frames of the primary page in |web_contents| and returns one
@@ -260,8 +218,9 @@ std::vector<FieldValue> GetFieldValues(
   std::vector<FieldValue> fields;
 
   for (const base::Value& field : r.value.GetList()) {
-    fields.push_back({.id = *field.FindStringKey("id"),
-                      .value = *field.FindStringKey("value")});
+    const auto& field_dict = field.GetDict();
+    fields.push_back({.id = *field_dict.FindString("id"),
+                      .value = *field_dict.FindString("value")});
   }
   return fields;
 }
@@ -348,21 +307,6 @@ bool IsFocusedField(const ElementExpr& e,
       return r;
   }
   return TriggerAndWaitForEvent(e, "focus", execution_target);
-}
-
-[[nodiscard]] AssertionResult FocusSelectOrSelectMenu(
-    const std::string& id,
-    bool is_selectmenu,
-    content::ToRenderFrameHost execution_target) {
-  // TODO(crbug.com/1422370): Focus <selectmenu> instead of button slot in
-  // <selectmenu> once button slot is focused by default when <selectmenu> is
-  // focused.
-  std::string dom_id_to_focus = id;
-  if (is_selectmenu) {
-    dom_id_to_focus = "selectmenu-button-" + id;
-  }
-
-  return FocusField(GetElementById(dom_id_to_focus), execution_target);
 }
 
 // Types the characters of `value` after focusing field `e`.
@@ -1020,18 +964,6 @@ class AutofillInteractiveTestBase : public AutofillUiTest {
     return GetFieldValues(ElementExpr(*form + ".elements"), GetWebContents());
   }
 
-  std::vector<FieldValue> GetFormValuesIgnoringSelectMenuButtonSlot(
-      const ElementExpr& form = GetElementById("shipping")) {
-    std::vector<FieldValue> values = GetFormValues(form);
-    std::vector<FieldValue> out;
-    for (const FieldValue& value : values) {
-      if (!base::StartsWith(value.id, "selectmenu-button")) {
-        out.push_back(value);
-      }
-    }
-    return out;
-  }
-
   base::RepeatingClosure ExpectValues(
       const std::vector<FieldValue>& expected_values,
       const ElementExpr& form = GetElementById("shipping")) {
@@ -1454,10 +1386,6 @@ class AutofillInteractiveDisableAutofillSelectMenuTest
 // feature is disabled.
 IN_PROC_BROWSER_TEST_F(AutofillInteractiveDisableAutofillSelectMenuTest,
                        DisableSelectMenuAutofilling) {
-  // TODO(crbug.com/1422650): Remove "autocomplete" attribute once it is no
-  // longer necessary.
-  // TODO(crbug.com/1422370): Remove <button> inside <selectmenu> once button
-  // slot is focused by default.
   const char kFormWithSelectMenuString[] = R"(
     <!-- Disable extra network request for /favicon.ico -->
     <link rel="icon" href="data:,">
@@ -1465,11 +1393,7 @@ IN_PROC_BROWSER_TEST_F(AutofillInteractiveDisableAutofillSelectMenuTest,
       <label for="firstname">First name:</label>
       <input type="text" id="firstname" autocomplete="given-name"><br>
       <label for="state">State:</label>
-      <selectmenu id="state" tabindex="0" autocomplete="address-level1">
-        <button type="button" slot="button" behavior="button"
-                id="selectmenu-button-state">
-          Button
-        </button>
+      <selectmenu id="state" autocomplete="address-level1">
         <option value="" selected="yes">--</option>
         <option value="CA">California</option>
         <option value="TX">Texas</option>
@@ -1482,7 +1406,7 @@ IN_PROC_BROWSER_TEST_F(AutofillInteractiveDisableAutofillSelectMenuTest,
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), GetTestUrl()));
 
   ASSERT_TRUE(AutofillFlow(GetElementById("firstname"), this));
-  EXPECT_THAT(GetFormValuesIgnoringSelectMenuButtonSlot(),
+  EXPECT_THAT(GetFormValues(),
               ValuesAre({{"firstname", kDefaultAddressValues.first_name},
                          {"state", ""}}));
 }
@@ -1589,13 +1513,12 @@ void DoModifySelectFieldAndFill(AutofillInteractiveTest* test,
       ui_test_utils::NavigateToURL(test->browser(), test->GetTestUrl()));
 
   // Modify a field.
-  ASSERT_TRUE(FocusSelectOrSelectMenu("state", should_test_selectmenu,
-                                      test->GetWebContents()));
+  ASSERT_TRUE(FocusField(GetElementById("state"), test->GetWebContents()));
   ASSERT_NE(kDefaultAddressValues.state_short, base::StringPiece("CA"));
   test->FillElementWithValue("state", "CA");
 
   ASSERT_TRUE(AutofillFlow(GetElementById("firstname"), test));
-  EXPECT_THAT(test->GetFormValuesIgnoringSelectMenuButtonSlot(),
+  EXPECT_THAT(test->GetFormValues(),
               ValuesAre(MergeValue(kDefaultAddress, {"state", "CA"})));
 }
 
@@ -1952,15 +1875,15 @@ IN_PROC_BROWSER_TEST_F(
   SetTestUrlResponse(kTestForm);
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), GetTestUrl()));
 
-  ASSERT_TRUE(content::ExecuteScript(
+  ASSERT_TRUE(content::ExecJs(
       GetWebContents(),
       "document.getElementById('firstname').type = 'password';"));
   // At this point, the IsPasswordFieldForAutofill() function returns true and
   // will continue to return true for the field, even when the type is changed
   // back to 'search'.
-  ASSERT_TRUE(content::ExecuteScript(
-      GetWebContents(),
-      "document.getElementById('firstname').type = 'search';"));
+  ASSERT_TRUE(
+      content::ExecJs(GetWebContents(),
+                      "document.getElementById('firstname').type = 'search';"));
 
   // Regression test for crbug.com/918351 whether the datalist becomes available
   // again.
@@ -2307,7 +2230,7 @@ IN_PROC_BROWSER_TEST_F(AutofillInteractiveTest, DynamicFormFill) {
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), GetTestUrl()));
 
   // Dynamically construct the form.
-  ASSERT_TRUE(content::ExecuteScript(GetWebContents(), "BuildForm();"));
+  ASSERT_TRUE(content::ExecJs(GetWebContents(), "BuildForm();"));
 
   ASSERT_TRUE(AutofillFlow(GetElementById("firstname"), this,
                            {.show_method = ShowMethod::ByChar('M'),
@@ -2655,8 +2578,8 @@ IN_PROC_BROWSER_TEST_F(AutofillInteractiveTest, FormFillableOnReset) {
   ASSERT_TRUE(ui_test_utils::NavigateToURL(browser(), url));
   ASSERT_TRUE(AutofillFlow(GetElementById("NAME_FIRST"), this));
 
-  ASSERT_TRUE(content::ExecuteScript(
-      GetWebContents(), "document.getElementById('testform').reset()"));
+  ASSERT_TRUE(content::ExecJs(GetWebContents(),
+                              "document.getElementById('testform').reset()"));
 
   ASSERT_TRUE(AutofillFlow(GetElementById("NAME_FIRST"), this));
 
@@ -2755,8 +2678,8 @@ IN_PROC_BROWSER_TEST_F(AutofillInteractiveTest,
 
   content::LoadStopObserver load_stop_observer(GetWebContents());
 
-  ASSERT_TRUE(content::ExecuteScript(
-      GetWebContents(), "document.getElementById('testform').submit();"));
+  ASSERT_TRUE(content::ExecJs(GetWebContents(),
+                              "document.getElementById('testform').submit();"));
   // This will ensure the test didn't hang.
   load_stop_observer.Wait();
 }
@@ -2772,7 +2695,7 @@ IN_PROC_BROWSER_TEST_F(AutofillInteractiveTest,
 
   // When suggestions are shown, disable autocomplete for the active field.
   auto SetAutocompleteOff = [this]() {
-    ASSERT_TRUE(content::ExecuteScript(
+    ASSERT_TRUE(content::ExecJs(
         GetWebContents(),
         "document.querySelector('input').autocomplete = 'off';"));
   };
@@ -3167,7 +3090,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveFencedFrameTest,
 
   // We need the fencedframe element to have id set to a known value
   if (GetParam() != FrameType::kIFrame) {
-    ASSERT_TRUE(content::ExecuteScript(
+    ASSERT_TRUE(content::ExecJs(
         GetWebContents(),
         "document.getElementsByTagName('fencedframe')[0].id = 'crossFF';"));
   }
@@ -3192,7 +3115,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveFencedFrameTest,
   std::string script_delete = base::StringPrintf(
       "document.body.removeChild(document.getElementById('%s'))",
       GetParam() == FrameType::kIFrame ? "crossFrame" : "crossFF");
-  ASSERT_TRUE(content::ExecuteScript(GetWebContents(), script_delete));
+  ASSERT_TRUE(content::ExecJs(GetWebContents(), script_delete));
 
   // The popup should have disappeared with the iframe.
   EXPECT_FALSE(IsPopupShown());
@@ -3213,23 +3136,8 @@ INSTANTIATE_TEST_SUITE_P(AutofillInteractiveTest,
 //   natural delay between fill and refill;
 // - advance by a delta greater than `kLimitBeforeRefill` to simulate that an
 //   event happens too late to actually trigger a refill.
-//
-// The boolean parameter controls whether or not
-// features::kAutofillAcrossIframes is enabled.
-class AutofillInteractiveTestDynamicForm
-    : public AutofillInteractiveTestBase,
-      public testing::WithParamInterface<bool> {
+class AutofillInteractiveTestDynamicForm : public AutofillInteractiveTestBase {
  public:
-  AutofillInteractiveTestDynamicForm() {
-    scoped_feature_list_.InitWithFeatureState(features::kAutofillAcrossIframes,
-                                              GetParam());
-  }
-  AutofillInteractiveTestDynamicForm(
-      const AutofillInteractiveTestDynamicForm&) = delete;
-  AutofillInteractiveTestDynamicForm& operator=(
-      const AutofillInteractiveTestDynamicForm&) = delete;
-  ~AutofillInteractiveTestDynamicForm() override = default;
-
   ValueWaiter ListenForRefill(
       const std::string& id,
       absl::optional<std::string> unblock_variable = "refill") {
@@ -3247,19 +3155,13 @@ class AutofillInteractiveTestDynamicForm
   }
 
  protected:
-  base::test::ScopedFeatureList scoped_feature_list_;
-
   TestAutofillClock clock_{AutofillClock::Now()};
   TestAutofillTickClock tick_clock_{AutofillTickClock::NowTicks()};
 };
 
-INSTANTIATE_TEST_SUITE_P(AutofillInteractiveTest,
-                         AutofillInteractiveTestDynamicForm,
-                         testing::Bool());
-
 // Test that we can Autofill dynamically generated forms.
 // TODO(https://crbug.com/1297560): Check back if flakiness is fixed now.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicChangingFormFill) {
   CreateTestProfile();
   GURL url =
@@ -3282,7 +3184,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 }
 
 // TODO(https://crbug.com/1297560): Check back if flakiness is fixed now.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        TwoDynamicChangingFormsFill) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL("a.com",
@@ -3319,7 +3221,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 }
 
 // Test that forms that dynamically change a second time do not get filled.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicChangingFormFill_SecondChange) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3342,7 +3244,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 }
 
 // Test that forms that dynamically change after a second do not get filled.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicChangingFormFill_AfterDelay) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3366,7 +3268,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 
 // Test that only field of a type group that was filled initially get refilled.
 // TODO(https://crbug.com/1297560): Check back if flakiness is fixed now.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicChangingFormFill_AddsNewFieldTypeGroups) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3396,7 +3298,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 
 // Test that we can autofill forms that dynamically change select fields to text
 // fields by changing the visibilities.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicFormFill_SelectToText) {
   CreateTestProfile();
 
@@ -3422,7 +3324,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 // Test that we can autofill forms that dynamically change the visibility of a
 // field after it's autofilled.
 // TODO(https://crbug.com/1297560): Check back if flakiness is fixed now.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicFormFill_VisibilitySwitch) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3448,7 +3350,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 
 // Test that we can autofill forms that dynamically change the element that
 // has been clicked on.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicFormFill_FirstElementDisappears) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3472,7 +3374,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 // Test that we can autofill forms that dynamically change the element that
 // has been clicked on, even though the form has no name.
 // TODO(https://crbug.com/1297560): Check back if flakiness is fixed now.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicFormFill_FirstElementDisappearsNoNameForm) {
   CreateTestProfile();
 
@@ -3497,7 +3399,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 // Test that we can autofill forms that dynamically change the element that
 // has been clicked on, even though there are multiple forms with identical
 // names.
-IN_PROC_BROWSER_TEST_P(
+IN_PROC_BROWSER_TEST_F(
     AutofillInteractiveTestDynamicForm,
     DynamicFormFill_FirstElementDisappearsMultipleBadNameForms) {
   CreateTestProfile();
@@ -3525,7 +3427,7 @@ IN_PROC_BROWSER_TEST_P(
 // Test that we can autofill forms that dynamically change the element that
 // has been clicked on, even though there are multiple forms with identical
 // names.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicFormFill_FirstElementDisappearsBadnameUnowned) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3551,7 +3453,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 // Test that we can autofill forms that dynamically change the element that
 // has been clicked on, even though there are multiple forms with no name.
 // TODO(https://crbug.com/1297560): Check back if flakiness is fixed now.
-IN_PROC_BROWSER_TEST_P(
+IN_PROC_BROWSER_TEST_F(
     AutofillInteractiveTestDynamicForm,
     DynamicFormFill_FirstElementDisappearsMultipleNoNameForms) {
   CreateTestProfile();
@@ -3578,7 +3480,7 @@ IN_PROC_BROWSER_TEST_P(
 
 // Test that we can autofill forms that dynamically change the element that
 // has been clicked on, even though the elements are unowned.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicFormFill_FirstElementDisappearsUnowned) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3600,7 +3502,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 }
 
 // Test that credit card fields are re-filled.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicChangingFormFill_AlsoForCreditCard) {
   CreateTestCreditCart();
   GURL url = https_server()->GetURL("a.com",
@@ -3622,7 +3524,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 
 // Test that we can Autofill dynamically changing selects that have options
 // added and removed.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicChangingFormFill_SelectUpdated) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3646,7 +3548,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 
 // Test that we can Autofill dynamically changing selects that have options
 // added and removed only once.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicChangingFormFill_DoubleSelectUpdated) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3674,7 +3576,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 
 // Test that we can Autofill dynamically generated forms with no name if the
 // NameForAutofill of the first field matches.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicChangingFormFill_FormWithoutName) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3700,7 +3602,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 // added and removed for forms with no names if the NameForAutofill of the first
 // field matches.
 // TODO(https://crbug.com/1297560): Check back if flakiness is fixed now.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicChangingFormFill_SelectUpdated_FormWithoutName) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3726,7 +3628,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 // Test that we can Autofill dynamically generated synthetic forms if the
 // NameForAutofill of the first field matches.
 // TODO(https://crbug.com/1297560): Check back if flakiness is fixed now.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicChangingFormFill_SyntheticForm) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3752,7 +3654,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 // Test that we can Autofill dynamically synthetic forms when the select options
 // change if the NameForAutofill of the first field matches
 // TODO(https://crbug.com/1297560): Check back if flakiness is fixed now.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        DynamicChangingFormFill_SelectUpdated_SyntheticForm) {
   CreateTestProfile();
   GURL url = embedded_test_server()->GetURL(
@@ -3786,7 +3688,7 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
 //    09 / 99 instead.
 // 4) The promise waits to see 09 / 99 and resolved.
 // Flaky on Win https://crbug.com/1337757.
-IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
+IN_PROC_BROWSER_TEST_F(AutofillInteractiveTestDynamicForm,
                        FillCardOnReformattingForm) {
   CreateTestCreditCart();
   GURL url = https_server()->GetURL(
@@ -3806,8 +3708,8 @@ IN_PROC_BROWSER_TEST_P(AutofillInteractiveTestDynamicForm,
   // the browser by a lot.
   AdvanceClock(base::Minutes(10));
   content::LoadStopObserver load_stop_observer(GetWebContents());
-  ASSERT_TRUE(content::ExecuteScript(
-      GetWebContents(), "document.getElementById('testform').submit();"));
+  ASSERT_TRUE(content::ExecJs(GetWebContents(),
+                              "document.getElementById('testform').submit();"));
   load_stop_observer.Wait();
 
   // Short hand for ExpectbucketCount:

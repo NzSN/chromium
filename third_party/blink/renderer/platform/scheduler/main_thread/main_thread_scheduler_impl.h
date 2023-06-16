@@ -100,6 +100,10 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
     // A frame has not been produced after a certain threshold, so prioritize
     // the next frame (but don't block input).
     kRenderingStarved,
+    // The total duration of render blocking tasks since the last frame exceeds
+    // a certain threshold, so prioritize the next frame (matching
+    // render-blocking priority).
+    kRenderingStarvedByRenderBlocking,
     // The user is waiting for the result of a discrete input event, e.g. clicks
     // or typing. The next frame is prioritized at highest priority (matching
     // input).
@@ -312,12 +316,17 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
   virtual void OnMainFramePaint();
 
   void OnShutdownTaskQueue(const scoped_refptr<MainThreadTaskQueue>& queue);
+  void OnDetachTaskQueue(MainThreadTaskQueue&);
 
+  // TODO(crbug.com/1143007): Pass `queue` by reference now that the queue is
+  // guaranteed to be alive.
   void OnTaskStarted(
       MainThreadTaskQueue* queue,
       const base::sequence_manager::Task& task,
       const base::sequence_manager::TaskQueue::TaskTiming& task_timing);
 
+  // TODO(crbug.com/1143007): Pass `queue` by reference now that the queue is
+  // guaranteed to be alive.
   void OnTaskCompleted(
       base::WeakPtr<MainThreadTaskQueue> queue,
       const base::sequence_manager::Task& task,
@@ -543,6 +552,10 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
   void WriteIntoTraceLocked(perfetto::TracedValue context,
                             base::TimeTicks optional_now) const;
   void CreateTraceEventObjectSnapshotLocked() const;
+
+  // Shuts down empty detached task queues, which are being kept alive to run
+  // pending tasks.
+  void ShutdownEmptyDetachedTaskQueues();
 
   static bool ShouldPrioritizeInputEvent(const WebInputEvent& web_input_event);
 
@@ -818,6 +831,9 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
     // used by the kPrioritizeCompositingAfterInput experiment to determine if
     // the next frame should be prioritized.
     bool is_current_task_discrete_input = false;
+    // Cumulative non-continuous time spent running render-blocking tasks since
+    // the last frame.
+    base::TimeDelta rendering_blocking_duration_since_last_frame;
 
     WTF::Vector<AgentGroupSchedulerScope> agent_group_scheduler_scope_stack;
 
@@ -826,6 +842,9 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
     std::unique_ptr<TaskAttributionTracker> task_attribution_tracker;
     Persistent<HeapHashSet<WeakMember<AgentGroupSchedulerImpl>>>
         agent_group_schedulers;
+    // Task queues that have been detached from their scheduler and may have
+    // pending tasks that need to run.
+    WTF::HashSet<scoped_refptr<MainThreadTaskQueue>> detached_task_queues;
   };
 
   struct AnyThread {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import {PrivacyHubBrowserProxyImpl} from 'chrome://os-settings/chromeos/lazy_load.js';
-import {PeripheralDataAccessBrowserProxyImpl, Router, routes, SecureDnsMode} from 'chrome://os-settings/chromeos/os_settings.js';
+import {PrivacyHubBrowserProxyImpl} from 'chrome://os-settings/lazy_load.js';
+import {PeripheralDataAccessBrowserProxyImpl, Router, routes, SecureDnsMode} from 'chrome://os-settings/os_settings.js';
 import {assert} from 'chrome://resources/ash/common/assert.js';
 import {loadTimeData} from 'chrome://resources/ash/common/load_time_data.m.js';
 import {getDeepActiveElement} from 'chrome://resources/ash/common/util.js';
@@ -314,15 +314,6 @@ suite('PrivacyPageTests', function() {
 
     assertEquals(Router.getInstance().currentRoute, routes.FINGERPRINT);
     assertTrue(privacyPage.showPasswordPromptDialog_);
-  });
-
-  test('Refresh token when authentication token invalid', async () => {
-    privacyPage.setProperties({setModes_: () => {}});
-    flush();
-
-    privacyPage.dispatchEvent(new CustomEvent('auth-token-invalid'));
-
-    assertEquals(privacyPage.setModes_, undefined);
   });
 
   test('Smart privacy hidden when both features disabled', async () => {

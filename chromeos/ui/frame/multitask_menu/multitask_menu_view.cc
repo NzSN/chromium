@@ -11,6 +11,7 @@
 #include "base/memory/raw_ptr.h"
 #include "base/metrics/user_metrics.h"
 #include "base/timer/timer.h"
+#include "chromeos/constants/chromeos_features.h"
 #include "chromeos/strings/grit/chromeos_strings.h"
 #include "chromeos/ui/base/display_util.h"
 #include "chromeos/ui/base/window_properties.h"
@@ -26,8 +27,11 @@
 #include "ui/base/default_style.h"
 #include "ui/base/l10n/l10n_util.h"
 #include "ui/base/metadata/metadata_impl_macros.h"
+#include "ui/chromeos/styles/cros_tokens_color_mappings.h"
+#include "ui/compositor/layer.h"
 #include "ui/display/screen.h"
 #include "ui/events/types/event_type.h"
+#include "ui/views/animation/animation_builder.h"
 #include "ui/views/background.h"
 #include "ui/views/controls/label.h"
 #include "ui/views/widget/widget.h"
@@ -43,8 +47,11 @@ constexpr int kLabelFontSize = 13;
 
 // If the menu was opened as a result of hovering over the frame size button,
 // moving the mouse outside the menu or size button will result in closing it
-// after 3 seconds have elapsed.
+// after 250 ms have elapsed.
 constexpr base::TimeDelta kMouseExitMenuTimeout = base::Milliseconds(250);
+
+// The multitask menu fade out duration after the exit timer finishes.
+constexpr base::TimeDelta kFadeDuration = base::Milliseconds(100);
 
 // Creates multitask button with label.
 std::unique_ptr<views::View> CreateButtonContainer(
@@ -67,7 +74,7 @@ std::unique_ptr<views::View> CreateButtonContainer(
 
 // -----------------------------------------------------------------------------
 // MultitaskMenuView::MenuPreTargetHandler:
-
+// Auto-closes the multitask menu on click outside or after timeout.
 class MultitaskMenuView::MenuPreTargetHandler : public ui::EventHandler {
  public:
   MenuPreTargetHandler(views::Widget* menu_widget,
@@ -86,8 +93,13 @@ class MultitaskMenuView::MenuPreTargetHandler : public ui::EventHandler {
   }
 
   void OnMouseEvent(ui::MouseEvent* event) override {
+    if (!menu_widget_ || menu_widget_->IsClosed()) {
+      return;
+    }
+
     if (event->type() == ui::ET_MOUSE_PRESSED) {
       ProcessPressedEvent(*event);
+      return;
     }
 
     if (event->type() == ui::ET_MOUSE_MOVED && anchor_view_) {
@@ -108,6 +120,10 @@ class MultitaskMenuView::MenuPreTargetHandler : public ui::EventHandler {
   }
 
   void OnTouchEvent(ui::TouchEvent* event) override {
+    if (!menu_widget_ || menu_widget_->IsClosed()) {
+      return;
+    }
+
     if (event->type() == ui::ET_TOUCH_PRESSED) {
       ProcessPressedEvent(*event);
     }
@@ -122,7 +138,20 @@ class MultitaskMenuView::MenuPreTargetHandler : public ui::EventHandler {
   }
 
  private:
-  void OnExitTimerFinished() { close_callback_.Run(); }
+  void OnExitTimerFinished() {
+    if (!menu_widget_->GetLayer()->GetAnimator()->is_animating()) {
+      views::AnimationBuilder()
+          .SetPreemptionStrategy(
+              ui::LayerAnimator::IMMEDIATELY_ANIMATE_TO_NEW_TARGET)
+          .OnEnded(base::BindOnce(&MenuPreTargetHandler::OnFadeOutFinished,
+                                  weak_factory_.GetWeakPtr()))
+          .Once()
+          .SetDuration(kFadeDuration)
+          .SetOpacity(menu_widget_->GetLayer(), 0.0f, gfx::Tween::LINEAR);
+    }
+  }
+
+  void OnFadeOutFinished() { close_callback_.Run(); }
 
   // The widget of the multitask menu that is currently shown. Guaranteed to
   // outlive `this`, which will get destroyed when the menu is destructed in
@@ -136,6 +165,10 @@ class MultitaskMenuView::MenuPreTargetHandler : public ui::EventHandler {
   base::OneShotTimer exit_timer_;
 
   base::RepeatingClosure close_callback_;
+
+  // Chrome's compiler toolchain enforces that any `WeakPtrFactory`
+  // fields are declared last, to avoid destruction ordering issues.
+  base::WeakPtrFactory<MenuPreTargetHandler> weak_factory_{this};
 };
 
 // -----------------------------------------------------------------------------
@@ -150,6 +183,9 @@ MultitaskMenuView::MultitaskMenuView(aura::Window* window,
       close_callback_(std::move(close_callback)) {
   DCHECK(window);
   DCHECK(close_callback_);
+  if (features::IsJellyEnabled()) {
+    SetBackground(views::CreateThemedSolidBackground(ui::kColorSysSurface3));
+  }
   SetUseDefaultFillLayout(true);
 
   window_observation_.Observe(window);
@@ -214,6 +250,8 @@ MultitaskMenuView::MultitaskMenuView(aura::Window* window,
     float_button_for_testing_ = float_button.get();
     AddChildView(CreateButtonContainer(std::move(float_button), message_id));
   }
+
+  AddAccelerator(ui::Accelerator(ui::VKEY_MENU, ui::EF_ALT_DOWN));
 }
 
 MultitaskMenuView::~MultitaskMenuView() {
@@ -225,6 +263,21 @@ void MultitaskMenuView::AddedToWidget() {
   // the menu on any events outside.
   event_handler_ = std::make_unique<MenuPreTargetHandler>(
       GetWidget(), close_callback_, anchor_view_);
+}
+
+bool MultitaskMenuView::AcceleratorPressed(const ui::Accelerator& accelerator) {
+  CHECK_EQ(ui::VKEY_MENU, accelerator.key_code());
+  is_reversed_ = !is_reversed_;
+  if (partial_button_) {
+    // Update the visual appearance of the split buttons. The callbacks will be
+    // updated in `PartialButtonPressed()`.
+    partial_button_->UpdateButtons(/*is_portrait_mode=*/
+                                   !chromeos::IsDisplayLayoutHorizontal(
+                                       display::Screen::GetScreen()
+                                           ->GetDisplayNearestWindow(window_)),
+                                   is_reversed_);
+  }
+  return true;
 }
 
 void MultitaskMenuView::OnWindowDestroying(aura::Window* window) {
@@ -267,8 +320,11 @@ void MultitaskMenuView::SplitButtonPressed(SnapDirection direction) {
 void MultitaskMenuView::PartialButtonPressed(SnapDirection direction) {
   SnapController::Get()->CommitSnap(
       window_, direction,
-      direction == SnapDirection::kPrimary ? kTwoThirdSnapRatio
-                                           : kOneThirdSnapRatio,
+      direction == SnapDirection::kPrimary
+          ? (is_reversed_ ? chromeos::kOneThirdSnapRatio
+                          : chromeos::kTwoThirdSnapRatio)
+          : (is_reversed_ ? chromeos::kTwoThirdSnapRatio
+                          : chromeos::kOneThirdSnapRatio),
       SnapController::SnapRequestSource::kWindowLayoutMenu);
   close_callback_.Run();
 

@@ -90,6 +90,12 @@ PushNotificationClientManager::GetClients() {
   return {PushNotificationClientId::kCommerce};
 }
 
+void PushNotificationClientManager::OnSceneActiveForegroundBrowserReady() {
+  for (auto& client : clients_) {
+    client.second->OnSceneActiveForegroundBrowserReady();
+  }
+}
+
 std::string PushNotificationClientManager::PushNotificationClientIdToString(
     PushNotificationClientId client_id) {
   switch (client_id) {

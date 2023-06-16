@@ -21,6 +21,9 @@ BASE_DECLARE_FEATURE(kAdSamplerTriggerFeature);
 // Adds page load token to client safe browsing report.
 BASE_DECLARE_FEATURE(kAddPageLoadTokenToClientSafeBrowsingReport);
 
+// Enables logging new phishing prevention data.
+BASE_DECLARE_FEATURE(kAntiPhishingTelemetry);
+
 // Killswitch for client side phishing detection. Since client side models are
 // run on a large fraction of navigations, crashes due to the model are very
 // impactful, even if only a small fraction of users have a bad version of the
@@ -45,6 +48,9 @@ BASE_DECLARE_FEATURE(kClientSideDetectionTypeForceRequest);
 
 // Enables serving the Android Protego allowlist through the component updater.
 BASE_DECLARE_FEATURE(kComponentUpdaterAndroidProtegoAllowlist);
+
+// Controls whether new deep scanning UX is enabled or not.
+BASE_DECLARE_FEATURE(kDeepScanningUpdatedUX);
 
 // Controls whether the delayed warning experiment is enabled.
 BASE_DECLARE_FEATURE(kDelayedWarnings);
@@ -171,6 +177,10 @@ BASE_DECLARE_FEATURE(kLogAccountEnhancedProtectionStateInProtegoPings);
 // mapped into memory.
 BASE_DECLARE_FEATURE(kMmapSafeBrowsingDatabase);
 
+// Whether hash prefix lookups are done on a background thread when
+// kMmapSafeBrowsingDatabase is enabled.
+extern const base::FeatureParam<bool> kMmapSafeBrowsingDatabaseAsync;
+
 // Enables unpacking of nested archives during downloads.
 BASE_DECLARE_FEATURE(kNestedArchives);
 
@@ -211,6 +221,9 @@ extern const base::FeatureParam<bool>
 
 // Run Safe Browsing code on UI thread.
 BASE_DECLARE_FEATURE(kSafeBrowsingOnUIThread);
+
+// Enable adding copy/paste navigation to the referrer chain.
+BASE_DECLARE_FEATURE(kSafeBrowsingReferrerChainWithCopyPasteNavigation);
 
 // Controls whether cookies are removed when the access token is present.
 BASE_DECLARE_FEATURE(kSafeBrowsingRemoveCookiesInAuthRequests);

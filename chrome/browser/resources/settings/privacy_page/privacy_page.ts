@@ -37,8 +37,9 @@ import {loadTimeData} from '../i18n_setup.js';
 import {MetricsBrowserProxy, MetricsBrowserProxyImpl, PrivacyGuideInteractions} from '../metrics_browser_proxy.js';
 import {routes} from '../route.js';
 import {RouteObserverMixin, Router} from '../router.js';
+import {NotificationPermission, SafetyHubBrowserProxy, SafetyHubBrowserProxyImpl} from '../safety_hub/safety_hub_browser_proxy.js';
 import {ChooserType, ContentSettingsTypes, CookieControlsMode, NotificationSetting} from '../site_settings/constants.js';
-import {NotificationPermission, SiteSettingsPrefsBrowserProxy, SiteSettingsPrefsBrowserProxyImpl} from '../site_settings/site_settings_prefs_browser_proxy.js';
+import {SiteSettingsPrefsBrowserProxy, SiteSettingsPrefsBrowserProxyImpl} from '../site_settings/site_settings_prefs_browser_proxy.js';
 
 import {PrivacyGuideAvailabilityMixin} from './privacy_guide/privacy_guide_availability_mixin.js';
 import {getTemplate} from './privacy_page.html.js';
@@ -182,6 +183,12 @@ export class SettingsPrivacyPageElement extends SettingsPrivacyPageElementBase {
         value: () => loadTimeData.getBoolean('privateStateTokensEnabled'),
       },
 
+      enablePermissionStorageAccessApi_: {
+        type: Boolean,
+        value: () =>
+            loadTimeData.getBoolean('enablePermissionStorageAccessApi'),
+      },
+
       /**
        * Whether the File System Access Persistent Permissions UI should be
        * displayed.
@@ -290,14 +297,17 @@ export class SettingsPrivacyPageElement extends SettingsPrivacyPageElementBase {
   private isPrivacySandboxSettings4_: boolean;
   private privateStateTokensEnabled_: boolean;
   private safetyCheckNotificationPermissionsEnabled_: boolean;
+  private enablePermissionStorageAccessApi_: boolean;
   private focusConfig_: FocusConfig;
   private searchFilter_: string;
   private browserProxy_: PrivacyPageBrowserProxy =
       PrivacyPageBrowserProxyImpl.getInstance();
   private metricsBrowserProxy_: MetricsBrowserProxy =
       MetricsBrowserProxyImpl.getInstance();
-  private siteSettingsBrowserProxy_: SiteSettingsPrefsBrowserProxy =
+  private siteSettingsPrefsBrowserProxy_: SiteSettingsPrefsBrowserProxy =
       SiteSettingsPrefsBrowserProxyImpl.getInstance();
+  private safetyHubBrowserProxy_: SafetyHubBrowserProxy =
+      SafetyHubBrowserProxyImpl.getInstance();
 
   override ready() {
     super.ready();
@@ -316,7 +326,7 @@ export class SettingsPrivacyPageElement extends SettingsPrivacyPageElementBase {
         (status: BlockAutoplayStatus) =>
             this.onBlockAutoplayStatusChanged_(status));
 
-    this.siteSettingsBrowserProxy_.getCookieSettingDescription().then(
+    this.siteSettingsPrefsBrowserProxy_.getCookieSettingDescription().then(
         (description: string) => this.cookieSettingDescription_ = description);
 
     this.addWebUiListener(
@@ -328,7 +338,7 @@ export class SettingsPrivacyPageElement extends SettingsPrivacyPageElementBase {
         (sites: NotificationPermission[]) =>
             this.onReviewNotificationPermissionListChanged_(sites));
 
-    this.siteSettingsBrowserProxy_.getNotificationPermissionReview().then(
+    this.safetyHubBrowserProxy_.getNotificationPermissionReview().then(
         (sites: NotificationPermission[]) =>
             this.onReviewNotificationPermissionListChanged_(sites));
   }
@@ -451,6 +461,15 @@ export class SettingsPrivacyPageElement extends SettingsPrivacyPageElementBase {
     const enabled = this.getPref('privacy_sandbox.apis_enabled_v2').value;
     return enabled ? this.i18n('privacySandboxTrialsEnabled') :
                      this.i18n('privacySandboxTrialsDisabled');
+  }
+
+  private computeAdPrivacySublabel_(): string {
+    // When the privacy sandbox is restricted with a notice, the sublabel
+    // wording indicates measurement only, rather than general ad privacy.
+    const restricted = this.isPrivacySandboxRestricted_ &&
+        this.isPrivacySandboxRestrictedNoticeEnabled_;
+    return restricted ? this.i18n('adPrivacyRestrictedLinkRowSubLabel') :
+                        this.i18n('adPrivacyLinkRowSubLabel');
   }
 
   private computeNotificationsDefaultBehaviorLabel_(): string {

@@ -15,7 +15,10 @@
 #include "base/feature_list.h"
 #include "base/functional/bind.h"
 #include "base/functional/callback_helpers.h"
+#include "base/metrics/histogram_functions.h"
 #include "base/observer_list.h"
+#include "base/strings/strcat.h"
+#include "base/strings/string_util.h"
 #include "base/strings/to_string.h"
 #include "build/chromeos_buildflags.h"
 #include "chrome/browser/browser_process.h"
@@ -324,6 +327,53 @@ GURL WebAppRegistrar::GetAppScope(const AppId& app_id) const {
   return GetAppStartUrl(app_id).GetWithoutFilename();
 }
 
+size_t WebAppRegistrar::GetAppExtendedScopeScore(const GURL& url,
+                                                 const AppId& app_id) const {
+  if (!base::FeatureList::IsEnabled(
+          blink::features::kWebAppEnableScopeExtensions)) {
+    return 0;
+  }
+
+  if (!url.is_valid()) {
+    return 0;
+  }
+
+  size_t app_scope = GetUrlInAppScopeScore(url.spec(), app_id);
+  if (app_scope > 0) {
+    return app_scope;
+  }
+
+  url::Origin origin = url::Origin::Create(url);
+  if (origin.opaque() || origin.scheme() != url::kHttpsScheme) {
+    return 0;
+  }
+
+  absl::optional<std::string> origin_str;
+
+  for (const auto& scope_extension : GetValidatedScopeExtensions(app_id)) {
+    if (origin.IsSameOriginWith(scope_extension.origin)) {
+      return origin.host().size();
+    }
+
+    // Origins with wildcard e.g. *.foo are saved as https://foo.
+    // Ensure while matching that the origin ends with '.foo' and not 'foo'.
+    if (scope_extension.has_origin_wildcard) {
+      if (!origin_str.has_value()) {
+        origin_str = origin.Serialize();
+      }
+
+      if (base::EndsWith(origin_str.value(), scope_extension.origin.host(),
+                         base::CompareCase::SENSITIVE) &&
+          origin_str.value().size() > scope_extension.origin.host().size() &&
+          origin_str.value()[origin_str.value().size() -
+                             scope_extension.origin.host().size() - 1] == '.') {
+        return scope_extension.origin.host().size();
+      }
+    }
+  }
+  return 0;
+}
+
 bool WebAppRegistrar::IsUrlInAppScope(const GURL& url,
                                       const AppId& app_id) const {
   return GetUrlInAppScopeScore(url.spec(), app_id) > 0;
@@ -431,11 +481,13 @@ absl::optional<AppId> WebAppRegistrar::FindInstalledAppWithUrlInScope(
   for (const AppId& app_id : GetAppIds()) {
     // TODO(crbug.com/910016): Treat shortcuts as PWAs.
     bool app_is_shortcut = IsShortcutApp(app_id);
-    if (app_is_shortcut && !best_app_is_shortcut)
+    if (app_is_shortcut && !best_app_is_shortcut) {
       continue;
+    }
 
-    if (!IsLocallyInstalled(app_id))
+    if (!IsLocallyInstalled(app_id)) {
       continue;
+    }
 
     if (window_only &&
         GetAppEffectiveDisplayMode(app_id) == DisplayMode::kBrowser) {
@@ -453,6 +505,26 @@ absl::optional<AppId> WebAppRegistrar::FindInstalledAppWithUrlInScope(
   }
 
   return best_app_id;
+}
+
+bool WebAppRegistrar::IsNonLocallyInstalledAppWithUrlInScope(
+    const GURL& url) const {
+  std::string scope_str = url.spec();
+
+  for (const auto& app_id : GetAppIds()) {
+    std::string app_scope = GetAppScope(app_id).spec();
+    CHECK(!app_scope.empty());
+
+    if (!base::StartsWith(scope_str, app_scope, base::CompareCase::SENSITIVE)) {
+      continue;
+    }
+
+    if (!IsLocallyInstalled(app_id)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool WebAppRegistrar::IsShortcutApp(const AppId& app_id) const {
@@ -496,12 +568,9 @@ DisplayMode WebAppRegistrar::GetEffectiveDisplayModeFromManifest(
   return GetAppDisplayMode(app_id);
 }
 
-std::string WebAppRegistrar::GetComputedUnhashedAppId(
-    const AppId& app_id) const {
+GURL WebAppRegistrar::GetComputedManifestId(const AppId& app_id) const {
   auto* web_app = GetAppById(app_id);
-  return web_app ? GenerateAppIdUnhashed(web_app->manifest_id(),
-                                         web_app->start_url())
-                 : std::string();
+  return web_app ? web_app->manifest_id() : GURL();
 }
 
 bool WebAppRegistrar::IsTabbedWindowModeEnabled(const AppId& app_id) const {
@@ -640,6 +709,15 @@ void WebAppRegistrar::Start() {
   // Profile manager can be null in unit tests.
   if (ProfileManager* profile_manager = g_browser_process->profile_manager())
     profile_manager_observation_.Observe(profile_manager);
+
+  int num_user_installed_apps = CountUserInstalledApps();
+  int num_non_locally_installed = CountUserInstalledNotLocallyInstalledApps();
+
+  base::UmaHistogramCounts1000("WebApp.InstalledCount.ByUser",
+                               num_user_installed_apps);
+  base::UmaHistogramCounts1000(
+      "WebApp.InstalledCount.ByUserNotLocallyInstalled",
+      num_non_locally_installed);
 }
 
 void WebAppRegistrar::Shutdown() {
@@ -741,6 +819,11 @@ bool WebAppRegistrar::WasInstalledBySubApp(const AppId& app_id) const {
   return web_app && web_app->IsSubAppInstalledApp();
 }
 
+bool WebAppRegistrar::CanUserUninstallWebApp(const AppId& app_id) const {
+  const WebApp* web_app = GetAppById(app_id);
+  return web_app && web_app->CanUserUninstallWebApp();
+}
+
 bool WebAppRegistrar::IsAllowedLaunchProtocol(
     const AppId& app_id,
     const std::string& protocol_scheme) const {
@@ -797,6 +880,16 @@ int WebAppRegistrar::CountUserInstalledApps() const {
   return num_user_installed;
 }
 
+int WebAppRegistrar::CountUserInstalledNotLocallyInstalledApps() const {
+  int num_non_locally_installed = 0;
+  for (const WebApp& app : GetApps()) {
+    if (!app.is_locally_installed() && app.WasInstalledByUser()) {
+      ++num_non_locally_installed;
+    }
+  }
+  return num_non_locally_installed;
+}
+
 std::vector<content::StoragePartitionConfig>
 WebAppRegistrar::GetIsolatedWebAppStoragePartitionConfigs(
     const AppId& isolated_web_app_id) const {
@@ -818,8 +911,14 @@ WebAppRegistrar::GetIsolatedWebAppStoragePartitionConfigs(
     return {};
   }
 
-  // TODO(crbug.com/1311065): Include Controlled Frame StoragePartitions.
-  return {url_info->storage_partition_config(profile_)};
+  std::vector<content::StoragePartitionConfig> partitions = {
+      url_info->storage_partition_config(profile_)};
+  for (const std::string& partition :
+       isolated_web_app->isolation_data()->controlled_frame_partitions) {
+    partitions.push_back(url_info->GetStoragePartitionConfigForControlledFrame(
+        profile_, partition, /*in_memory=*/false));
+  }
+  return partitions;
 }
 
 std::string WebAppRegistrar::GetAppShortName(const AppId& app_id) const {
@@ -877,10 +976,9 @@ const GURL& WebAppRegistrar::GetAppStartUrl(const AppId& app_id) const {
   return web_app ? web_app->start_url() : GURL::EmptyGURL();
 }
 
-absl::optional<std::string> WebAppRegistrar::GetAppManifestId(
-    const AppId& app_id) const {
+ManifestId WebAppRegistrar::GetAppManifestId(const AppId& app_id) const {
   auto* web_app = GetAppById(app_id);
-  return web_app ? web_app->manifest_id() : absl::nullopt;
+  return web_app ? web_app->manifest_id() : ManifestId();
 }
 
 const std::string* WebAppRegistrar::GetAppLaunchQueryParams(
@@ -1087,6 +1185,18 @@ std::vector<AppId> WebAppRegistrar::GetAllSubAppIds(
   }
 
   return sub_app_ids;
+}
+
+base::flat_map<AppId, AppId> WebAppRegistrar::GetSubAppToParentMap() const {
+  base::flat_map<AppId, AppId> parent_app_ids;
+
+  for (const WebApp& app : GetApps()) {
+    if (app.parent_app_id().has_value()) {
+      parent_app_ids[app.app_id()] = *app.parent_app_id();
+    }
+  }
+
+  return parent_app_ids;
 }
 
 ValueWithPolicy<RunOnOsLoginMode> WebAppRegistrar::GetAppRunOnOsLoginMode(

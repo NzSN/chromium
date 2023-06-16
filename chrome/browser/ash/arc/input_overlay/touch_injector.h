@@ -8,11 +8,12 @@
 #include <memory>
 #include <vector>
 
+#include "ash/constants/ash_features.h"
 #include "base/functional/callback.h"
 #include "base/memory/raw_ptr.h"
+#include "base/observer_list.h"
 #include "base/scoped_observation.h"
-#include "chrome/browser/ash/arc/input_overlay/actions/action.h"
-#include "chrome/browser/ash/arc/input_overlay/constants.h"
+#include "base/values.h"
 #include "chrome/browser/ash/arc/input_overlay/display_overlay_controller.h"
 #include "ui/events/event_rewriter.h"
 #include "ui/gfx/geometry/rect_f.h"
@@ -30,6 +31,7 @@ namespace arc::input_overlay {
 
 class Action;
 class ArcInputOverlayManagerTest;
+class TouchInjectorObserver;
 
 // If the following touch move sent immediately, the touch move event is not
 // processed correctly by apps. This is a delayed time to send touch move
@@ -96,7 +98,7 @@ class TouchInjector : public ui::EventRewriter {
   void NotifyFirstTimeLaunch();
   // Save the menu entry view position when it's changed.
   void SaveMenuEntryLocation(gfx::Point menu_entry_location_point);
-  absl::optional<gfx::Vector2dF> menu_entry_location() {
+  absl::optional<gfx::Vector2dF> menu_entry_location() const {
     return menu_entry_location_;
   }
 
@@ -116,6 +118,9 @@ class TouchInjector : public ui::EventRewriter {
   void RemoveAction(Action* action);
   // Remove action view for |action|.
   void RemoveActionView(Action* action);
+
+  void AddObserver(TouchInjectorObserver* observer);
+  void RemoveObserver(TouchInjectorObserver* observer);
 
   // UMA stats.
   void RecordMenuStateOnLaunch();
@@ -159,11 +164,6 @@ class TouchInjector : public ui::EventRewriter {
 
   bool enable_mouse_lock() { return enable_mouse_lock_; }
   void set_enable_mouse_lock(bool enable) { enable_mouse_lock_ = true; }
-
-  bool allow_reposition() const { return allow_reposition_; }
-  void set_allow_reposition(bool allow_reposition) {
-    allow_reposition_ = allow_reposition;
-  }
 
   bool beta() const { return beta_; }
   void set_beta(bool beta) { beta_ = beta; }
@@ -255,6 +255,12 @@ class TouchInjector : public ui::EventRewriter {
   void RemoveDefaultActionsAndViews(
       std::vector<Action*>& added_default_actions);
 
+  // For observers.
+  void NotifyActionAdded(const Action& action);
+  void NotifyActionRemoved(const Action& action);
+  void NotifyActionTypeChanged(const Action& action, const Action& new_action);
+  void NotifyActionUpdated(const Action& action);
+
   // For test.
   int GetRewrittenTouchIdForTesting(ui::PointerId original_id);
   gfx::PointF GetRewrittenRootLocationForTesting(ui::PointerId original_id);
@@ -313,6 +319,8 @@ class TouchInjector : public ui::EventRewriter {
   std::vector<Action*> pending_add_default_actions_;
   std::vector<Action*> pending_delete_default_actions_;
 
+  base::ReentrantObserverList<TouchInjectorObserver> observers_;
+
   // Callback when saving proto file.
   OnSaveProtoFileCallback save_file_callback_;
 
@@ -320,9 +328,6 @@ class TouchInjector : public ui::EventRewriter {
   // post MVP.
   bool enable_mouse_lock_ = false;
 
-  // TODO(b/260937747): Update or remove when removing flags
-  // |kArcInputOverlayAlphaV2| or |kArcInputOverlayBeta|.
-  bool allow_reposition_ = false;
   // Corresponds to |kArcInputOverlayBeta| flag to turn on/off the editor
   // feature of adding or removing actions.
   bool beta_ = ash::features::IsArcInputOverlayBetaEnabled();

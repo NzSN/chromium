@@ -386,6 +386,8 @@ Response PageHandler::Disable() {
     item->RemoveObserver(this);
   pending_downloads_.clear();
   navigate_callbacks_.clear();
+  SetPrerenderingAllowed(true);
+
   return Response::FallThrough();
 }
 
@@ -1470,6 +1472,8 @@ Page::BackForwardCacheNotRestoredReason NotRestoredReasonToProtocol(
       return Page::BackForwardCacheNotRestoredReasonEnum::ErrorDocument;
     case Reason::kFencedFramesEmbedder:
       return Page::BackForwardCacheNotRestoredReasonEnum::FencedFramesEmbedder;
+    case Reason::kCookieDisabled:
+      return Page::BackForwardCacheNotRestoredReasonEnum::CookieDisabled;
     case Reason::kBlocklistedFeatures:
       // Blocklisted features should be handled separately and be broken down
       // into sub reasons.
@@ -1592,6 +1596,10 @@ Page::BackForwardCacheNotRestoredReason BlocklistedFeatureToProtocol(
       return Page::BackForwardCacheNotRestoredReasonEnum::Dummy;
     case WebSchedulerTrackedFeature::kAuthorizationHeader:
       return Page::BackForwardCacheNotRestoredReasonEnum::AuthorizationHeader;
+    case WebSchedulerTrackedFeature::kWebSerial:
+      // Currently we add WebSchedulerTrackedFeature::kWebSerial only for
+      // disabling aggressive throttling.
+      NOTREACHED_NORETURN();
   }
 }
 
@@ -1621,9 +1629,6 @@ DisableForRenderFrameHostReasonToProtocol(
               ContentFileChooser;
         case BackForwardCacheDisable::DisabledReasonId::kSerial:
           return Page::BackForwardCacheNotRestoredReasonEnum::ContentSerial;
-        case BackForwardCacheDisable::DisabledReasonId::kFileSystemAccess:
-          return Page::BackForwardCacheNotRestoredReasonEnum::
-              ContentFileSystemAccess;
         case BackForwardCacheDisable::DisabledReasonId::
             kMediaDevicesDispatcherHost:
           return Page::BackForwardCacheNotRestoredReasonEnum::
@@ -1740,6 +1745,7 @@ Page::BackForwardCacheNotRestoredReasonType MapNotRestoredReasonToType(
     case Reason::kNoResponseHead:
     case Reason::kErrorDocument:
     case Reason::kFencedFramesEmbedder:
+    case Reason::kCookieDisabled:
       return Page::BackForwardCacheNotRestoredReasonTypeEnum::Circumstantial;
     case Reason::kCacheControlNoStore:
     case Reason::kCacheControlNoStoreCookieModified:
@@ -1807,6 +1813,8 @@ Page::BackForwardCacheNotRestoredReasonType MapBlocklistedFeatureToType(
     case WebSchedulerTrackedFeature::kDummy:
     case WebSchedulerTrackedFeature::kAuthorizationHeader:
       return Page::BackForwardCacheNotRestoredReasonTypeEnum::Circumstantial;
+    case WebSchedulerTrackedFeature::kWebSerial:
+      NOTREACHED_NORETURN();
   }
 }
 
@@ -1893,6 +1901,21 @@ Response PageHandler::AddCompilationCache(const std::string& url,
   if (allow_unsafe_operations_)
     return Response::FallThrough();
   return Response::ServerError("Permission denied");
+}
+
+void PageHandler::IsPrerenderingAllowed(bool& is_allowed) {
+  is_allowed &= is_prerendering_allowed_;
+}
+
+Response PageHandler::SetPrerenderingAllowed(bool is_allowed) {
+  Response response = AssureTopLevelActiveFrame();
+  if (response.IsError()) {
+    return response;
+  }
+
+  is_prerendering_allowed_ = is_allowed;
+
+  return Response::Success();
 }
 
 Response PageHandler::AssureTopLevelActiveFrame() {

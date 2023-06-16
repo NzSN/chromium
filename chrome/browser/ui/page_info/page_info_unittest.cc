@@ -1558,12 +1558,13 @@ TEST_F(PageInfoTest, TimeOpenMetrics) {
 }
 
 TEST_F(PageInfoTest, AdPersonalization) {
+  constexpr int kTaxonomyVersion = 1;
   privacy_sandbox::CanonicalTopic kFirstTopic(
       browsing_topics::Topic(24),  // "Blues"
-      privacy_sandbox::CanonicalTopic::AVAILABLE_TAXONOMY);
+      kTaxonomyVersion);
   privacy_sandbox::CanonicalTopic kSecondTopic(
       browsing_topics::Topic(23),  // "Music & audio"
-      privacy_sandbox::CanonicalTopic::AVAILABLE_TAXONOMY);
+      kTaxonomyVersion);
 
   std::vector<privacy_sandbox::CanonicalTopic> accessed_topics = {kFirstTopic,
                                                                   kSecondTopic};
@@ -1953,32 +1954,6 @@ TEST_F(PageInfoToggleStatesUnitTest,
   // Allow once -> Allow
   PageInfoUI::ToggleBetweenRememberAndForget(location_permission);
   EXPECT_EQ(location_permission.setting, CONTENT_SETTING_ALLOW);
-  EXPECT_EQ(location_permission.is_one_time, false);
-
-  // Allow -> Block
-  PageInfoUI::ToggleBetweenAllowAndBlock(location_permission);
-  EXPECT_EQ(location_permission.setting, CONTENT_SETTING_BLOCK);
-
-  // Block -> Default
-  PageInfoUI::ToggleBetweenRememberAndForget(location_permission);
-  EXPECT_EQ(location_permission.setting, CONTENT_SETTING_DEFAULT);
-
-  // Default -> Block
-  PageInfoUI::ToggleBetweenRememberAndForget(location_permission);
-  EXPECT_EQ(location_permission.setting, CONTENT_SETTING_BLOCK);
-
-  // Block -> Default
-  PageInfoUI::ToggleBetweenRememberAndForget(location_permission);
-  EXPECT_EQ(location_permission.setting, CONTENT_SETTING_DEFAULT);
-
-  // Default -> Allow once
-  PageInfoUI::ToggleBetweenAllowAndBlock(location_permission);
-  EXPECT_EQ(location_permission.setting, CONTENT_SETTING_ALLOW);
-  EXPECT_EQ(location_permission.is_one_time, true);
-
-  // Allow once -> Default
-  PageInfoUI::ToggleBetweenAllowAndBlock(location_permission);
-  EXPECT_EQ(location_permission.setting, CONTENT_SETTING_DEFAULT);
   EXPECT_EQ(location_permission.is_one_time, false);
 }
 

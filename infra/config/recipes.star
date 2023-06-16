@@ -165,7 +165,7 @@ build_recipe(
 )
 
 build_recipe(
-    name = "recipe:chromium/targets_spec_verifier",
+    name = "recipe:chromium/targets_config_verifier",
 )
 
 build_recipe(
@@ -249,10 +249,6 @@ build_recipe(
 
 build_recipe(
     name = "recipe:reclient_config_deploy_check/tester",
-)
-
-build_recipe(
-    name = "recipe:reclient_goma_comparison",
 )
 
 build_recipe(

@@ -148,6 +148,7 @@
 <translation id="3600792891314830896">Isključi zvuk sajtova koji puštaju zvuk</translation>
 <translation id="3602290021589620013">Pregled</translation>
 <translation id="3628308229821498208">Predložene pretrage</translation>
+<translation id="3707034683772193706">Sajt koji posećujete može da sačuva malu količinu informacija u Chrome-u, uglavnom da bi potvrdio da niste robot</translation>
 <translation id="3721953990244350188">Odbacite i pregledajte sledeću dostupnu radnju</translation>
 <translation id="3744111561329211289">Sinhronizacija u pozadini</translation>
 <translation id="3763247130972274048">Dvaput dodirnite video levo ili desno da biste preskočili 10 sek</translation>
@@ -188,7 +189,6 @@
 <translation id="4412992751769744546">Dozvoli kolačiće treće strane</translation>
 <translation id="4428065317363009941">Personalizacija oglasa</translation>
 <translation id="4434045419905280838">Iskačući prozori i preusmeravanja</translation>
-<translation id="4440642537584213025">Proširite <ph name="TARGET_DESCRIPTION" /></translation>
 <translation id="4468959413250150279">Isključi zvuk za određeni sajt</translation>
 <translation id="4475912480633855319">{COOKIES,plural, =1{# kolačić}one{# kolačić}few{# kolačića}other{# kolačića}}</translation>
 <translation id="4478158430052450698">Olakšajte prilagođavanje zumiranja za različite sajtove</translation>
@@ -310,6 +310,7 @@
 <translation id="6612358246767739896">Zaštićeni sadržaj</translation>
 <translation id="662080504995468778">Ne zatvaraj</translation>
 <translation id="6643016212128521049">Obriši</translation>
+<translation id="6653342741369270081">Dodirnite dugme Nazad da biste izašli iz režima celog ekrana.</translation>
 <translation id="6689172468748959065">Slike profila</translation>
 <translation id="6697925417670533197">Aktivna preuzimanja</translation>
 <translation id="6722828510648505498">Blokirajte upite za prijavljivanje koje prikazuju usluge za identitet.</translation>
@@ -344,6 +345,7 @@
 <translation id="7302486331832100261">Obično blokirate obaveštenja. Da biste ih dozvolili, dodirnite Detalji.</translation>
 <translation id="7366415735885268578">Dodajte sajt</translation>
 <translation id="7383715096023715447">Podešavanja za <ph name="DOMAIN" /></translation>
+<translation id="7406113532070524618">Ovo podešavanje radi, a da ne mora da vas identifikuje ili da dozvoli sajtovima da vide istoriju pregledanja, iako sajtovi mogu da dele malu količinu podataka u okviru verifikacije</translation>
 <translation id="7423098979219808738">Prvo pitaj</translation>
 <translation id="7423538860840206698">Čitanje privremene memorije je blokirano</translation>
 <translation id="7425915948813553151">Tamna tema za sajtove</translation>
@@ -369,6 +371,7 @@
 <translation id="7846076177841592234">Otkaži izbor</translation>
 <translation id="7882806643839505685">Dozvoli zvuk za određeni sajt.</translation>
 <translation id="789180354981963912">Blokirajte kolačiće trećih strana u režimu bez arhiviranja:</translation>
+<translation id="7895868624847501462">Ovom radnjom ćete obrisati sve lokalne podatke, uključujući kolačiće, i resetovati sve dozvole za <ph name="DOMAIN" /> i sve sajtove u okviru njega</translation>
 <translation id="7940722705963108451">Podseti me</translation>
 <translation id="7974024493641668069">{COUNT,plural, =1{<ph name="FPS_MEMBERS_COUNT" /> sajt u grupi sajtova vlasnika <ph name="FPS_OWNER" /> koja može da vidi vaše aktivnosti u grupi}one{<ph name="FPS_MEMBERS_COUNT" /> sajt u grupi sajtova vlasnika <ph name="FPS_OWNER" /> koja može da vidi vaše aktivnosti u grupi}few{<ph name="FPS_MEMBERS_COUNT" /> sajta u grupi sajtova vlasnika <ph name="FPS_OWNER" /> koja može da vidi vaše aktivnosti u grupi}other{<ph name="FPS_MEMBERS_COUNT" /> sajtova u grupi sajtova vlasnika <ph name="FPS_OWNER" /> koja može da vidi vaše aktivnosti u grupi}}</translation>
 <translation id="7986741934819883144">Izaberite kontakt</translation>
@@ -394,6 +397,7 @@
 <translation id="8284326494547611709">Titl</translation>
 <translation id="8300705686683892304">Upravlja aplikacija</translation>
 <translation id="8324158725704657629">Ne pitaj ponovo</translation>
+<translation id="8338445138528827481">Ovom radnjom ćete obrisati sve lokalne podatke, uključujući kolačiće, i resetovati sve dozvole za <ph name="ORIGIN" /></translation>
 <translation id="8362795839483915693">Možete da uvećavate ili umanjujete prikaz sajtova koje posećujete</translation>
 <translation id="8372893542064058268">Dozvolite Sinhronizaciju u pozadini za određeni sajt.</translation>
 <translation id="8376384591331888629">Uključujući kolačiće trećih strana na ovom sajtu</translation>
@@ -433,6 +437,7 @@
 <translation id="8816026460808729765">Ne dozvoljavaj sajtovima da pristupaju senzorima</translation>
 <translation id="8823559166155093873">Blokiraj kolačiće</translation>
 <translation id="8847988622838149491">USB</translation>
+<translation id="8889294078294184559">Dok nastavljate sa pregledanjem, sajtovi mogu da proveravaju u Chrome-u i da od prethodnog sajta koji ste posetili dobiju potvrdu da ste verovatno stvarna osoba</translation>
 <translation id="8899807382908246773">Oglasi koji ometaju</translation>
 <translation id="8903921497873541725">Uvećavanje</translation>
 <translation id="8921772741368021346"><ph name="POSITION" />/<ph name="DURATION" /></translation>

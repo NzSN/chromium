@@ -19,6 +19,30 @@ from util import diff_utils
 import action_helpers  # build_utils adds //build to sys.path.
 import zip_helpers
 
+_IGNORE_WARNINGS = (
+    # E.g. Triggers for weblayer_instrumentation_test_apk since both it and its
+    # apk_under_test have no shared_libraries.
+    # https://crbug.com/1364192 << To fix this in a better way.
+    r'Missing class org.chromium.build.NativeLibraries',
+    # Caused by internal protobuf package: https://crbug.com/1183971
+    r'referenced from: com\.google\.protobuf\.GeneratedMessageLite\$GeneratedExtension',  # pylint: disable=line-too-long
+    # Caused by protobuf runtime using -identifiernamestring in a way that
+    # doesn't work with R8. Looks like:
+    # Rule matches the static final field `...`, which may have been inlined...
+    # com.google.protobuf.*GeneratedExtensionRegistryLite {
+    #   static java.lang.String CONTAINING_TYPE_*;
+    # }
+    r'GeneratedExtensionRegistryLite\.CONTAINING_TYPE_',
+    # Relevant for R8 when optimizing an app that doesn't use protobuf.
+    r'Ignoring -shrinkunusedprotofields since the protobuf-lite runtime is',
+    # TODO(crbug.com/1303951): Don't ignore all such warnings.
+    r'Proguard configuration rule does not match anything:',
+    # TODO(agrieve): Remove once we update to U SDK.
+    r'OnBackAnimationCallback',
+    # We enforce that this class is removed via -checkdiscard.
+    r'FastServiceLoader\.class:.*Could not inline ServiceLoader\.load',
+)
+
 _BLOCKLISTED_EXPECTATION_PATHS = [
     # A separate expectation file is created for these files.
     'clank/third_party/google3/pg_confs/',
@@ -212,11 +236,7 @@ class _SplitContext:
     shutil.move(tmp_jar_output, self.final_output_path)
 
 
-def _OptimizeWithR8(options,
-                    config_paths,
-                    libraries,
-                    dynamic_config_data,
-                    print_stdout=False):
+def _OptimizeWithR8(options, config_paths, libraries, dynamic_config_data):
   with build_utils.TempDir() as tmp_dir:
     if dynamic_config_data:
       dynamic_config_path = os.path.join(tmp_dir, 'dynamic_config.flags')
@@ -320,12 +340,19 @@ def _OptimizeWithR8(options,
 
     cmd += sorted(base_context.input_jars)
 
+    if options.verbose or os.environ.get('R8_VERBOSE') == '1':
+      stderr_filter = None
+    else:
+      filters = list(dex.DEFAULT_IGNORE_WARNINGS)
+      filters += _IGNORE_WARNINGS
+      if options.show_desugar_default_interface_warnings:
+        filters += dex.INTERFACE_DESUGARING_WARNINGS
+      stderr_filter = dex.CreateStderrFilter(filters)
+
     try:
-      stderr_filter = dex.CreateStderrFilter(
-          options.show_desugar_default_interface_warnings)
       logging.debug('Running R8')
       build_utils.CheckOutput(cmd,
-                              print_stdout=print_stdout,
+                              print_stdout=True,
                               stderr_filter=stderr_filter,
                               fail_on_output=options.warnings_as_errors)
     except build_utils.CalledProcessError as e:
@@ -551,10 +578,6 @@ def _ExtractEmbeddedConfigs(jar_path, embedded_configs):
       embedded_configs[config_path] = z.read(filename).decode('utf-8').rstrip()
 
 
-def _ContainsDebuggingConfig(config_str):
-  return '-whyareyoukeeping' in config_str
-
-
 def _MaybeWriteStampAndDepFile(options, inputs):
   output = options.output_path
   if options.stamp:
@@ -629,7 +652,6 @@ def _Run(options):
                                    dynamic_config_data,
                                    embedded_configs,
                                    exclude_generated=True)
-  print_stdout = _ContainsDebuggingConfig(merged_configs) or options.verbose
 
   depfile_inputs = options.proguard_configs + options.input_paths + libraries
   if options.expected_file:
@@ -647,8 +669,7 @@ def _Run(options):
     return
 
   split_contexts_by_name = _OptimizeWithR8(options, options.proguard_configs,
-                                           libraries, dynamic_config_data,
-                                           print_stdout)
+                                           libraries, dynamic_config_data)
 
   if not options.disable_checks:
     logging.debug('Running tracereferences')

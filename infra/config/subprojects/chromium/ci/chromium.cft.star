@@ -22,7 +22,7 @@ ci.defaults.set(
     service_account = ci.DEFAULT_SERVICE_ACCOUNT,
 )
 
-def builder_spec(*, target_platform, build_config):
+def builder_spec(*, target_platform, build_config, target_arch = None):
     return builder_config.builder_spec(
         gclient_config = builder_config.gclient_config(
             config = "chromium",
@@ -31,6 +31,7 @@ def builder_spec(*, target_platform, build_config):
             config = "chromium",
             apply_configs = ["mb"],
             build_config = build_config,
+            target_arch = target_arch,
             target_bits = 64,
             target_platform = target_platform,
         ),
@@ -50,6 +51,19 @@ ci.builder(
     os = os.MAC_DEFAULT,
     console_view_entry = consoles.console_view_entry(
         short_name = "mac-rel-cft",
+    ),
+)
+
+ci.builder(
+    name = "linux-arm64-rel-cft",
+    builder_spec = builder_spec(
+        build_config = builder_config.build_config.RELEASE,
+        target_arch = builder_config.target_arch.ARM,
+        target_platform = builder_config.target_platform.LINUX,
+    ),
+    os = os.LINUX_DEFAULT,
+    console_view_entry = consoles.console_view_entry(
+        short_name = "linux-arm64-rel-cft",
     ),
 )
 

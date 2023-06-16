@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::crates;
+use crate::crates::{self, ThirdPartySource};
 use crate::manifest::CargoManifest;
 use crate::paths;
 use crate::util::{check_exit_ok, check_output, check_spawn, check_wait_with_output};
@@ -21,12 +21,9 @@ pub fn download(
     security: bool,
     paths: &paths::ChromiumPaths,
 ) -> Result<()> {
-    let vendored_crate = crates::ChromiumVendoredCrate {
-        name: name.to_string(),
-        epoch: crates::Epoch::from_version(&version),
-    };
-    let build_path = paths.third_party.join(vendored_crate.build_path());
-    let crate_path = paths.third_party.join(vendored_crate.crate_path());
+    let vendored_crate = crates::VendoredCrate { name: name.into(), version: version.clone() };
+    let build_path = paths.third_party.join(ThirdPartySource::build_path(&vendored_crate));
+    let crate_path = paths.third_party.join(ThirdPartySource::crate_path(&vendored_crate));
 
     let url = format!(
         "{dir}/{name}/{name}-{version}.{suffix}",
@@ -161,5 +158,8 @@ static ALLOWED_LICENSES: [(&str, &str); 15] = [
     ("ISC", "ISC"),
     ("MIT OR Zlib OR Apache-2.0", "Apache 2.0"),
     ("0BSD OR MIT OR Apache-2.0", "Apache 2.0"),
-    ("Unicode-DFS-2016", "Unicode License Agreement - Data Files and Software (2016)"),
+    (
+        "(MIT OR Apache-2.0) AND Unicode-DFS-2016",
+        "Apache 2.0 AND Unicode License Agreement - Data Files and Software (2016)",
+    ),
 ];

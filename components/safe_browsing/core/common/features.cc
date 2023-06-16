@@ -27,6 +27,10 @@ BASE_FEATURE(kAdSamplerTriggerFeature,
 
 BASE_FEATURE(kAddPageLoadTokenToClientSafeBrowsingReport,
              "AddPageLoadTokenToClientSafeBrowsingReport",
+             base::FEATURE_ENABLED_BY_DEFAULT);
+
+BASE_FEATURE(kAntiPhishingTelemetry,
+             "AntiPhishingTelemetry",
              base::FEATURE_DISABLED_BY_DEFAULT);
 
 BASE_FEATURE(kClientSideDetectionKillswitch,
@@ -43,10 +47,14 @@ BASE_FEATURE(kClientSideDetectionModelTag,
 
 BASE_FEATURE(kClientSideDetectionTypeForceRequest,
              "ClientSideDetectionTypeForceRequest",
-             base::FEATURE_DISABLED_BY_DEFAULT);
+             base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kComponentUpdaterAndroidProtegoAllowlist,
              "SafeBrowsingComponentUpdaterAndroidProtegoAllowlist",
+             base::FEATURE_ENABLED_BY_DEFAULT);
+
+BASE_FEATURE(kDeepScanningUpdatedUX,
+             "SafeBrowsingDeepScanningUpdatedUX",
              base::FEATURE_DISABLED_BY_DEFAULT);
 
 BASE_FEATURE(kDelayedWarnings,
@@ -74,13 +82,13 @@ BASE_FEATURE(kDownloadTailoredWarnings,
 
 BASE_FEATURE(kEsbIphBubbleAndCollapseSettings,
              "EsbIphBubbleAndCollapseSettings",
-             base::FEATURE_DISABLED_BY_DEFAULT);
+             base::FEATURE_ENABLED_BY_DEFAULT);
 
 const base::FeatureParam<bool> kEsbIphBubbleAndCollapseSettingsEnableIph{
-    &kEsbIphBubbleAndCollapseSettings, "EnableEsbIphBubble", false};
+    &kEsbIphBubbleAndCollapseSettings, "EnableEsbIphBubble", true};
 
 const base::FeatureParam<bool> kEsbIphBubbleAndCollapseSettingsEnableCollapse{
-    &kEsbIphBubbleAndCollapseSettings, "EnableEsbSettingCollapse", false};
+    &kEsbIphBubbleAndCollapseSettings, "EnableEsbSettingCollapse", true};
 
 BASE_FEATURE(kExtensionTelemetry,
              "SafeBrowsingExtensionTelemetry",
@@ -171,6 +179,10 @@ BASE_FEATURE(kMmapSafeBrowsingDatabase,
              "MmapSafeBrowsingDatabase",
              base::FEATURE_DISABLED_BY_DEFAULT);
 
+constexpr base::FeatureParam<bool> kMmapSafeBrowsingDatabaseAsync{
+    &kMmapSafeBrowsingDatabase, "MmapSafeBrowsingDatabaseAsync",
+    /*default_value=*/false};
+
 BASE_FEATURE(kNestedArchives,
              "SafeBrowsingArchiveImprovements",
              base::FEATURE_DISABLED_BY_DEFAULT);
@@ -206,6 +218,10 @@ const base::FeatureParam<bool> kUrlLevelValidationForHprtExperimentEnabled{
 BASE_FEATURE(kSafeBrowsingOnUIThread,
              "SafeBrowsingOnUIThread",
              base::FEATURE_DISABLED_BY_DEFAULT);
+
+BASE_FEATURE(kSafeBrowsingReferrerChainWithCopyPasteNavigation,
+             "SafeBrowsingReferrerChainWithCopyPasteNavigation",
+             base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kSafeBrowsingRemoveCookiesInAuthRequests,
              "SafeBrowsingRemoveCookiesInAuthRequests",
@@ -272,7 +288,7 @@ BASE_FEATURE(kClientSideDetectionModelOptimizationGuide,
 
 BASE_FEATURE(kSafeBrowsingPhishingClassificationESBThreshold,
              "SafeBrowsingPhishingClassificationESBThreshold",
-             base::FEATURE_DISABLED_BY_DEFAULT);
+             base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kSafeBrowsingDailyPhishingReportsLimit,
              "SafeBrowsingDailyPhishingReportsLimit",
@@ -295,6 +311,7 @@ constexpr struct {
 } kExperimentalFeatures[]{
     {&kAdSamplerTriggerFeature, false},
     {&kAddPageLoadTokenToClientSafeBrowsingReport, false},
+    {&kAntiPhishingTelemetry, false},
     {&kClientSideDetectionKillswitch, true},
     {&kClientSideDetectionModelOptimizationGuide, true},
     {&kClientSideDetectionModelIsFlatBuffer, true},

@@ -149,6 +149,7 @@ enum Subpage {
   kNetworkFileShares = 1300,
   kOfficeFiles = 1301,
   kGoogleDrive = 1302,
+  kOneDrive = 1303,
 
   // Printing section.
   kPrintingDetails = 1400,
@@ -287,8 +288,9 @@ const string kJapaneseManageUserDictionarySubpagePath =
 // Files section.
 const string kFilesSectionPath = "files";
 const string kGoogleDriveSubpagePath = "googleDrive";
-const string kNetworkFileSharesSubpagePath = "smbShares";
+const string kOneDriveSubpagePath = "oneDrive";
 const string kOfficeFilesSubpagePath = "officeFiles";
+const string kNetworkFileSharesSubpagePath = "smbShares";
 
 // Printing section.
 const string kPrintingSectionPath = "osPrinting";
@@ -319,3 +321,25 @@ const string kDetailedBuildInfoSubpagePath = "help/details";
 // Kerberos section.
 const string kKerberosSectionPath = "kerberos";
 const string kKerberosAccountsV2SubpagePath = "kerberos/kerberosAccounts";
+
+// The properties should match the top-level section paths defined above
+// Keep alphabetized
+struct OsPageAvailability {
+  bool apps;
+  bool bluetooth;
+  bool crostini;
+  bool dateTime;
+  bool device;
+  bool files;
+  bool internet;
+  bool kerberos;
+  bool multidevice;
+  bool osAccessibility;
+  bool osLanguages;
+  bool osPeople;
+  bool osPrinting;
+  bool osPrivacy;
+  bool osReset;
+  bool osSearch;
+  bool personalization;
+};

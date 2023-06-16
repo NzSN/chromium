@@ -23,6 +23,7 @@ class TestZcrTextInputExtensionV1 : public GlobalObject {
   enum class Version : uint32_t {
     kV7 = 7,
     kV8 = 8,
+    kV10 = 10,
   };
   explicit TestZcrTextInputExtensionV1(Version version);
   TestZcrTextInputExtensionV1(const TestZcrTextInputExtensionV1&) = delete;
@@ -38,7 +39,7 @@ class TestZcrTextInputExtensionV1 : public GlobalObject {
   }
 
  private:
-  raw_ptr<MockZcrExtendedTextInput> extended_text_input_;
+  raw_ptr<MockZcrExtendedTextInput, DanglingUntriaged> extended_text_input_;
 };
 
 }  // namespace wl

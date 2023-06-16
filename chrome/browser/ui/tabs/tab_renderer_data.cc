@@ -8,6 +8,7 @@
 #include "build/build_config.h"
 #include "build/chromeos_buildflags.h"
 #include "chrome/browser/favicon/favicon_utils.h"
+#include "chrome/browser/performance_manager/public/user_tuning/user_performance_tuning_manager.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/resource_coordinator/lifecycle_unit_state.mojom-shared.h"
 #include "chrome/browser/ui/browser.h"
@@ -19,6 +20,8 @@
 #include "chrome/browser/ui/tabs/tab_utils.h"
 #include "chrome/browser/ui/thumbnails/thumbnail_tab_helper.h"
 #include "chrome/browser/ui/web_applications/web_app_browser_controller.h"
+#include "chrome/browser/ui/web_applications/web_app_tabbed_utils.h"
+#include "components/performance_manager/public/features.h"
 #include "components/security_interstitials/content/security_interstitial_tab_helper.h"
 #include "content/public/browser/navigation_entry.h"
 #include "content/public/browser/web_contents.h"
@@ -44,15 +47,26 @@ TabRendererData TabRendererData::FromTabInModel(TabStripModel* model,
       security_interstitial_tab_helper->ShouldDisplayURL();
   TabRendererData data;
   TabUIHelper* const tab_ui_helper = TabUIHelper::FromWebContents(contents);
-  data.favicon = tab_ui_helper->GetFavicon().AsImageSkia();
+  data.favicon = tab_ui_helper->GetFavicon();
 
-  // Finding the relevant WebApp to get the correct home tab icon.
+  // Tabbed web apps should use the app icon on the home tab.
   Browser* app_browser = chrome::FindBrowserWithWebContents(contents);
-  if (app_browser && app_browser->app_controller()) {
+
+  if (app_browser && app_browser->app_controller() &&
+      app_browser->app_controller()->ShouldShowAppIconOnTab(index)) {
     web_app::WebAppBrowserController* app_controller =
         app_browser->app_controller()->AsWebAppBrowserController();
-    if (app_controller && app_controller->DoesHomeTabIconExist()) {
-      data.favicon = app_controller->GetHomeTabIcon();
+    if (app_controller) {
+      gfx::ImageSkia home_tab_icon = app_controller->GetHomeTabIcon();
+      if (!home_tab_icon.isNull()) {
+        data.is_monochrome_favicon = true;
+        data.favicon = ui::ImageModel::FromImageSkia(home_tab_icon);
+      } else {
+        home_tab_icon = app_controller->GetFallbackHomeTabIcon();
+        if (!home_tab_icon.isNull()) {
+          data.favicon = ui::ImageModel::FromImageSkia(home_tab_icon);
+        }
+      }
     }
   }
 
@@ -98,6 +112,11 @@ TabRendererData TabRendererData::FromTabInModel(TabStripModel* model,
       contents->WasDiscarded() && discard_reason.has_value() &&
       discard_reason.value() == mojom::LifecycleUnitDiscardReason::PROACTIVE;
 
+  if (contents->WasDiscarded()) {
+    data.discarded_memory_savings_in_bytes =
+        high_efficiency::GetDiscardedMemorySavingsInBytes(contents);
+  }
+
   return data;
 }
 
@@ -112,9 +131,9 @@ TabRendererData& TabRendererData::operator=(TabRendererData&& other) = default;
 TabRendererData::~TabRendererData() = default;
 
 bool TabRendererData::operator==(const TabRendererData& other) const {
-  return favicon.BackedBySameObjectAs(other.favicon) &&
-         thumbnail == other.thumbnail && network_state == other.network_state &&
-         title == other.title && visible_url == other.visible_url &&
+  return favicon == other.favicon && thumbnail == other.thumbnail &&
+         network_state == other.network_state && title == other.title &&
+         visible_url == other.visible_url &&
          last_committed_url == other.last_committed_url &&
          should_display_url == other.should_display_url &&
          crashed_status == other.crashed_status &&
@@ -123,7 +142,9 @@ bool TabRendererData::operator==(const TabRendererData& other) const {
          alert_state == other.alert_state &&
          should_hide_throbber == other.should_hide_throbber &&
          is_tab_discarded == other.is_tab_discarded &&
-         should_show_discard_status == other.should_show_discard_status;
+         should_show_discard_status == other.should_show_discard_status &&
+         discarded_memory_savings_in_bytes ==
+             other.discarded_memory_savings_in_bytes;
 }
 
 bool TabRendererData::IsCrashed() const {

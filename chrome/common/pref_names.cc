@@ -21,10 +21,6 @@ namespace prefs {
 // *************** PROFILE PREFS ***************
 // These are attached to the user profile
 
-// A bool pref that keeps whether the child status for this profile was already
-// successfully checked via ChildAccountService.
-const char kChildAccountStatusKnown[] = "child_account_status_known";
-
 // A string property indicating whether default apps should be installed
 // in this profile.  Use the value "install" to enable defaults apps, or
 // "noinstall" to disable them.  This property is usually set in the
@@ -154,13 +150,6 @@ const char kManagedProfileSerialAllowAllPortsForUrlsDeprecated[] =
 const char kManagedProfileSerialAllowUsbDevicesForUrlsDeprecated[] =
     "profile.managed.serial_allow_usb_devices_for_urls";
 #endif  // !BUILDFLAG(IS_ANDROID)
-
-#if BUILDFLAG(ENABLE_SUPERVISED_USERS) && BUILDFLAG(ENABLE_EXTENSIONS)
-// DictionaryValue that maps extension ids to the approved version of this
-// extension for a supervised user. Missing extensions are not approved.
-const char kSupervisedUserApprovedExtensions[] =
-    "profile.managed.approved_extensions";
-#endif  // BUILDFLAG(ENABLE_SUPERVISED_USERS) && BUILDFLAG(ENABLE_EXTENSIONS)
 
 #if BUILDFLAG(ENABLE_RLZ)
 // Integer. RLZ ping delay in seconds.
@@ -583,6 +572,7 @@ const char kLastSessionLength[] = "session.last_session_length";
 // honored for public accounts.
 const char kTermsOfServiceURL[] = "terms_of_service.url";
 
+// TODO(b/285556135): Remove this pref together with AttestationEnabledForUser
 // Indicates whether the remote attestation is enabled for the user.
 const char kAttestationEnabled[] = "attestation.enabled";
 
@@ -654,6 +644,15 @@ const char kHatsBatteryLifeCycleEndTs[] =
 // A boolean pref. Indicates if the device is selected for the HaTS Battery
 // life experience survey.
 const char kHatsBatteryLifeIsSelected[] = "hats_battery_life_is_selected";
+
+// An int64 pref. This is the timestamp, microseconds after epoch, that
+// indicates the end of the Peripherals experience survey.
+const char kHatsPeripheralsCycleEndTs[] =
+    "hats_peripherals_cycle_end_timestamp";
+
+// A boolean pref. Indicates if the device is selected for the HaTS Peripherals
+// experience survey.
+const char kHatsPeripheralsIsSelected[] = "hats_peripherals_is_selected";
 
 // An int64 pref. This is a timestamp, microseconds after epoch, of the most
 // recent time the profile took or dismissed HaTS (happiness-tracking) survey.
@@ -816,6 +815,16 @@ const char kHatsPrivacyHubBaselineIsSelected[] =
 // indicated the end of the most recent Privacy Hub baseline cycle.
 const char kHatsPrivacyHubBaselineCycleEndTs[] =
     "hats_privacy_hub_baseline_end_timestamp";
+
+// A boolean pref. Indicated if the device is selected for the Borealis games
+// survey.
+const char kHatsBorealisGamesSurveyIsSelected[] =
+    "hats_borealis_games_is_selected";
+
+// An int64 pref. This is the timestamp, microseconds after epoch, that
+// indicated the end of the most recent Borealis games survey cycle.
+const char kHatsBorealisGamesSurveyCycleEndTs[] =
+    "hats_borealis_games_end_timestamp";
 
 // A boolean pref. Indicates if we've already shown a notification to inform the
 // current user about the quick unlock feature.
@@ -1121,6 +1130,18 @@ const char kHatsOsSettingsSearchSurveyCycleEndTs[] =
 // Search survey.
 const char kHatsOsSettingsSearchSurveyIsSelected[] =
     "hats_os_settings_search_is_selected";
+
+// A dictionary storing the string representation of
+// chromeos::settings::mojom::Setting IDs for the unique OS Settings changed.
+// Implicitly stores the total count of the unique OS Settings changed by each
+// user per device.
+// Key:string = the int equivalent of the Settings enum
+//      chromeos::settings::mojom::Setting casted to string. Need to cast to
+//      string since the keys in a dictionary can only be strings.
+// Value:int = constant number 1. It signifies whether that particular Settings
+//      has been used by the user during the device's lifetime.
+const char kTotalUniqueOsSettingsChanged[] =
+    "settings.total_unique_os_settings_changed";
 #endif  // BUILDFLAG(IS_CHROMEOS_ASH)
 
 #if BUILDFLAG(IS_CHROMEOS)
@@ -1286,9 +1307,7 @@ const char kShowUpdatePromotionInfoBar[] =
     "browser.show_update_promotion_info_bar";
 #endif
 
-// TODO(crbug.com/1052397): Revisit the macro expression once build flag switch
-// of lacros-chrome is complete.
-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS_LACROS)
+#if BUILDFLAG(IS_LINUX)
 // Boolean that is false if we should show window manager decorations.  If
 // true, we draw a custom chrome frame (thicker title bar and blue border).
 const char kUseCustomChromeFrame[] = "browser.custom_chrome_frame";
@@ -1648,6 +1667,11 @@ const char kQuietNotificationPermissionPromoWasShown[] =
     "profile.content_settings.quiet_permission_ui_promo.was_shown."
     "notifications";
 
+// Boolean indicating whether support for Data URLs in SVGUseElement should be
+// removed.
+const char kDataUrlInSvgUseEnabled[] =
+    "profile.content_settings.data_url_in_svg_use_enabled";
+
 // Boolean indicating if JS dialogs triggered from a different origin iframe
 // should be blocked. Has no effect if
 // "SuppressDifferentOriginSubframeJSDialogs" feature is disabled.
@@ -1671,6 +1695,9 @@ const char kSidePanelHorizontalAlignment[] = "side_panel.is_right_aligned";
 // a button in the toolbar.
 const char kSidePanelCompanionEntryPinnedToToolbar[] =
     "side_panel.companion_pinned_to_toolbar";
+// Corresponds to the enterprise policy.
+const char kGoogleSearchSidePanelEnabled[] =
+    "side_panel.google_search_side_panel_enabled";
 #endif
 
 // Number of minutes of inactivity before running actions from
@@ -1680,6 +1707,10 @@ const char kIdleTimeout[] = "idle_timeout";
 // Actions to run when the idle timeout is reached. Controller via the
 // IdleTimeoutActions policy.
 const char kIdleTimeoutActions[] = "idle_timeout_actions";
+
+// If true, show the IdleTimeout bubble when Chrome starts.
+const char kIdleTimeoutShowBubbleOnStartup[] =
+    "idle_timeout_show_bubble_on_startup";
 
 // *************** LOCAL STATE ***************
 // These are attached to the machine/installation
@@ -1836,9 +1867,6 @@ const char kDefaultTasksBySuffix[] = "filebrowser.tasks.default_by_suffix";
 const char kDefaultHandlersForFileExtensions[] =
     "filebrowser.default_handlers_for_file_extensions";
 
-// Whether the office files setup flow has ever been completed by the user.
-const char kOfficeSetupComplete[] = "filebrowser.office.setup_complete";
-
 // Whether we should always move office files to Google Drive without prompting
 // the user first.
 const char kOfficeFilesAlwaysMoveToDrive[] =
@@ -1856,6 +1884,26 @@ const char kOfficeMoveConfirmationShownForDrive[] =
 // Whether the move confirmation dialog has been shown before for OneDrive.
 const char kOfficeMoveConfirmationShownForOneDrive[] =
     "filebrowser.office.move_confirmation_shown_for_onedrive";
+
+// Whether the move confirmation dialog has been shown before for uploading
+// local files to Drive.
+const char kOfficeMoveConfirmationShownForLocalToDrive[] =
+    "filebrowser.office.move_confirmation_shown_for_local_to_drive";
+
+// Whether the move confirmation dialog has been shown before for uploading
+// local files to OneDrive.
+const char kOfficeMoveConfirmationShownForLocalToOneDrive[] =
+    "filebrowser.office.move_confirmation_shown_for_local_to_onedrive";
+
+// Whether the move confirmation dialog has been shown before for uploading
+// cloud files to Drive.
+const char kOfficeMoveConfirmationShownForCloudToDrive[] =
+    "filebrowser.office.move_confirmation_shown_for_cloud_to_drive";
+
+// Whether the move confirmation dialog has been shown before for uploading
+// cloud files to OneDrive.
+const char kOfficeMoveConfirmationShownForCloudToOneDrive[] =
+    "filebrowser.office.move_confirmation_shown_for_cloud_to_onedrive";
 
 // The timestamp of the latest office file automatically moved to OneDrive.
 const char kOfficeFileMovedToOneDrive[] =
@@ -2104,6 +2152,9 @@ const char kWebAppsExtensionIDs[] = "web_apps.extension_ids";
 // Dictionary that stores IPH state not scoped to a particular app.
 const char kWebAppsAppAgnosticIphState[] = "web_apps.app_agnostic_iph_state";
 
+// Dictionary that stores ML state not scoped to a particular app.
+const char kWebAppsAppAgnosticMlState[] = "web_apps.app_agnostic_ml_state";
+
 // A string representing the last version of Chrome preinstalled web apps were
 // synchronised for.
 const char kWebAppsLastPreinstallSynchronizeVersion[] =
@@ -2294,6 +2345,12 @@ const char kEncryptedClientHelloEnabled[] = "ssl.ech_enabled";
 // If false, disallow insecure hashes for use in  TLS Handshakes.
 const char kInsecureHashesInTLSHandshakesEnabled[] =
     "ssl.insecure_hash_enabled";
+
+// If true, checks the X.509 keyUsage extension in TLS 1.2 for RSA
+// certificates that chain to a local trust anchor. If false, the checks are
+// disabled.
+const char kRSAKeyUsageForLocalAnchorsEnabled[] =
+    "ssl.rsa_key_usage_for_local_anchors_enabled";
 
 // Boolean that specifies whether the built-in asynchronous DNS client is used.
 const char kBuiltInDnsClientEnabled[] = "async_dns.enabled";
@@ -3504,6 +3561,10 @@ const char kDesktopSharingHubEnabled[] =
 // Pref name for the last major version where the What's New page was
 // successfully shown.
 const char kLastWhatsNewVersion[] = "browser.last_whats_new_version";
+// Pref name for the whether whats new refresh page has been shown
+// successfully.
+const char kHasShownRefreshWhatsNew[] =
+    "browser.has_shown_refresh_2023_whats_new";
 // A boolean indicating whether the Lens Region search feature should be enabled
 // if supported.
 const char kLensRegionSearchEnabled[] = "policy.lens_region_search_enabled";
@@ -3539,17 +3600,6 @@ const char kSCTAuditingHashdanceReportCount[] =
 
 #if BUILDFLAG(IS_CHROMEOS_ASH)
 const char kConsumerAutoUpdateToggle[] = "settings.consumer_auto_update_toggle";
-
-// A boolean pref that controls whether or not Hindi Inscript keyboard layout
-// is available.
-// This is set by a user policy, but the user policy does not work to
-// control the availability of the Hindi Inscript layout.
-// TODO(jungshik): Deprecate it.
-const char kHindiInscriptLayoutEnabled[] =
-    "settings.input.hindi_inscript_layout_enabled";
-// This is set by a device policy and does actually work.
-const char kDeviceHindiInscriptLayoutEnabled[] =
-    "settings.input.device_hindi_inscript_layout_enabled";
 #endif
 
 #if !BUILDFLAG(IS_ANDROID)
@@ -3634,5 +3684,8 @@ const char kHttpAllowlist[] = "https_upgrades.policy.http_allowlist";
 // Whether the HTTPS Upgrades feature is enabled or disabled by the
 // `HttpsUpgradesEnabled` enterprise policy.
 const char kHttpsUpgradesEnabled[] = "https_upgrades.policy.upgrades_enabled";
+
+// Whether the hovercard image previews is enabled
+const char kHoverCardImagesEnabled[] = "browser.hovercard_images_enabled";
 
 }  // namespace prefs

@@ -6,10 +6,10 @@
 
 #import "base/ios/ios_util.h"
 #import "base/mac/foundation_util.h"
-#import "ios/chrome/browser/application_context/application_context.h"
 #import "ios/chrome/browser/promos_manager/constants.h"
 #import "ios/chrome/browser/promos_manager/features.h"
 #import "ios/chrome/browser/promos_manager/promos_manager.h"
+#import "ios/chrome/browser/shared/model/application_context/application_context.h"
 #import "ios/chrome/browser/shared/public/features/features.h"
 #import "ios/chrome/browser/ui/whats_new/constants.h"
 #import "ios/chrome/browser/ui/whats_new/feature_flags.h"
@@ -66,6 +66,10 @@ bool IsWhatsNewPromoRegistered() {
 
 }  // namespace
 
+BASE_FEATURE(kWhatsNewIOSM116,
+             "WhatsNewIOSM116",
+             base::FEATURE_DISABLED_BY_DEFAULT);
+
 bool WasWhatsNewUsed() {
   return
       [[NSUserDefaults standardUserDefaults] boolForKey:kWhatsNewUsageEntryKey];
@@ -96,4 +100,8 @@ void setWhatsNewPromoRegistration() {
 bool ShouldRegisterWhatsNewPromo() {
   return !IsWhatsNewPromoRegistered() &&
          (IsSixLaunchAfterFre() || IsSixDaysAfterFre());
+}
+
+bool IsWhatsNewM116Enabled() {
+  return base::FeatureList::IsEnabled(kWhatsNewIOSM116);
 }

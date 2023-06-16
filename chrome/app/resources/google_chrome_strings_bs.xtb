@@ -32,6 +32,7 @@ Neke funkcije možda neće biti dostupne i promjene postavki se neće sačuvati.
 uparivanjem. <ph name="IDS_BLUETOOTH_DEVICE_CHOOSER_AUTHORIZE_BLUETOOTH_LINK" /></translation>
 <translation id="1547295885616600893">ChromeOS je moguć zahvaljujući dodatnom <ph name="BEGIN_LINK_CROS_OSS" />softveru otvorenog koda<ph name="END_LINK_CROS_OSS" />.</translation>
 <translation id="1553358976309200471">Ažuriraj Chrome</translation>
+<translation id="1555506416658437797">urediti načine plaćanja.</translation>
 <translation id="1583073672411044740"><ph name="EXISTING_USER" /> je već prijavljen/a na ovom Chrome profilu. Ovim će se kreirati novi Chrome profil za korisnika <ph name="USER_EMAIL_ADDRESS" /></translation>
 <translation id="1587223624401073077">Google Chrome koristi vašu kameru.</translation>
 <translation id="1587325591171447154">Fajl <ph name="FILE_NAME" /> je opasan, pa ga je Chrome blokirao.</translation>
@@ -83,10 +84,12 @@ uparivanjem. <ph name="IDS_BLUETOOTH_DEVICE_CHOOSER_AUTHORIZE_BLUETOOTH_LINK" />
 <translation id="234869673307233423">Chrome ne može provjeravati vaše lozinke. Pokušajte ponovo kasnije.</translation>
 <translation id="235650106824528204">Administrator radnog profila može ukloniti bilo koje podatke Chromea koji se generiraju tokom korištenja ovog profila (naprimjer kreiranje oznaka, historije, lozinki i drugih postavki). <ph name="LEARN_MORE" /></translation>
 <translation id="2359808026110333948">Nastavi</translation>
+<translation id="2399868464369312507">Google Chrome pokušava urediti načine plaćanja.</translation>
 <translation id="2401189691232800402">Sistem ChromeOS</translation>
 <translation id="2467438592969358367">Google Chrome želi izvesti vaše lozinke. Unesite svoju lozinku za Windows da ovo omogućite.</translation>
 <translation id="2485422356828889247">Deinstaliraj</translation>
 <translation id="2534507159460261402">Google Pay (kopirano u Chrome)</translation>
+<translation id="2556847002339236023">Vaš organizacija zatvara Chrome kada se ne koristi <ph name="TIMEOUT_DURATION" />. Podaci o pregledanju su izbrisani. Ovo može uključivati historiju, automatsko popunjavanje i preuzimanja.</translation>
 <translation id="2559253115192232574">Kasnije, web lokacija koju ste posjetili može zatražiti od Chromea da pogleda vaša interesovanja radi personalizacije oglasa koje vidite. Chrome može dijeliti do 3 ineresovanja.</translation>
 <translation id="2563121210305478421">Ponovo pokrenuti Chrome?</translation>
 <translation id="2574930892358684005">Račun <ph name="EXISTING_USER" /> je već prijavljen na ovom Chrome profilu. Da vaše pregledanje ostane odvojeno, Chrome vam može kreirati vaš lični profil.</translation>
@@ -118,7 +121,7 @@ uparivanjem. <ph name="IDS_BLUETOOTH_DEVICE_CHOOSER_AUTHORIZE_BLUETOOTH_LINK" />
 <translation id="2929907241665500097">Ažuriranje Chromea nije uspjelo. Nešto nije uredu. <ph name="BEGIN_LINK" />Ispravite probleme s ažuriranjem Chromea i neuspjela ažuriranja.<ph name="END_LINK" /></translation>
 <translation id="2969728957078202736"><ph name="PAGE_TITLE" /> – prijava na mrežu – Chrome</translation>
 <translation id="3019382870990049182">Ponovo pokrenite da ažurirate &amp;ChromeOS Flex</translation>
-<translation id="3033660625209020231">{NUM_DEVICES,plural, =0{Proširenja za Google Chrome pristupala su HID uređajima}=1{Proširenja za Google Chrome pristupaju HID uređajima}one{Proširenja za Google Chrome pristupaju # HID uređaju}few{Proširenja za Google Chrome pristupaju # HID uređaja}other{Proširenja za Google Chrome pristupaju # HID uređaja}}</translation>
+<translation id="3033660625209020231">{NUM_DEVICES,plural, =0{Ekstenzije za Google Chrome su pristupale uređajima s korisničkim interfejsom}=1{Ekstenzije za Google Chrome pristupaju uređajima s korisničkim interfejsom}one{Ekstenzije za Google Chrome pristupaju # uređaju s korisničkim interfejsom}few{Ekstenzije za Google Chrome pristupaju # uređajima s korisničkim interfejsom}other{Ekstenzije za Google Chrome pristupaju # uređaja s korisničkim interfejsom}}</translation>
 <translation id="303514781271618814">Chrome istražuje nove funkcije koje dozvoljavaju web lokacijama da pružaju isto iskustvo pregledanja korištenjem manje količine vaših podataka</translation>
 <translation id="3037838751736561277">Google Chrome radi u pozadinskom načinu rada.</translation>
 <translation id="3038232873781883849">Čekanje na instalaciju...</translation>
@@ -224,7 +227,7 @@ uparivanjem. <ph name="IDS_BLUETOOTH_DEVICE_CHOOSER_AUTHORIZE_BLUETOOTH_LINK" />
 <translation id="4970880042055371251">Verzija ChromeOS-a</translation>
 <translation id="4970947549776831107">Chrome je blokirao ovaj fajl jer je ova vrsta fajla opasna</translation>
 <translation id="4990567037958725628">Google Chrome Canary</translation>
-<translation id="5005958605836556244">{NUM_DEVICES,plural, =0{Proširenje za Google Chrome pristupalo je HID uređajima}=1{Proširenje za Google Chrome pristupa jednom HID uređaju}one{Proširenje za Google Chrome pristupa # HID uređaju}few{Proširenje za Google Chrome pristupa # HID uređaja}other{Proširenje za Google Chrome pristupa # HID uređaja}}</translation>
+<translation id="5005958605836556244">{NUM_DEVICES,plural, =0{Ekstenzija za Google Chrome je pristupala uređajima s korisničkim interfejsom}=1{Ekstenzija za Google Chrome pristupa 1 uređaju s korisničkim interfejsom}one{Ekstenzija za Google Chrome pristupa # uređaju s korisničkim interfejsom}few{Ekstenzija za Google Chrome pristupa # uređajima s korisničkim interfejsom}other{Ekstenzija za Google Chrome pristupa # uređaja s korisničkim interfejsom}}</translation>
 <translation id="5064155331105009416">{COUNT,plural, =1{Administrator automatski zatvara Chrome kada se ne koristi 1 minutu. Podaci o pregledanju se brišu. Ovo može uključivati historiju, automatsko popunjavanje i preuzimanja.}one{Administrator automatski zatvara Chrome kada se ne koristi # minutu. Podaci o pregledanju se brišu. Ovo može uključivati historiju, automatsko popunjavanje i preuzimanja.}few{Administrator automatski zatvara Chrome kada se ne koristi # minute. Podaci o pregledanju se brišu. Ovo može uključivati historiju, automatsko popunjavanje i preuzimanja.}other{Administrator automatski zatvara Chrome kada se ne koristi # minuta. Podaci o pregledanju se brišu. Ovo može uključivati historiju, automatsko popunjavanje i preuzimanja.}}</translation>
 <translation id="5098668839038261629">Kada je uključeno, također ćete biti odjavljeni iz Chroma</translation>
 <translation id="5132929315877954718">Otkrijte odlične aplikacije, igre, ekstenzije i teme za Google Chrome.</translation>
@@ -258,6 +261,7 @@ Google Chrome ne može vratiti vaše postavke.</translation>
 <translation id="5756509061973259733">Chrome profil s ovim računom već postoji na ovom uređaju</translation>
 <translation id="5795887333006832406"><ph name="PAGE_TITLE" /> – Google Chrome Canary</translation>
 <translation id="5804318322022881572">Pokretanje Chromea nije uspjelo. Ponovite.</translation>
+<translation id="585620188971323280">izmijeniti postavke za popunjavanje načina plaćanja.</translation>
 <translation id="5895138241574237353">Ponovo pokreni</translation>
 <translation id="5903106910045431592"><ph name="PAGE_TITLE" /> – prijava na mrežu</translation>
 <translation id="5924017743176219022">Povezivanje s internetom...</translation>
@@ -275,6 +279,7 @@ Google Chrome ne može vratiti vaše postavke.</translation>
 <translation id="6113794647360055231">Chrome je upravo postao još bolji</translation>
 <translation id="6145313976051292476">Otvaraj PDF dokumente u Chromeu</translation>
 <translation id="6155960517327665396">Ušteda memorije ubrzava rada Chromea</translation>
+<translation id="6157638032135951407">Vaša organizacija briše podatke Chromea kada se ne koristi <ph name="TIMEOUT_DURATION" />. Ovo može uključivati historiju, automatsko popunjavanje i preuzimanja.</translation>
 <translation id="6169866489629082767"><ph name="PAGE_TITLE" /> - Google Chrome</translation>
 <translation id="6173637689840186878"><ph name="PAGE_TITLE" /> - Google Chrome Beta</translation>
 <translation id="6235018212288296708">Ulazno pravilo da Google Chrome dozvoli mDNS saobraćaj.</translation>
@@ -290,6 +295,7 @@ Google Chrome ne može vratiti vaše postavke.</translation>
 <translation id="6418662306461808273">Želite li se prebaciti na postojeći Chrome profil?</translation>
 <translation id="648319183876919572">Poboljšano Sigurno pregledanje vas bolje štiti od opasnih web lokacija i preuzimanja</translation>
 <translation id="6493527311031785448">Google Chrome pokušava <ph name="AUTHENTICATION_PURPOSE" /></translation>
+<translation id="6497147134301593682">Chrome se automatski zatvorio</translation>
 <translation id="6506909944137591434">Chromeu je potrebno odobrenje za kameru radi kreiranja 3D mape vašeg okruženja</translation>
 <translation id="6515495397637126556"><ph name="PAGE_TITLE" /> – Google Chrome Dev</translation>
 <translation id="659498884637196217">U Googleovom Upravitelju lozinki na ovom uređaju</translation>
@@ -326,6 +332,7 @@ Odobrenja koja ste već dali web lokacijama i aplikacijama se mogu primjenjivati
 <translation id="7155997830309522122">Ako jeste, uredite sačuvanu lozinku u Chromeu da se podudara s novom lozinkom.</translation>
 <translation id="7161904924553537242">Dobro došli u Google Chrome</translation>
 <translation id="7177959540995930968">O ovim funkcijama možete saznati više u postavkama Chromea.</translation>
+<translation id="7193885263065350793">Vaš organizacija zatvara Chrome kada se ne koristi <ph name="TIMEOUT_DURATION" />.</translation>
 <translation id="7242029209006116544">Prijavljujete se na upravljani račun i administratoru dajete kontrolu nad svojim Google Chrome profilom. Vaši podaci iz Chromea, kao što su vaše aplikacije, oznake, historija, lozinke i druge postavke, trajno će se vezati za račun <ph name="USER_NAME" />. Moći ćete izbrisati ove podatke na kontrolnoj tabli Google računa, ali nećete moći povezati ove podatke s drugim računom. Imate mogućnost kreiranja novog profila kako biste odvojili postojeće podatke iz Chromea. <ph name="LEARN_MORE" /></translation>
 <translation id="7295052994004373688">Ovaj jezik se koristi za prikaz korisničkog interfejsa u Google Chromeu</translation>
 <translation id="7296210096911315575">Važne informacije o korištenju i sigurnosti</translation>
@@ -387,11 +394,13 @@ Odobrenja koja ste već dali web lokacijama i aplikacijama se mogu primjenjivati
 <translation id="8418845734693287262">ChromeOS nije mogao sinhronizirati vaše podatke jer su podaci o prijavi računa zastarjeli.</translation>
 <translation id="8433638294851456451">Da pošaljete broj s ovog uređaja na svoj Android telefon, prijavite se u Chrome na oba uređaja.</translation>
 <translation id="8451192282033883849">Vašim računom upravlja <ph name="MANAGER_NAME" />. Vaš administrator može vidjeti i urediti ovaj profil Chrome preglednika i njegove podatke kao što su oznake, historija i lozinke.</translation>
+<translation id="8496177819998570653">Google upravitelj l&amp;ozinki</translation>
 <translation id="8498858610309223613">Upravo je izvršeno posebno sigurnosno ažuriranje za Google Chrome. Sada ga ponovo pokrenite i vratićemo vaše kartice.</translation>
 <translation id="8504220326736535258">Chrome je blokirao ovaj fajl jer sadržava zlonamjerni softver</translation>
 <translation id="8516431725144212809">Vaša interesovanja prema Chromeovoj procjeni</translation>
 <translation id="8521348052903287641">Ulazno pravilo da Google Chrome Dev dozvoli mDNS saobraćaj.</translation>
 <translation id="8540666473246803645">Google Chrome</translation>
+<translation id="8544217240017914508">Google Chrome pokušava izmijeniti postavke za popunjavanje načina plaćanja.</translation>
 <translation id="8550334526674375523">Ovaj radni profil je u potpunosti odvojen od vašeg ličnog profila.</translation>
 <translation id="8556340503434111824">Dostupna je nova verzija Google Chromea koji je brži nego ikad.</translation>
 <translation id="8571790202382503603">S Chrome profilima možete odvojiti sve svoje Chrome stvari. Tako ćete lakše razdvojiti posao i zabavu.</translation>

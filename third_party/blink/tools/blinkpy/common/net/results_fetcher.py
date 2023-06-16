@@ -88,7 +88,7 @@ class TestResultsFetcher:
     def gather_results(self,
                        build: Build,
                        step_name: str,
-                       exclude_exonerated: bool = True,
+                       exclude_exonerated: bool = False,
                        only_unexpected: bool = True) -> WebTestResults:
         """Gather all web test results on a given build step from ResultDB."""
         assert build.build_id, '%s must set a build ID' % build
@@ -289,14 +289,10 @@ class TestResultsFetcher:
                 'followEdges': {
                     'includedInvocations': True,
                 },
+                'artifactIdRegexp': 'wpt_reports.json',
             })
-        filename_pattern = re.compile(r'wpt_reports_(.*)\.json')
-        url_to_index = {}
-        for artifact in artifacts:
-            filename_match = filename_pattern.fullmatch(artifact['artifactId'])
-            if filename_match:
-                url_to_index[artifact['fetchUrl']] = filename_match[0]
-        return sorted(url_to_index, key=url_to_index.get)
+        artifacts.sort(key=lambda artifact: artifact['artifactId'])
+        return [artifact['fetchUrl'] for artifact in artifacts]
 
 
 def filter_latest_builds(builds):

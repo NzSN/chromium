@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import {CupsPrintersBrowserProxyImpl, CupsPrintersEntryManager, PrinterSetupResult, PrinterType, PrintServerResult} from 'chrome://os-settings/chromeos/lazy_load.js';
-import {Router, routes} from 'chrome://os-settings/chromeos/os_settings.js';
-import {OncMojo} from 'chrome://resources/ash/common/network/onc_mojo.js';
+import {CupsPrintersBrowserProxyImpl, CupsPrintersEntryManager, PrinterSettingsUserAction, PrinterSetupResult, PrinterType, PrintServerResult} from 'chrome://os-settings/lazy_load.js';
+import {Router, routes} from 'chrome://os-settings/os_settings.js';
 import {webUIListenerCallback} from 'chrome://resources/ash/common/cr.m.js';
+import {OncMojo} from 'chrome://resources/ash/common/network/onc_mojo.js';
 import {NetworkStateProperties} from 'chrome://resources/mojo/chromeos/services/network_config/public/mojom/cros_network_config.mojom-webui.js';
 import {ConnectionStateType, NetworkType} from 'chrome://resources/mojo/chromeos/services/network_config/public/mojom/network_types.mojom-webui.js';
 import {keyEventOn} from 'chrome://resources/polymer/v3_0/iron-test-helpers/mock-interactions.js';
 import {flush} from 'chrome://resources/polymer/v3_0/polymer/polymer_bundled.min.js';
+import {assertEquals, assertFalse, assertTrue} from 'chrome://webui-test/chai_assert.js';
+import {isVisible} from 'chrome://webui-test/chromeos/test_util.js';
 import {flushTasks} from 'chrome://webui-test/polymer_test_util.js';
 
-import {assertEquals, assertFalse, assertTrue} from 'chrome://webui-test/chai_assert.js';
-
 import {createCupsPrinterInfo, createPrinterListEntry} from './cups_printer_test_utils.js';
+import {FakeMetricsPrivate} from './fake_metrics_private.js';
 import {TestCupsPrintersBrowserProxy} from './test_cups_printers_browser_proxy.js';
 
 /*
@@ -47,18 +48,31 @@ function resetGetEulaUrl(cupsPrintersBrowserProxy, eulaUrl) {
 suite('CupsPrinterUITests', () => {
   let page = null;
 
+  /** @type {?settings.TestCupsPrintersBrowserProxy} */
+  let cupsPrintersBrowserProxy = null;
+
   setup(() => {
+    cupsPrintersBrowserProxy = new TestCupsPrintersBrowserProxy();
+    CupsPrintersBrowserProxyImpl.setInstanceForTesting(
+        cupsPrintersBrowserProxy);
+
+    resetPage();
+  });
+
+  teardown(() => {
+    cupsPrintersBrowserProxy.reset();
+    page.remove();
+    page = null;
+  });
+
+  function resetPage() {
     PolymerTest.clearBody();
+    Router.getInstance().navigateTo(routes.CUPS_PRINTERS);
     page = document.createElement('settings-cups-printers');
     document.body.appendChild(page);
     assertTrue(!!page);
     flush();
-  });
-
-  teardown(() => {
-    page.remove();
-    page = null;
-  });
+  }
 
   // Verify the Saved printers section strings.
   test('SavedPrintersText', () => {
@@ -88,6 +102,101 @@ suite('CupsPrinterUITests', () => {
           loadTimeData.getString('availablePrintersReadySubtext'),
           page.shadowRoot.querySelector('#availablePrintersReadySubtext')
               .textContent.trim());
+    });
+  });
+
+  // Verify the Nearby printers section can be properly opened and closed.
+  test('CollapsibleNearbyPrinterSection', () => {
+    page.canAddPrinter = true;
+    return flushTasks().then(() => {
+      // The Add printer section above the Nearby printers section should be
+      // hidden.
+      assertFalse(
+          isVisible(page.shadowRoot.querySelector('#addPrinterSection')));
+
+      // The collapsible section should start opened, then after clicking the
+      // button should close.
+      const toggleButton =
+          page.shadowRoot.querySelector('#nearbyPrinterToggleButton');
+      assertTrue(
+          isVisible(page.shadowRoot.querySelector('#collapsibleSection')));
+      assertTrue(isVisible(page.shadowRoot.querySelector('#helpSection')));
+      toggleButton.click();
+      assertFalse(
+          isVisible(page.shadowRoot.querySelector('#collapsibleSection')));
+      assertFalse(isVisible(page.shadowRoot.querySelector('#helpSection')));
+      toggleButton.click();
+      assertTrue(
+          isVisible(page.shadowRoot.querySelector('#collapsibleSection')));
+      assertTrue(isVisible(page.shadowRoot.querySelector('#helpSection')));
+    });
+  });
+
+  // Verify the Saved printers empty state only shows when there are no saved
+  // printers.
+  test('SavedPrintersEmptyState', () => {
+    // Settings should start in empty state without saved printers.
+    const emptyState = page.shadowRoot.querySelector('#noSavedPrinters');
+    assertTrue(isVisible(emptyState));
+
+    return flushTasks().then(() => {
+      // Add a saved printer and expect the empty state to be hidden.
+      webUIListenerCallback('on-saved-printers-changed', {
+        printerList: [
+          createCupsPrinterInfo('nameA', 'address', 'idA'),
+        ],
+      });
+      assertFalse(isVisible(emptyState));
+    });
+  });
+
+  // Verify the Nearby printers section starts open when there are no saved
+  // printers or open when there's more than one saved printer.
+  test('CollapsibleNearbyPrinterSectionSavedPrinters', () => {
+    // Simulate no saved printers and expect the section to be open.
+    cupsPrintersBrowserProxy.printerList = {printerList: []};
+    resetPage();
+    return flushTasks().then(() => {
+      assertTrue(
+          isVisible(page.shadowRoot.querySelector('#collapsibleSection')));
+
+      // Simulate 1 saved printer on load and expect the section to be
+      // collapsed.
+      cupsPrintersBrowserProxy.printerList = {
+        printerList: [
+          createCupsPrinterInfo('nameA', 'address', 'idA'),
+        ],
+      };
+      resetPage();
+      return flushTasks().then(() => {
+        assertFalse(
+            isVisible(page.shadowRoot.querySelector('#collapsibleSection')));
+      });
+    });
+  });
+
+  // Verify clicking the add printer manually button is recorded to metrics.
+  test('RecordUserActionMetric', () => {
+    const fakeMetricsPrivate = new FakeMetricsPrivate();
+    chrome.metricsPrivate = fakeMetricsPrivate;
+
+    // Enable the add printer manually button.
+    page.prefs = {
+      native_printing: {
+        user_native_printers_allowed: {
+          value: true,
+        },
+      },
+    };
+    page.canAddPrinter = true;
+
+    return flushTasks().then(() => {
+      page.shadowRoot.querySelector('.add-manual-printer-icon').click();
+      assertEquals(
+          1,
+          fakeMetricsPrivate.countMetricValue(
+              'Printing.CUPS.SettingsUserAction',
+              PrinterSettingsUserAction.ADD_PRINTER_MANUALLY));
     });
   });
 });

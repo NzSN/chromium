@@ -179,6 +179,18 @@ inline constexpr char16_t kStateRe[] =
     u"|((\\b|_|\\*)(eyalet|[şs]ehir|[İii̇]l(imiz)?|kent)(\\b|_|\\*))"  // tr
     u"|^시[·・]?도"                                                   // ko-KR
     u"|provinci";                                                     // id
+inline constexpr char16_t kLandmarkRe[] =
+    u"landmark"
+    u"|(?:ponto|complemento).*referência"  // pt-BR, pt-PT
+    u"|punto.*referencia";                 // es
+
+inline constexpr char16_t kBetweenStreetsRe[] =
+    u"(cross|between).*street"
+    u"|entre.*calle";  // es
+
+inline constexpr char16_t kAdminLevel2Re[] =
+    u"municipio"               // pt
+    u"|municipio|delegación";  // es
 
 /////////////////////////////////////////////////////////////////////////////
 // search_field.cc

@@ -45,9 +45,14 @@ suite('NewTabPageModulesHistoryClustersModuleCartTileTest', () => {
     assertTrue(!!tileElement);
     assertEquals(
         $$(tileElement, '#content')!.getAttribute('href'), 'https://foo.com');
+    assertEquals(
+        $$(tileElement, '#content')!.getAttribute('aria-label'),
+        loadTimeData.getStringF(
+            'modulesJourneysCartTileLabelPlural', 5, '5% off', 'Foo', 'foo.com',
+            '6 mins ago'));
     assertEquals($$(tileElement, '#title')!.textContent, 'Foo');
     assertEquals(
-        $$(tileElement, '#titleAnnotation')!.textContent!,
+        $$(tileElement, '#titleAnnotation')!.textContent!.trim(),
         loadTimeData.getString('modulesJourneysCartAnnotation'));
     assertEquals(
         tileElement.shadowRoot!.querySelectorAll('.small-image').length, 3);
@@ -84,10 +89,15 @@ suite('NewTabPageModulesHistoryClustersModuleCartTileTest', () => {
         assertEquals(
             $$(tileElement, '#content')!.getAttribute('href'),
             'https://foo.com');
+        assertEquals(
+            $$(tileElement, '#content')!.getAttribute('aria-label'),
+            loadTimeData.getStringF(
+                'modulesJourneysCartTileLabelPlural', 2, '', 'Foo', 'foo.com',
+                '6 mins ago'));
         assertEquals($$(tileElement, '#title')!.textContent, 'Foo');
         assertTrue(isVisible($$(tileElement, '#titleAnnotation')!));
         assertEquals(
-            $$(tileElement, '#titleAnnotation')!.textContent!,
+            $$(tileElement, '#titleAnnotation')!.textContent!.trim(),
             loadTimeData.getString('modulesJourneysCartAnnotation'));
         assertEquals(
             tileElement.shadowRoot!.querySelectorAll('.small-image').length, 2);
@@ -119,10 +129,15 @@ suite('NewTabPageModulesHistoryClustersModuleCartTileTest', () => {
     assertTrue(!!tileElement);
     assertEquals(
         $$(tileElement, '#content')!.getAttribute('href'), 'https://foo.com');
+    assertEquals(
+        $$(tileElement, '#content')!.getAttribute('aria-label'),
+        loadTimeData.getStringF(
+            'modulesJourneysCartTileLabelSingular', '', 'Foo', 'foo.com',
+            '6 mins ago'));
     assertEquals($$(tileElement, '#title')!.textContent, 'Foo');
     assertTrue(isVisible($$(tileElement, '#titleAnnotation')!));
     assertEquals(
-        $$(tileElement, '#titleAnnotation')!.textContent!,
+        $$(tileElement, '#titleAnnotation')!.textContent!.trim(),
         loadTimeData.getString('modulesJourneysCartAnnotation'));
     assertEquals(
         tileElement.shadowRoot!.querySelectorAll('.small-image').length, 0);
@@ -150,10 +165,15 @@ suite('NewTabPageModulesHistoryClustersModuleCartTileTest', () => {
     assertTrue(!!tileElement);
     assertEquals(
         $$(tileElement, '#content')!.getAttribute('href'), 'https://foo.com');
+    assertEquals(
+        $$(tileElement, '#content')!.getAttribute('aria-label'),
+        loadTimeData.getStringF(
+            'modulesJourneysCartTileLabelDefault', '', 'Foo', 'foo.com',
+            '6 mins ago'));
     assertEquals($$(tileElement, '#title')!.textContent, 'Foo');
     assertTrue(isVisible($$(tileElement, '#titleAnnotation')!));
     assertEquals(
-        $$(tileElement, '#titleAnnotation')!.textContent!,
+        $$(tileElement, '#titleAnnotation')!.textContent!.trim(),
         loadTimeData.getString('modulesJourneysCartAnnotation'));
     assertEquals(
         tileElement.shadowRoot!.querySelectorAll('.small-image').length, 0);

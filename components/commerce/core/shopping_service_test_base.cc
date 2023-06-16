@@ -204,13 +204,27 @@ OptimizationMetadata MockOptGuideDecider::BuildMerchantTrustResponse(
 
 MockWebWrapper::MockWebWrapper(const GURL& last_committed_url,
                                bool is_off_the_record)
+    : MockWebWrapper(last_committed_url, is_off_the_record, nullptr) {}
+
+MockWebWrapper::MockWebWrapper(const GURL& last_committed_url,
+                               bool is_off_the_record,
+                               base::Value* result)
     : last_committed_url_(last_committed_url),
-      is_off_the_record_(is_off_the_record) {}
+      is_off_the_record_(is_off_the_record),
+      mock_js_result_(result) {}
 
 MockWebWrapper::~MockWebWrapper() = default;
 
 const GURL& MockWebWrapper::GetLastCommittedURL() {
   return last_committed_url_;
+}
+
+bool MockWebWrapper::IsFirstLoadForNavigationFinished() {
+  return is_first_load_finished_;
+}
+
+void MockWebWrapper::SetIsFirstLoadForNavigationFinished(bool finished) {
+  is_first_load_finished_ = finished;
 }
 
 bool MockWebWrapper::IsOffTheRecord() {
@@ -230,10 +244,6 @@ void MockWebWrapper::RunJavascript(
       FROM_HERE, base::BindOnce(std::move(callback), mock_js_result_->Clone()));
 }
 
-void MockWebWrapper::SetMockJavaScriptResult(base::Value* result) {
-  mock_js_result_ = result;
-}
-
 ShoppingServiceTestBase::ShoppingServiceTestBase()
     : bookmark_model_(bookmarks::TestBookmarkClient::CreateModel()),
       opt_guide_(std::make_unique<MockOptGuideDecider>()),
@@ -245,6 +255,11 @@ ShoppingServiceTestBase::ShoppingServiceTestBase()
   base::CommandLine::ForCurrentProcess()->AppendSwitch(
       optimization_guide::switches::kDisableCheckingUserPermissionsForTesting);
   RegisterPrefs(pref_service_->registry());
+}
+
+ShoppingServiceTestBase::~ShoppingServiceTestBase() = default;
+
+void ShoppingServiceTestBase::SetUp() {
   shopping_service_ = std::make_unique<ShoppingService>(
       "us", "en-us", bookmark_model_.get(), opt_guide_.get(),
       pref_service_.get(), identity_test_env_->identity_manager(),
@@ -253,8 +268,6 @@ ShoppingServiceTestBase::ShoppingServiceTestBase()
           test_url_loader_factory_.get()),
       nullptr, nullptr);
 }
-
-ShoppingServiceTestBase::~ShoppingServiceTestBase() = default;
 
 void ShoppingServiceTestBase::TestBody() {}
 
@@ -270,6 +283,12 @@ void ShoppingServiceTestBase::DidNavigatePrimaryMainFrame(WebWrapper* web) {
 
 void ShoppingServiceTestBase::DidFinishLoad(WebWrapper* web) {
   shopping_service_->DidFinishLoad(web);
+  base::RunLoop().RunUntilIdle();
+}
+
+void ShoppingServiceTestBase::SimulateProductInfoJsTaskFinished() {
+  task_environment_.FastForwardBy(
+      base::Milliseconds(kProductInfoJavascriptDelayMs));
   base::RunLoop().RunUntilIdle();
 }
 

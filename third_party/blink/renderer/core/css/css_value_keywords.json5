@@ -154,6 +154,15 @@
     // math
 
     //
+    // font-size-adjust
+    //
+    //none
+    "ex-height",
+    "cap-height",
+    "ch-width",
+    "ic-width",
+
+    //
     // font-family (<generic-family> in CSS 2.1)
     //
     // If you modify this list, please make sure you update css_parsing_utils's
@@ -182,6 +191,13 @@
     "font-format",
 
     //
+    // font-palette animation
+    //
+    "palette-mix",
+    "palette-add",
+    "palette-scale",
+
+    //
     // *-color
     //
     "aqua",
@@ -204,6 +220,8 @@
     "transparent",
     "-webkit-link",
     "-webkit-activelink",
+    "accentcolor",
+    "accentcolortext",
     "activeborder",
     "activecaption",
     "activetext",
@@ -574,6 +592,7 @@
     //
     "preserve",
     "preserve-breaks",
+    "pretty",
     //
     // Unordered rest
     //
@@ -769,6 +788,11 @@
     // under
     // left
     // right
+
+    //
+    // word-boundary-detection
+    //
+    "ja",
 
     //
     // word-break
@@ -1256,6 +1280,7 @@
     "-webkit-repeating-radial-gradient",
     "-webkit-image-set",
     "image-set",
+    "type",
 
     // deprecated gradients
     "from",
@@ -1376,6 +1401,9 @@
     "ray",
     "sides",
 
+    // coord-box
+    "stroke-box",
+
     // math functions
     // https://drafts.csswg.org/css-values-4/#math
     "calc",
@@ -1453,8 +1481,17 @@
     "inline-size",
 
     // @container
-    "name",
-    "type",
+    // size
+    // style
+    "state",
+    // top
+    // left
+    // right
+    // bottom
+    "inset-block-start",
+    "inset-block-end",
+    "inset-inline-start",
+    "inset-inline-end",
 
     // grid auto-repeat
     "auto-fill",

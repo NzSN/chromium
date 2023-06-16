@@ -545,6 +545,17 @@ chromium-metrics-reviews@google.com.
       name="Autofill.SaveCreditCardPromptResult.Upload.Reshows"/>
 </histogram_suffixes>
 
+<histogram_suffixes
+    name="AutofillSaveCreditCardPromptWithSameLastFourButDifferentExpiration"
+    separator=".">
+  <suffix name="WithSameLastFourButDifferentExpiration"
+      label="When the same last four but different expiration dates"/>
+  <affected-histogram name="Autofill.CreditCardInfoBar.Server"/>
+  <affected-histogram
+      name="Autofill.SaveCreditCardPromptOffer.Upload.FirstShow"/>
+  <affected-histogram name="Autofill.SaveCreditCardPromptOffer.Upload.Reshows"/>
+</histogram_suffixes>
+
 <histogram_suffixes name="AutofillStoredCardHasNickname" separator=".">
   <owner>sujiezhu@google.com</owner>
   <owner>jsaul@google.com</owner>
@@ -2021,25 +2032,6 @@ chromium-metrics-reviews@google.com.
   <affected-histogram name="GPU.Error"/>
 </histogram_suffixes>
 
-<histogram_suffixes name="GoogleUpdate_Result_UpdateType" separator=".">
-  <suffix base="true" name="Intent" label="Intent Updates"/>
-  <suffix base="true" name="Unknown" label="Unknown Update Type"/>
-  <affected-histogram name="GoogleUpdate.Result.Session"/>
-  <affected-histogram name="GoogleUpdate.Result.TimeWindow"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="GoogleUpdate_Result_UpdateType_UpdateSource"
-    separator=".">
-  <suffix name="Infobar" label="Update initiated from the infobar"/>
-  <suffix name="Menu" label="Update initiated from the menu"/>
-  <suffix name="Notification" label="Update initiated from the notification"/>
-  <suffix name="Unknown" label="Update initiated from an unknown source"/>
-  <affected-histogram name="GoogleUpdate.Result.Session.Intent"/>
-  <affected-histogram name="GoogleUpdate.Result.Session.Unknown"/>
-  <affected-histogram name="GoogleUpdate.Result.TimeWindow.Intent"/>
-  <affected-histogram name="GoogleUpdate.Result.TimeWindow.Unknown"/>
-</histogram_suffixes>
-
 <histogram_suffixes name="GPU_ProtectedVideoType" separator=".">
   <suffix name="Clear" label="Clear"/>
   <suffix name="HardwareProtected" label="HardwareProtected"/>
@@ -2157,60 +2149,6 @@ chromium-metrics-reviews@google.com.
   <affected-histogram name="PLT.PT_RequestToStart_FromGWS"/>
   <affected-histogram name="PLT.PT_StartToCommit_FromGWS"/>
   <affected-histogram name="PLT.PT_StartToFinish_FromGWS"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="HandshakeConfirmed" separator=".">
-  <suffix name="HandshakeConfirmed" label="the handshake was confirmed"/>
-  <affected-histogram name="Net.QuicSession.ClosedByPublicReset"/>
-  <affected-histogram name="Net.QuicSession.ConnectionCloseErrorCodeClient"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeClientGoogle"/>
-  <affected-histogram name="Net.QuicSession.ConnectionCloseErrorCodeServer"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerGoogle"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfApplication"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfApplicationGoogle"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfApplicationGQuicErrorMissing"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfApplicationGQuicErrorMissingGoogle"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfTransport"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfTransportGoogle"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfTransportGQuicErrorMissing"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfTransportGQuicErrorMissingGoogle"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="HandshakeNotConfirmed" separator=".">
-  <suffix name="HandshakeNotConfirmed" label="the handshake was confirmed"/>
-  <affected-histogram name="Net.QuicSession.ClosedByPublicReset"/>
-  <affected-histogram name="Net.QuicSession.ConnectionCloseErrorCodeClient"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeClientGoogle"/>
-  <affected-histogram name="Net.QuicSession.ConnectionCloseErrorCodeServer"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerGoogle"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfApplication"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfApplicationGoogle"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfApplicationGQuicErrorMissing"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfApplicationGQuicErrorMissingGoogle"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfTransport"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfTransportGoogle"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfTransportGQuicErrorMissing"/>
-  <affected-histogram
-      name="Net.QuicSession.ConnectionCloseErrorCodeServerIetfTransportGQuicErrorMissingGoogle"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="HardwareVerifierSupportCategory" separator=".">
@@ -3225,10 +3163,6 @@ chromium-metrics-reviews@google.com.
   <affected-histogram
       name="PageLoad.Clients.DocWrite.Block.ParseTiming.ParseBlockedOnScriptLoad"/>
   <affected-histogram
-      name="PageLoad.Clients.MultiTabLoading.DocumentTiming.NavigationToDOMContentLoadedEventFired"/>
-  <affected-histogram
-      name="PageLoad.Clients.MultiTabLoading.DocumentTiming.NavigationToLoadEventFired"/>
-  <affected-histogram
       name="PageLoad.Clients.ServiceWorker2.PaintTiming.NavigationToFirstContentfulPaint"/>
   <affected-histogram
       name="PageLoad.Clients.ServiceWorker2.ParseTiming.NavigationToParseStart"/>
@@ -3349,27 +3283,6 @@ chromium-metrics-reviews@google.com.
              page"/>
   <affected-histogram
       name="PageLoad.Clients.LoadingPredictor2.PaintTiming.NavigationToFirstContentfulPaint"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="PageLoadMetricsClientsMultiTabLoading" separator="."
-    ordering="prefix">
-  <suffix name="Clients.MultiTabLoading"
-      label="PageLoadMetrics for page loads that started while there are
-             other loading tabs."/>
-  <suffix name="Clients.MultiTabLoading.2OrMore"
-      label="PageLoadMetrics for page loads that started while there are 2 or
-             more other loading tabs."/>
-  <suffix name="Clients.MultiTabLoading.5OrMore"
-      label="PageLoadMetrics for page loads that started while there are 5 or
-             more other loading tabs."/>
-  <affected-histogram
-      name="PageLoad.DocumentTiming.NavigationToDOMContentLoadedEventFired"/>
-  <affected-histogram
-      name="PageLoad.DocumentTiming.NavigationToLoadEventFired"/>
-  <affected-histogram
-      name="PageLoad.PaintTiming.ForegroundToFirstContentfulPaint"/>
-  <affected-histogram
-      name="PageLoad.PaintTiming.NavigationToFirstContentfulPaint"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="PageLoadMetricsClientsNoScriptPreview" separator="."
@@ -4214,27 +4127,6 @@ chromium-metrics-reviews@google.com.
       label="Used super pages in the configurable pool. Only recorded for
              64-bit with process uptime 24H+."/>
   <suffix
-      name="PartitionAlloc.AddressSpace.PkeyPoolLargestAvailableReservation"
-      label="Longest free chunk in the pkey pool. Only recorded on
-             pkey-supported platforms."/>
-  <suffix
-      name="PartitionAlloc.AddressSpace.PkeyPoolLargestAvailableReservation.After1H"
-      label="Longest free chunk in the pkey pool. Only recorded on
-             pkey-supported platforms with process uptime [1,24)H."/>
-  <suffix
-      name="PartitionAlloc.AddressSpace.PkeyPoolLargestAvailableReservation.After24H"
-      label="Longest free chunk in the pkey pool. Only recorded on
-             pkey-supported platforms with process uptime 24H+."/>
-  <suffix name="PartitionAlloc.AddressSpace.PkeyPoolUsage"
-      label="Used super pages in the pkey pool. Only recorded on
-             pkey-supported platforms."/>
-  <suffix name="PartitionAlloc.AddressSpace.PkeyPoolUsage.After1H"
-      label="Used super pages in the pkey pool. Only recorded on
-             pkey-supported platforms with process uptime [1,24)H."/>
-  <suffix name="PartitionAlloc.AddressSpace.PkeyPoolUsage.After24H"
-      label="Used super pages in the pkey pool. Only recorded on
-             pkey-supported platforms with process uptime 24H+."/>
-  <suffix
       name="PartitionAlloc.AddressSpace.RegularPoolLargestAvailableReservation"
       label="Longest free chunk in the regular pool. Only recorded for
              64-bit."/>
@@ -4254,6 +4146,27 @@ chromium-metrics-reviews@google.com.
   <suffix name="PartitionAlloc.AddressSpace.RegularPoolUsage.After24H"
       label="Used super pages in the regular pool. Only recorded when process
              uptime is 24H+."/>
+  <suffix
+      name="PartitionAlloc.AddressSpace.ThreadIsolatedPoolLargestAvailableReservation"
+      label="Longest free chunk in the thread isolated pool. Only recorded on
+             supported platforms."/>
+  <suffix
+      name="PartitionAlloc.AddressSpace.ThreadIsolatedPoolLargestAvailableReservation.After1H"
+      label="Longest free chunk in the thread isolated pool. Only recorded on
+             supported platforms with process uptime [1,24)H."/>
+  <suffix
+      name="PartitionAlloc.AddressSpace.ThreadIsolatedPoolLargestAvailableReservation.After24H"
+      label="Longest free chunk in the thread isolated pool. Only recorded on
+             supported platforms with process uptime 24H+."/>
+  <suffix name="PartitionAlloc.AddressSpace.ThreadIsolatedPoolUsage"
+      label="Used super pages in the thread isolated pool. Only recorded on
+             supported platforms."/>
+  <suffix name="PartitionAlloc.AddressSpace.ThreadIsolatedPoolUsage.After1H"
+      label="Used super pages in the thread isolated pool. Only recorded on
+             supported platforms with process uptime [1,24)H."/>
+  <suffix name="PartitionAlloc.AddressSpace.ThreadIsolatedPoolUsage.After24H"
+      label="Used super pages in the thread isolated pool. Only recorded on
+             supported platforms with process uptime 24H+."/>
   <suffix name="PartitionAlloc.AllocatedObjects"
       label="Only counting objects allocated using Partition allocator."/>
   <suffix name="PartitionAlloc.CommittedSize.ArrayBuffer"
@@ -5292,8 +5205,6 @@ chromium-metrics-reviews@google.com.
   <suffix name="FcmVapid" label="FCM VAPID"/>
   <suffix name="Server" label="Server"/>
   <suffix name="Unknown" label="Unknown"/>
-  <affected-histogram name="Sharing.MessageAckTime"/>
-  <affected-histogram name="Sharing.SendAckMessageResult"/>
   <affected-histogram name="Sharing.SendMessageResult"/>
 </histogram_suffixes>
 
@@ -5314,8 +5225,6 @@ chromium-metrics-reviews@google.com.
   <suffix name="Server" label="Server"/>
   <suffix name="Unknown" label="Device type unknown"/>
   <suffix name="Windows" label="Windows OS"/>
-  <affected-histogram name="Sharing.MessageAckTime"/>
-  <affected-histogram name="Sharing.SendAckMessageResult"/>
   <affected-histogram name="Sharing.SendMessageResult"/>
 </histogram_suffixes>
 
@@ -5335,25 +5244,7 @@ chromium-metrics-reviews@google.com.
   <suffix name="SMS_FETCH_REQUEST" label="SMS Fetch Request"/>
   <suffix name="UNKNOWN_MESSAGE" label="Unknown Message"/>
   <suffix name="WEB_RTC_SIGNALING_FRAME" label="Web RTC Signalling Message"/>
-  <affected-histogram name="Sharing.MessageAckTime"/>
-  <affected-histogram name="Sharing.MessageAckTime.Android"/>
-  <affected-histogram name="Sharing.MessageAckTime.ChromeOS"/>
-  <affected-histogram name="Sharing.MessageAckTime.iOS"/>
-  <affected-histogram name="Sharing.MessageAckTime.Linux"/>
-  <affected-histogram name="Sharing.MessageAckTime.Mac"/>
-  <affected-histogram name="Sharing.MessageAckTime.Server"/>
-  <affected-histogram name="Sharing.MessageAckTime.Unknown"/>
-  <affected-histogram name="Sharing.MessageAckTime.Windows"/>
   <affected-histogram name="Sharing.MessageHandlerTime"/>
-  <affected-histogram name="Sharing.SendAckMessageResult"/>
-  <affected-histogram name="Sharing.SendAckMessageResult.Android"/>
-  <affected-histogram name="Sharing.SendAckMessageResult.ChromeOS"/>
-  <affected-histogram name="Sharing.SendAckMessageResult.iOS"/>
-  <affected-histogram name="Sharing.SendAckMessageResult.Linux"/>
-  <affected-histogram name="Sharing.SendAckMessageResult.Mac"/>
-  <affected-histogram name="Sharing.SendAckMessageResult.Server"/>
-  <affected-histogram name="Sharing.SendAckMessageResult.Unknown"/>
-  <affected-histogram name="Sharing.SendAckMessageResult.Windows"/>
   <affected-histogram name="Sharing.SendMessageResult"/>
   <affected-histogram name="Sharing.SendMessageResult.Android"/>
   <affected-histogram name="Sharing.SendMessageResult.ChromeOS"/>
@@ -5515,22 +5406,7 @@ chromium-metrics-reviews@google.com.
   <affected-histogram name="Graphics.Smoothness.Jank.Compositor"/>
   <affected-histogram name="Graphics.Smoothness.Jank.Main"/>
   <affected-histogram name="Graphics.Smoothness.MaxStale"/>
-  <affected-histogram
-      name="Graphics.Smoothness.PercentMissedDeadlineFrames.CompositorThread"/>
-  <affected-histogram
-      name="Graphics.Smoothness.PercentMissedDeadlineFrames.MainThread"/>
-  <affected-histogram
-      name="Graphics.Smoothness.PercentMissedDeadlineFrames.ScrollingThread"/>
   <affected-histogram name="Graphics.Smoothness.Stale"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="SmoothnessThreadTypes" separator=".">
-  <suffix name="CompositorThread"
-      label="The throughput of the compositor thread"/>
-  <suffix name="MainThread" label="The throughput of the main thread"/>
-  <suffix name="ScrollingThread"
-      label="The throughput of the thread responsible for handling the thread"/>
-  <affected-histogram name="Graphics.Smoothness.PercentMissedDeadlineFrames"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="SmoothnessThreadTypes_Jank" separator=".">
@@ -5944,13 +5820,6 @@ chromium-metrics-reviews@google.com.
   <affected-histogram name="Webapp.InstallResult"/>
 </histogram_suffixes>
 
-<histogram_suffixes name="WebFontFamily" separator="_">
-  <suffix name="opensans" label="Open Sans font"/>
-  <suffix name="others" label="Fonts other than Roboto and Open Sans"/>
-  <suffix name="roboto" label="Roboto font"/>
-  <affected-histogram name="WebFont.HttpCacheStatus"/>
-</histogram_suffixes>
-
 <histogram_suffixes name="WebMediaPlayerImplTypes" separator=".">
   <suffix name="EME"
       label="For Encrypted Media Extensions (EME) based playbacks."/>
@@ -6006,67 +5875,6 @@ chromium-metrics-reviews@google.com.
   <suffix name="MediaFoundationHighRes"
       label="Using MediaFoundation at high resolution (width &gt; 1920)."/>
   <affected-histogram name="Media.VideoCapture.Windows.ImageCaptureOutcome"/>
-</histogram_suffixes>
-
-<!-- TODO(crbug.com/401026): Convert to Patterned Histograms:
-  chromium.googlesource.com/chromium/src/+/HEAD/tools/metrics/histograms/README.md#patterned-histograms
--->
-
-<histogram_suffixes name="WrenchMenuActionTimings" separator=".">
-  <suffix name="About" label=""/>
-  <suffix name="AppInfo" label=""/>
-  <suffix name="BetaForum" label=""/>
-  <suffix name="BookmarkAllTabs" label=""/>
-  <suffix name="BookmarkPage" label=""/>
-  <suffix name="Cast" label=""/>
-  <suffix name="ChromeOSRestart" label=""/>
-  <suffix name="ChromeTips" label=""/>
-  <suffix name="ClearBrowsingData" label=""/>
-  <suffix name="Copy" label=""/>
-  <suffix name="CopyUrl" label=""/>
-  <suffix name="CreateHostedApp" label=""/>
-  <suffix name="Cut" label=""/>
-  <suffix name="DevTools" label=""/>
-  <suffix name="DevToolsConsole" label=""/>
-  <suffix name="DevToolsDevices" label=""/>
-  <suffix name="DistillPage" label=""/>
-  <suffix name="EnterFullScreen" label=""/>
-  <suffix name="Exit" label=""/>
-  <suffix name="Feedback" label=""/>
-  <suffix name="Find" label=""/>
-  <suffix name="HelpPage" label=""/>
-  <suffix name="ImportSettings" label=""/>
-  <suffix name="ManageExtensions" label=""/>
-  <suffix name="NewIncognitoWindow" label=""/>
-  <suffix name="NewTab" label=""/>
-  <suffix name="NewWindow" label=""/>
-  <suffix name="OpenBookmark" label=""/>
-  <suffix name="OpenInChrome" label=""/>
-  <suffix name="OpenRecentTab" label=""/>
-  <suffix name="PasswordManager" label=""/>
-  <suffix name="Paste" label=""/>
-  <suffix name="PinToStartScreen" label=""/>
-  <suffix name="Print" label=""/>
-  <suffix name="ProfilingEnabled" label=""/>
-  <suffix name="RequestTabletSite" label=""/>
-  <suffix name="RestoreTab" label=""/>
-  <suffix name="SavePage" label=""/>
-  <suffix name="Settings" label=""/>
-  <suffix name="ShowBookmarkBar" label=""/>
-  <suffix name="ShowBookmarkMgr" label=""/>
-  <suffix name="ShowDownloads" label=""/>
-  <suffix name="ShowHistory" label=""/>
-  <suffix name="ShowKaleidoscope" label=""/>
-  <suffix name="ShowSyncSetup" label=""/>
-  <suffix name="SiteSettings" label=""/>
-  <suffix name="TaskManager" label=""/>
-  <suffix name="ViewSource" label=""/>
-  <suffix name="VisitChromeWebStore" label=""/>
-  <suffix name="Win8MetroRestart" label=""/>
-  <suffix name="WinDesktopRestart" label=""/>
-  <suffix name="ZoomMinus" label=""/>
-  <suffix name="ZoomPlus" label=""/>
-  <affected-histogram name="WrenchMenu.TimeToAction"/>
 </histogram_suffixes>
 
 </histogram_suffixes_list>

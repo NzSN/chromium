@@ -8,13 +8,14 @@
 #import "base/metrics/user_metrics.h"
 #import "base/metrics/user_metrics_action.h"
 #import "components/google/core/common/google_util.h"
-#import "components/sync/driver/sync_service.h"
-#import "components/sync/driver/sync_service_utils.h"
-#import "components/sync/driver/sync_user_settings.h"
-#import "ios/chrome/browser/application_context/application_context.h"
-#import "ios/chrome/browser/main/browser.h"
+#import "components/sync/service/sync_service.h"
+#import "components/sync/service/sync_service_utils.h"
+#import "components/sync/service/sync_user_settings.h"
 #import "ios/chrome/browser/shared/coordinator/alert/action_sheet_coordinator.h"
+#import "ios/chrome/browser/shared/model/application_context/application_context.h"
+#import "ios/chrome/browser/shared/model/browser/browser.h"
 #import "ios/chrome/browser/shared/model/browser_state/chrome_browser_state.h"
+#import "ios/chrome/browser/shared/model/url/chrome_url_constants.h"
 #import "ios/chrome/browser/shared/public/commands/application_commands.h"
 #import "ios/chrome/browser/shared/public/commands/browsing_data_commands.h"
 #import "ios/chrome/browser/shared/public/commands/command_dispatcher.h"
@@ -35,7 +36,6 @@
 #import "ios/chrome/browser/ui/settings/google_services/sync_error_settings_command_handler.h"
 #import "ios/chrome/browser/ui/settings/sync/sync_encryption_passphrase_table_view_controller.h"
 #import "ios/chrome/browser/ui/settings/sync/sync_encryption_table_view_controller.h"
-#import "ios/chrome/browser/url/chrome_url_constants.h"
 #import "net/base/mac/url_conversions.h"
 
 #if !defined(__has_feature) || !__has_feature(objc_arc)
@@ -75,25 +75,39 @@ using DismissViewCallback = SystemIdentityManager::DismissViewCallback;
 @implementation ManageSyncSettingsCoordinator {
   // Dismiss callback for Web and app setting details view.
   DismissViewCallback _dismissWebAndAppSettingDetailsController;
+  // YES if the parent coordinator is advanced settings coordinator, NO
+  // otherwise.
+  BOOL _isInAdvancedInitialSyncSetup;
 }
 
 @synthesize baseNavigationController = _baseNavigationController;
 
 - (instancetype)initWithBaseNavigationController:
                     (UINavigationController*)navigationController
-                                         browser:(Browser*)browser {
+                                         browser:(Browser*)browser
+                    isInAdvancedInitialSyncSetup:
+                        (BOOL)isInAdvancedInitialSyncSetup {
   if (self = [super initWithBaseViewController:navigationController
                                        browser:browser]) {
     _baseNavigationController = navigationController;
+    _isInAdvancedInitialSyncSetup = isInAdvancedInitialSyncSetup;
   }
   return self;
 }
 
 - (void)start {
   DCHECK(self.baseNavigationController);
+  // Ensure that SyncService::IsSetupInProgress is true while the
+  // manage-sync-settings UI is open.
+  SyncSetupService* syncSetupService =
+      SyncSetupServiceFactory::GetForBrowserState(
+          self.browser->GetBrowserState());
+  syncSetupService->PrepareForFirstSyncSetup();
+
   self.mediator = [[ManageSyncSettingsMediator alloc]
-      initWithSyncService:self.syncService
-          userPrefService:self.browser->GetBrowserState()->GetPrefs()];
+                 initWithSyncService:self.syncService
+                     userPrefService:self.browser->GetBrowserState()->GetPrefs()
+      isFromAdvancedInitialSyncSetup:_isInAdvancedInitialSyncSetup];
   self.mediator.syncSetupService = SyncSetupServiceFactory::GetForBrowserState(
       self.browser->GetBrowserState());
   self.mediator.commandHandler = self;
@@ -103,7 +117,12 @@ using DismissViewCallback = SystemIdentityManager::DismissViewCallback;
       AuthenticationService::ServiceStatus::SigninForcedByPolicy;
   self.viewController = [[ManageSyncSettingsTableViewController alloc]
       initWithStyle:ChromeTableViewStyle()];
-  self.viewController.title = self.delegate.manageSyncSettingsCoordinatorTitle;
+
+  NSString* title = self.mediator.overrideViewControllerTitle;
+  if (!title) {
+    title = self.delegate.manageSyncSettingsCoordinatorTitle;
+  }
+  self.viewController.title = title;
   self.viewController.serviceDelegate = self.mediator;
   self.viewController.presentationDelegate = self;
   self.viewController.modelDelegate = self.mediator;
@@ -121,13 +140,11 @@ using DismissViewCallback = SystemIdentityManager::DismissViewCallback;
   [super stop];
   // This coordinator displays the main view and it is in charge to enable sync
   // or not when being closed.
-  // Sync changes should only be commited if the user is authenticated.
-  if (self.authService->HasPrimaryIdentity(signin::ConsentLevel::kSignin)) {
-    SyncSetupService* syncSetupService =
-        SyncSetupServiceFactory::GetForBrowserState(
-            self.browser->GetBrowserState());
-    syncSetupService->CommitSyncChanges();
-  }
+  SyncSetupService* syncSetupService =
+      SyncSetupServiceFactory::GetForBrowserState(
+          self.browser->GetBrowserState());
+  syncSetupService->CommitSyncChanges();
+
   _syncObserver.reset();
 }
 
@@ -299,16 +316,7 @@ using DismissViewCallback = SystemIdentityManager::DismissViewCallback;
   if (self.signOutFlowInProgress) {
     return;
   }
-  syncer::SyncService::DisableReasonSet disableReasons =
-      self.syncService->GetDisableReasons();
-  syncer::SyncService::DisableReasonSet userChoiceDisableReason =
-      syncer::SyncService::DisableReasonSet(
-          syncer::SyncService::DISABLE_REASON_USER_CHOICE);
-  // Manage sync settings needs to stay opened if sync is disabled with
-  // DISABLE_REASON_USER_CHOICE. Manage sync settings is the only way for a
-  // user to turn on the sync engine (and remove DISABLE_REASON_USER_CHOICE).
-  // The sync engine turned back on automatically by enabling any datatype.
-  if (!disableReasons.Empty() && disableReasons != userChoiceDisableReason) {
+  if (!self.syncService->GetDisableReasons().Empty()) {
     [self closeManageSyncSettings];
   }
 }

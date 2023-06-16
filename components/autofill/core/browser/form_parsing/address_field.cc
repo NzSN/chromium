@@ -82,6 +82,15 @@ constexpr MatchParams kCityMatchType =
 constexpr MatchParams kStateMatchType =
     kDefaultMatchParamsWith<MatchFieldType::kSelect, MatchFieldType::kSearch>;
 
+constexpr MatchParams kLandmarkMatchType =
+    kDefaultMatchParamsWith<MatchFieldType::kTextArea, MatchFieldType::kSearch>;
+
+constexpr MatchParams kBetweenStreetsMatchType =
+    kDefaultMatchParamsWith<MatchFieldType::kTextArea, MatchFieldType::kSearch>;
+
+constexpr MatchParams kAdminLevel2MatchType =
+    kDefaultMatchParamsWith<MatchFieldType::kTextArea, MatchFieldType::kSearch>;
+
 }  // namespace
 
 std::unique_ptr<FormField> AddressField::Parse(
@@ -133,8 +142,8 @@ std::unique_ptr<FormField> AddressField::Parse(
       continue;
     } else if (address_field->ParseAddress(scanner, page_language,
                                            pattern_source) ||
-               address_field->ParseDependentLocalityCityStateCountryZipCode(
-                   scanner, page_language, pattern_source) ||
+               address_field->ParseAddressField(scanner, page_language,
+                                                pattern_source) ||
                address_field->ParseCompany(scanner, page_language,
                                            pattern_source)) {
       has_trailing_non_labeled_fields = false;
@@ -177,7 +186,8 @@ std::unique_ptr<FormField> AddressField::Parse(
       address_field->state_ || address_field->zip_ || address_field->zip4_ ||
       address_field->street_name_ || address_field->house_number_ ||
       address_field->country_ || address_field->apartment_number_ ||
-      address_field->dependent_locality_) {
+      address_field->dependent_locality_ || address_field->landmark_ ||
+      address_field->between_streets_ || address_field->admin_level2_) {
     // Don't slurp non-labeled fields at the end into the address.
     if (has_trailing_non_labeled_fields)
       scanner->RewindTo(begin_trailing_non_labeled_fields);
@@ -225,6 +235,12 @@ void AddressField::AddClassifications(
   AddClassification(street_name_, ADDRESS_HOME_STREET_NAME,
                     kBaseAddressParserScore, field_candidates);
   AddClassification(apartment_number_, ADDRESS_HOME_APT_NUM,
+                    kBaseAddressParserScore, field_candidates);
+  AddClassification(landmark_, ADDRESS_HOME_LANDMARK, kBaseAddressParserScore,
+                    field_candidates);
+  AddClassification(between_streets_, ADDRESS_HOME_BETWEEN_STREETS,
+                    kBaseAddressParserScore, field_candidates);
+  AddClassification(admin_level2_, ADDRESS_HOME_ADMIN_LEVEL2,
                     kBaseAddressParserScore, field_candidates);
 }
 
@@ -521,6 +537,59 @@ bool AddressField::ParseState(AutofillScanner* scanner,
                              &state_, {log_manager_, "kStateRe"});
 }
 
+bool AddressField::ParseLandmark(AutofillScanner* scanner,
+                                 const LanguageCode& page_language,
+                                 PatternSource pattern_source) {
+  const bool is_enabled_landmark_parsing =
+      base::FeatureList::IsEnabled(features::kAutofillEnableSupportForLandmark);
+  // TODO(crbug.com/1441904) Remove feature check when launched.
+  if (landmark_ || !is_enabled_landmark_parsing) {
+    return false;
+  }
+
+  base::span<const MatchPatternRef> landmark_patterns =
+      GetMatchPatterns("LANDMARK", page_language, pattern_source);
+  return ParseFieldSpecifics(scanner, kLandmarkRe, kLandmarkMatchType,
+                             landmark_patterns, &landmark_,
+                             {log_manager_, "kLandmarkRe"});
+}
+
+bool AddressField::ParseBetweenStreets(AutofillScanner* scanner,
+                                       const LanguageCode& page_language,
+                                       PatternSource pattern_source) {
+  const bool is_enabled_between_streets_parsing = base::FeatureList::IsEnabled(
+      features::kAutofillEnableSupportForBetweenStreets);
+  // TODO(crbug.com/1441904) Remove feature check when launched.
+  if (between_streets_ || !is_enabled_between_streets_parsing) {
+    return false;
+  }
+
+  base::span<const MatchPatternRef> between_streets_patterns =
+      GetMatchPatterns("BETWEEN_STREETS", page_language, pattern_source);
+  return ParseFieldSpecifics(scanner, kBetweenStreetsRe,
+                             kBetweenStreetsMatchType, between_streets_patterns,
+                             &between_streets_,
+                             {log_manager_, "kBetweenStreetsRe"});
+}
+
+bool AddressField::ParseAdminLevel2(AutofillScanner* scanner,
+                                    const LanguageCode& page_language,
+                                    PatternSource pattern_source) {
+  const bool is_enabled_admin_level2_parsing = base::FeatureList::IsEnabled(
+      features::kAutofillEnableSupportForAdminLevel2);
+  // TODO(crbug.com/1441904) Remove feature check when launched.
+  if (admin_level2_ || !is_enabled_admin_level2_parsing) {
+    return false;
+  }
+
+  base::span<const MatchPatternRef> admin_level2_patterns =
+      GetMatchPatterns("ADMIN_LEVEL_2", page_language, pattern_source);
+  return ParseFieldSpecifics(scanner, kAdminLevel2Re, kAdminLevel2MatchType,
+                             admin_level2_patterns, &admin_level2_,
+                             {log_manager_, "kAdminLevel2Re"});
+}
+
+// static
 AddressField::ParseNameLabelResult AddressField::ParseNameAndLabelSeparately(
     AutofillScanner* scanner,
     const std::u16string& pattern,
@@ -558,17 +627,16 @@ AddressField::ParseNameLabelResult AddressField::ParseNameAndLabelSeparately(
   return RESULT_MATCH_NONE;
 }
 
-bool AddressField::ParseDependentLocalityCityStateCountryZipCode(
-    AutofillScanner* scanner,
-    const LanguageCode& page_language,
-    PatternSource pattern_source) {
+bool AddressField::ParseAddressField(AutofillScanner* scanner,
+                                     const LanguageCode& page_language,
+                                     PatternSource pattern_source) {
   // The |scanner| is not pointing at a field.
   if (scanner->IsEnd())
     return false;
 
   int num_of_missing_types = 0;
-  for (const auto* field :
-       {dependent_locality_, city_, state_, country_, zip_}) {
+  for (const auto* field : {dependent_locality_, city_, state_, country_, zip_,
+                            landmark_, between_streets_, admin_level2_}) {
     if (!field)
       ++num_of_missing_types;
   }
@@ -589,6 +657,15 @@ bool AddressField::ParseDependentLocalityCityStateCountryZipCode(
       return ParseCountry(scanner, page_language, pattern_source);
     if (!zip_)
       return ParseZipCode(scanner, page_language, pattern_source);
+    if (!landmark_) {
+      return ParseLandmark(scanner, page_language, pattern_source);
+    }
+    if (!between_streets_) {
+      return ParseBetweenStreets(scanner, page_language, pattern_source);
+    }
+    if (!admin_level2_) {
+      return ParseAdminLevel2(scanner, page_language, pattern_source);
+    }
   }
 
   // Check for matches to both the name and the label.
@@ -609,14 +686,32 @@ bool AddressField::ParseDependentLocalityCityStateCountryZipCode(
       ParseNameAndLabelForCountry(scanner, page_language, pattern_source);
   if (country_result == RESULT_MATCH_NAME_LABEL)
     return true;
+  ParseNameLabelResult landmark_result =
+      ParseNameAndLabelForLandmark(scanner, page_language, pattern_source);
+  if (landmark_result == RESULT_MATCH_NAME_LABEL) {
+    return true;
+  }
+  ParseNameLabelResult between_streets_result =
+      ParseNameAndLabelForBetweenStreets(scanner, page_language,
+                                         pattern_source);
+  if (between_streets_result == RESULT_MATCH_NAME_LABEL) {
+    return true;
+  }
+  ParseNameLabelResult admin_level2_result =
+      ParseNameAndLabelForAdminLevel2(scanner, page_language, pattern_source);
+  if (admin_level2_result == RESULT_MATCH_NAME_LABEL) {
+    return true;
+  }
   ParseNameLabelResult zip_result =
       ParseNameAndLabelForZipCode(scanner, page_language, pattern_source);
   if (zip_result == RESULT_MATCH_NAME_LABEL)
     return true;
 
   int num_of_matches = 0;
-  for (const auto result : {dependent_locality_result, city_result,
-                            state_result, country_result, zip_result}) {
+  for (const auto result :
+       {dependent_locality_result, city_result, state_result, country_result,
+        zip_result, landmark_result, between_streets_result,
+        admin_level2_result}) {
     if (result != RESULT_MATCH_NONE)
       ++num_of_matches;
   }
@@ -631,6 +726,15 @@ bool AddressField::ParseDependentLocalityCityStateCountryZipCode(
       return SetFieldAndAdvanceCursor(scanner, &state_);
     if (country_result != RESULT_MATCH_NONE)
       return SetFieldAndAdvanceCursor(scanner, &country_);
+    if (landmark_result != RESULT_MATCH_NONE) {
+      return SetFieldAndAdvanceCursor(scanner, &landmark_);
+    }
+    if (between_streets_result != RESULT_MATCH_NONE) {
+      return SetFieldAndAdvanceCursor(scanner, &between_streets_);
+    }
+    if (admin_level2_result != RESULT_MATCH_NONE) {
+      return SetFieldAndAdvanceCursor(scanner, &admin_level2_);
+    }
     if (zip_result != RESULT_MATCH_NONE)
       return ParseZipCode(scanner, page_language, pattern_source);
   }
@@ -661,6 +765,15 @@ bool AddressField::ParseDependentLocalityCityStateCountryZipCode(
       return SetFieldAndAdvanceCursor(scanner, &state_);
     if (country_result == result)
       return SetFieldAndAdvanceCursor(scanner, &country_);
+    if (landmark_result == result) {
+      return SetFieldAndAdvanceCursor(scanner, &landmark_);
+    }
+    if (between_streets_result == result) {
+      return SetFieldAndAdvanceCursor(scanner, &between_streets_);
+    }
+    if (admin_level2_result == result) {
+      return SetFieldAndAdvanceCursor(scanner, &admin_level2_);
+    }
     if (zip_result == result)
       return ParseZipCode(scanner, page_language, pattern_source);
   }
@@ -787,6 +900,60 @@ AddressField::ParseNameLabelResult AddressField::ParseNameAndLabelForCountry(
                   {MatchFieldType::kSelect, MatchFieldType::kSearch}),
       country_location_patterns, &country_,
       {log_manager_, "kCountryLocationRe"});
+}
+
+AddressField::ParseNameLabelResult AddressField::ParseNameAndLabelForLandmark(
+    AutofillScanner* scanner,
+    const LanguageCode& page_language,
+    PatternSource pattern_source) {
+  // TODO(crbug.com/1441904) Remove feature check when launched.
+  if (landmark_ || !base::FeatureList::IsEnabled(
+                       features::kAutofillEnableSupportForLandmark)) {
+    return RESULT_MATCH_NONE;
+  }
+
+  base::span<const MatchPatternRef> landmark_patterns =
+      GetMatchPatterns("LANDMARK", page_language, pattern_source);
+  return ParseNameAndLabelSeparately(scanner, kLandmarkRe, kLandmarkMatchType,
+                                     landmark_patterns, &landmark_,
+                                     {log_manager_, "kLandmarkRe"});
+}
+
+AddressField::ParseNameLabelResult
+AddressField::ParseNameAndLabelForBetweenStreets(
+    AutofillScanner* scanner,
+    const LanguageCode& page_language,
+    PatternSource pattern_source) {
+  // TODO(crbug.com/1441904) Remove feature check when launched.
+  if (between_streets_ ||
+      !base::FeatureList::IsEnabled(
+          features::kAutofillEnableSupportForBetweenStreets)) {
+    return RESULT_MATCH_NONE;
+  }
+
+  base::span<const MatchPatternRef> between_streets_patterns =
+      GetMatchPatterns("BETWEEN_STREETS", page_language, pattern_source);
+  return ParseNameAndLabelSeparately(
+      scanner, kBetweenStreetsRe, kBetweenStreetsMatchType,
+      between_streets_patterns, &between_streets_,
+      {log_manager_, "kBetweenStreetsRe"});
+}
+
+AddressField::ParseNameLabelResult
+AddressField::ParseNameAndLabelForAdminLevel2(AutofillScanner* scanner,
+                                              const LanguageCode& page_language,
+                                              PatternSource pattern_source) {
+  // TODO(crbug.com/1441904) Remove feature check when launched.
+  if (admin_level2_ || !base::FeatureList::IsEnabled(
+                           features::kAutofillEnableSupportForAdminLevel2)) {
+    return RESULT_MATCH_NONE;
+  }
+
+  base::span<const MatchPatternRef> admin_level2_patterns =
+      GetMatchPatterns("ADMIN_LEVEL_2", page_language, pattern_source);
+  return ParseNameAndLabelSeparately(
+      scanner, kAdminLevel2Re, kAdminLevel2MatchType, admin_level2_patterns,
+      &admin_level2_, {log_manager_, "kAdminLevel2Re"});
 }
 
 }  // namespace autofill

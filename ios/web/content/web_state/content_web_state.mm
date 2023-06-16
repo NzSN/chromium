@@ -41,11 +41,10 @@ class DummySessionCertificatePolicyCache
   explicit DummySessionCertificatePolicyCache(BrowserState* browser_state)
       : SessionCertificatePolicyCache(browser_state) {}
 
-  void UpdateCertificatePolicyCache(
-      const scoped_refptr<web::CertificatePolicyCache>& cache) const override {}
+  void UpdateCertificatePolicyCache() const override {}
 
   void RegisterAllowedCertificate(
-      const scoped_refptr<net::X509Certificate> certificate,
+      const scoped_refptr<net::X509Certificate>& certificate,
       const std::string& host,
       net::CertStatus status) override {}
 };
@@ -348,12 +347,8 @@ const GURL& ContentWebState::GetLastCommittedURL() const {
   return item ? item->GetURL() : GURL::EmptyGURL();
 }
 
-GURL ContentWebState::GetCurrentURL(
-    URLVerificationTrustLevel* trust_level) const {
-  // TODO(crbug.com/1419001): Make sure that callers are using this correctly
-  // and that unexpected URLs are not displayed.
-  auto* item = navigation_manager_->GetLastCommittedItem();
-  return item ? item->GetURL() : GURL::EmptyGURL();
+absl::optional<GURL> ContentWebState::GetLastCommittedURLIfTrusted() const {
+  return GetLastCommittedURL();
 }
 
 WebFramesManager* ContentWebState::GetWebFramesManager(ContentWorld world) {

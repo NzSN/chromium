@@ -48,6 +48,10 @@ typedef NS_ENUM(NSInteger, BookmarksHomeItemType) {
   BookmarksHomeItemTypeMessage,
 };
 
+namespace bookmarks {
+class BookmarkModel;
+}  // namespace bookmarks
+
 // BookmarksHomeMediator manages model interactions for the
 // BookmarksHomeViewController.
 @interface BookmarksHomeMediator : NSObject
@@ -77,8 +81,14 @@ typedef NS_ENUM(NSInteger, BookmarksHomeItemType) {
 // The newly created folder node its name is being edited.
 @property(nonatomic, assign) const bookmarks::BookmarkNode* editingFolderNode;
 
+// Bookmark model of the current displayed folder node. If the view is at
+// the root level, `displayedBookmarkModel` returns the profile storage.
+@property(nonatomic, assign, readonly)
+    bookmarks::BookmarkModel* displayedBookmarkModel;
+
 // Designated initializer.
 // `baseViewController` view controller used to present sign-in UI.
+// `profileBookmarkModel` must not be `nullptr`. It should also be loaded.
 // TODO(crbug.com/1402758): `browser` and `baseViewController` need to be
 // removed from `BookmarksHomeMediator`. A mediator should not be aware of
 // those classes.
@@ -109,6 +119,11 @@ typedef NS_ENUM(NSInteger, BookmarksHomeItemType) {
 
 // Updates promo cell based on its current visibility.
 - (void)computePromoTableViewData;
+
+// Returns weather the slashed cloud icon should be displayed for
+// `bookmarkModel`.
+- (BOOL)shouldDisplayCloudSlashIconWithBookmarkModel:
+    (bookmarks::BookmarkModel*)bookmarkModel;
 
 @end
 

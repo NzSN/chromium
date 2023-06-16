@@ -96,6 +96,7 @@ class CONTENT_EXPORT RenderWidgetHostViewIOS
   void RenderProcessGone() override;
   void ShowWithVisibility(PageVisibilityState page_visibility) override;
   gfx::Rect GetBoundsInRootWindow() override;
+  gfx::Size GetRequestedRendererSize() override;
   absl::optional<DisplayFeature> GetDisplayFeature() override;
   void SetDisplayFeatureForTesting(
       const DisplayFeature* display_feature) override;
@@ -112,6 +113,11 @@ class CONTENT_EXPORT RenderWidgetHostViewIOS
   void DidNavigate() override;
   bool RequestRepaintForTesting() override;
   void Destroy() override;
+  bool IsSurfaceAvailableForCopy() override;
+  void CopyFromSurface(
+      const gfx::Rect& src_rect,
+      const gfx::Size& dst_size,
+      base::OnceCallback<void(const SkBitmap&)> callback) override;
   ui::Compositor* GetCompositor() override;
 
   BrowserCompositorIOS* BrowserCompositor() const {
@@ -153,6 +159,15 @@ class CONTENT_EXPORT RenderWidgetHostViewIOS
   void OnTouchEvent(blink::WebTouchEvent event);
   void UpdateNativeViewTree(gfx::NativeView view);
 
+  void InjectTouchEvent(const blink::WebTouchEvent& event,
+                        const ui::LatencyInfo& latency_info);
+  void InjectGestureEvent(const blink::WebGestureEvent& event,
+                          const ui::LatencyInfo& latency_info);
+  void InjectMouseEvent(const blink::WebMouseEvent& web_mouse,
+                        const ui::LatencyInfo& latency_info);
+  void InjectMouseWheelEvent(const blink::WebMouseWheelEvent& web_wheel,
+                             const ui::LatencyInfo& latency_info);
+
   void ImeSetComposition(const std::u16string& text,
                          const std::vector<ui::ImeTextSpan>& spans,
                          const gfx::Range& replacement_range,
@@ -164,6 +179,9 @@ class CONTENT_EXPORT RenderWidgetHostViewIOS
   void ImeFinishComposingText(bool keep_selection);
   void OnFirstResponderChanged();
 
+  bool CanBecomeFirstResponderForTesting() const;
+  bool CanResignFirstResponderForTesting() const;
+
  private:
   friend class MockPointerLockRenderWidgetHostView;
 
@@ -174,6 +192,8 @@ class CONTENT_EXPORT RenderWidgetHostViewIOS
   bool ShouldRouteEvents() const;
 
   void SendGestureEvent(const blink::WebGestureEvent& event);
+
+  bool ComputeIsViewOrSubviewFirstResponder() const;
 
   // Provides gesture synthesis given a stream of touch events and touch event
   // acks. This is for generating gesture events from injected touch events.

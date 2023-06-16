@@ -6,6 +6,7 @@
 
 #include <GLES3/gl3.h>
 #include <limits>
+#include <numeric>
 
 #include "base/barrier_closure.h"
 #include "base/compiler_specific.h"
@@ -211,6 +212,19 @@ sk_sp<SkImage> WrapGLTexture(
       kRGBA_8888_SkColorType, kPremul_SkAlphaType);
 }
 
+void BindAndTexImage2D(gpu::gles2::GLES2Interface* gl,
+                       unsigned int target,
+                       unsigned int texture,
+                       unsigned int internal_format,
+                       unsigned int format,
+                       unsigned int type,
+                       int level,
+                       const gfx::Size& size) {
+  gl->BindTexture(target, texture);
+  gl->TexImage2D(target, level, internal_format, size.width(), size.height(), 0,
+                 format, type, nullptr);
+}
+
 void CopyMailboxToTexture(gpu::gles2::GLES2Interface* gl,
                           const gfx::Size& coded_size,
                           const gfx::Rect& visible_rect,
@@ -244,9 +258,8 @@ void CopyMailboxToTexture(gpu::gles2::GLES2Interface* gl,
       DCHECK_LE(visible_rect.width(), coded_size.width());
       DCHECK_LE(visible_rect.height(), coded_size.height());
 
-      gl->BindTexture(target, texture);
-      gl->TexImage2D(target, level, internal_format, visible_rect.width(),
-                     visible_rect.height(), 0, format, type, nullptr);
+      BindAndTexImage2D(gl, target, texture, internal_format, format, type,
+                        level, visible_rect.size());
       gl->CopySubTextureCHROMIUM(source_texture, 0, target, texture, level, 0,
                                  0, visible_rect.x(), visible_rect.y(),
                                  visible_rect.width(), visible_rect.height(),
@@ -317,15 +330,6 @@ void SynchronizeVideoFrameRead(scoped_refptr<VideoFrame> video_frame,
   gl->DeleteQueriesEXT(1, &query_id);
 }
 
-// TODO(thomasanderson): Remove these and use std::gcd and std::lcm once we're
-// building with C++17.
-size_t GCD(size_t a, size_t b) {
-  return a == 0 ? b : GCD(b % a, a);
-}
-size_t LCM(size_t a, size_t b) {
-  return a / GCD(a, b) * b;
-}
-
 const libyuv::YuvConstants* GetYuvContantsForColorSpace(SkYUVColorSpace cs) {
   switch (cs) {
     case kJPEG_Full_SkYUVColorSpace:
@@ -345,8 +349,7 @@ const libyuv::YuvConstants* GetYuvContantsForColorSpace(SkYUVColorSpace cs) {
     case kBT2020_12bit_Limited_SkYUVColorSpace:
       return &YUV_MATRIX(libyuv::kYuv2020Constants);
     case kIdentity_SkYUVColorSpace:
-      NOTREACHED();
-      return nullptr;
+      NOTREACHED_NORETURN();
   };
 }
 
@@ -383,8 +386,8 @@ void ConvertVideoFrameToRGBPixelsTask(const VideoFrame* video_frame,
   size_t rows_per_chunk = 1;
   for (size_t plane = 0; plane < VideoFrame::kMaxPlanes; ++plane) {
     if (VideoFrame::IsValidPlane(format, plane)) {
-      rows_per_chunk =
-          LCM(rows_per_chunk, VideoFrame::SampleSize(format, plane).height());
+      rows_per_chunk = std::lcm(rows_per_chunk,
+                                VideoFrame::SampleSize(format, plane).height());
     }
   }
 
@@ -1188,8 +1191,7 @@ scoped_refptr<VideoFrame> DownShiftHighbitVideoFrame(
       break;
 
     default:
-      NOTREACHED();
-      return nullptr;
+      NOTREACHED_NORETURN();
   }
   const int scale = 1 << (24 - video_frame->BitDepth());
   scoped_refptr<VideoFrame> ret = VideoFrame::CreateFrame(
@@ -1579,11 +1581,8 @@ bool PaintCanvasVideoRenderer::UploadVideoFrameToGLTexture(
 
     // Trigger resource allocation for dst texture to back SkSurface.
     // Dst texture size should equal to video frame visible rect.
-    destination_gl->BindTexture(target, texture);
-    destination_gl->TexImage2D(
-        target, 0, internal_format, video_frame->visible_rect().width(),
-        video_frame->visible_rect().height(), 0, format, type, nullptr);
-
+    BindAndTexImage2D(destination_gl, target, texture, internal_format, format,
+                      type, /*level=*/0, video_frame->visible_rect().size());
     gpu::MailboxHolder mailbox_holder;
     mailbox_holder.texture_target = target;
     destination_gl->ProduceTextureDirectCHROMIUM(texture,
@@ -1619,11 +1618,8 @@ bool PaintCanvasVideoRenderer::UploadVideoFrameToGLTexture(
   } else {
     // Trigger resource allocation for dst texture to back SkSurface.
     // Dst texture size should equal to video frame visible rect.
-    destination_gl->BindTexture(target, texture);
-    destination_gl->TexImage2D(
-        target, 0, internal_format, video_frame->visible_rect().width(),
-        video_frame->visible_rect().height(), 0, format, type, nullptr);
-
+    BindAndTexImage2D(destination_gl, target, texture, internal_format, format,
+                      type, /*level=*/0, video_frame->visible_rect().size());
     gpu::MailboxHolder mailbox_holder =
         GetVideoFrameMailboxHolder(video_frame.get());
     destination_gl->WaitSyncTokenCHROMIUM(
@@ -1680,11 +1676,10 @@ bool PaintCanvasVideoRenderer::PrepareVideoFrameForWebGL(
 
     // Take webgl video texture as 2D texture. Setting it as external render
     // target backend for skia.
-    destination_gl->BindTexture(target, texture);
-    destination_gl->TexImage2D(target, 0, GL_RGBA,
-                               video_frame->coded_size().width(),
-                               video_frame->coded_size().height(), 0, GL_RGBA,
-                               GL_UNSIGNED_BYTE, nullptr);
+    BindAndTexImage2D(destination_gl, target, texture,
+                      /*internal_format=*/GL_RGBA, /*format=*/GL_RGBA,
+                      /*type=*/GL_UNSIGNED_BYTE, /*level=*/0,
+                      video_frame->coded_size());
 
     CHECK_GT(video_frame->NumTextures(), 1u);
     gpu::MailboxHolder mailbox_holder;
@@ -1713,11 +1708,10 @@ bool PaintCanvasVideoRenderer::PrepareVideoFrameForWebGL(
   } else {
     // Take webgl video texture as 2D texture. Setting it as external render
     // target backend for skia.
-    destination_gl->BindTexture(target, texture);
-    destination_gl->TexImage2D(target, 0, GL_RGBA,
-                               video_frame->coded_size().width(),
-                               video_frame->coded_size().height(), 0, GL_RGBA,
-                               GL_UNSIGNED_BYTE, nullptr);
+    BindAndTexImage2D(destination_gl, target, texture,
+                      /*internal_format=*/GL_RGBA, /*format=*/GL_RGBA,
+                      /*type=*/GL_UNSIGNED_BYTE, /*level=*/0,
+                      video_frame->coded_size());
 
     CHECK_EQ(video_frame->NumTextures(), 1u);
     CHECK_EQ(video_frame->shared_image_format_type(),

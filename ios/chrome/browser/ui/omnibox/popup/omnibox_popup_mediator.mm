@@ -47,7 +47,6 @@
 #import "ios/chrome/browser/ui/omnibox/popup/popup_debug_info_consumer.h"
 #import "ios/chrome/browser/ui/omnibox/popup/popup_swift.h"
 #import "ios/chrome/browser/ui/omnibox/popup/remote_suggestions_service_observer_bridge.h"
-#import "ios/chrome/browser/web_state_list/web_state_list.h"
 #import "ios/chrome/common/ui/favicon/favicon_attributes.h"
 #import "ui/base/l10n/l10n_util.h"
 
@@ -135,14 +134,7 @@ const NSUInteger kMaxSuggestTileTypePosition = 15;
   self.currentPedals = nil;
 
   self.hasResults = !self.autocompleteResult.empty();
-  if (base::FeatureList::IsEnabled(omnibox::kAdaptiveSuggestionsCount)) {
-    [self.consumer newResultsAvailable];
-  } else {
-    // Avoid calling consumer visible size and set all suggestions as visible to
-    // get only one grouping.
-    [self requestResultsWithVisibleSuggestionCount:self.autocompleteResult
-                                                       .size()];
-  }
+  [self.consumer newResultsAvailable];
 
   if (self.debugInfoConsumer) {
     DCHECK(experimental_flags::IsOmniboxDebuggingEnabled());
@@ -400,8 +392,7 @@ const NSUInteger kMaxSuggestTileTypePosition = 15;
   formatter.starred = _delegate->IsStarredMatch(match);
   formatter.incognito = _incognito;
   formatter.defaultSearchEngineIsGoogle = self.defaultSearchEngineIsGoogle;
-  formatter.pedalData = [self.pedalAnnotator pedalForMatch:match
-                                                 incognito:_incognito];
+  formatter.pedalData = [self.pedalAnnotator pedalForMatch:match];
 
   if (formatter.suggestionGroupId) {
     omnibox::GroupId groupId =

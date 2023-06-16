@@ -113,6 +113,7 @@ export class EmojiPicker extends PolymerElement {
   private nextGifPos: {[key: string]: string};
   private status: Status|null;
   private previousGifValidation: Date;
+  private fetchAndProcessDataPromise: Promise<void>|null;
 
   constructor() {
     super();
@@ -194,7 +195,7 @@ export class EmojiPicker extends PolymerElement {
                 item => ({'category': item.name, 'urls': dataUrls[item.name]}));
 
     // Fetch and process all the data.
-    this.fetchAndProcessData(categoryDataUrls);
+    this.fetchAndProcessDataPromise = this.fetchAndProcessData(categoryDataUrls);
 
     this.updateStyles({
       '--emoji-group-button-size': constants.EMOJI_GROUP_SIZE_PX,
@@ -213,6 +214,12 @@ export class EmojiPicker extends PolymerElement {
       '--tab-button-margin': constants.TAB_BUTTON_MARGIN_PX,
       '--text-group-button-padding': constants.TEXT_GROUP_BUTTON_PADDING_PX,
     });
+  }
+
+  private async ensureFetchAndProcessDataFinished(): Promise<void> {
+    if (this.fetchAndProcessDataPromise !== null) {
+      await this.fetchAndProcessDataPromise;
+    }
   }
 
   /**
@@ -321,13 +328,13 @@ export class EmojiPicker extends PolymerElement {
     );
 
     if (this.gifSupport) {
-      this.fetchAndProcessGifData(prevFetchPromise, prevRenderPromise);
+      await this.fetchAndProcessGifData(prevFetchPromise, prevRenderPromise);
     }
   }
 
   private fetchAndProcessGifData(
       prevFetchPromise: Promise<EmojiGroupData> = Promise.resolve([]),
-      prevRenderPromise = Promise.resolve()) {
+      prevRenderPromise = Promise.resolve()): Promise<void> {
     this.validateRecentlyUsedGifs();
 
     // Set Recently Used and Trending in the GIF tabs first before fetching
@@ -368,7 +375,8 @@ export class EmojiPicker extends PolymerElement {
             });
     const featuredGifFetchPromise =
         categoriesFetchPromise.then(() => this.apiProxy.getFeaturedGifs());
-    Promise.all([categoriesRenderPromise, featuredGifFetchPromise])
+
+    return Promise.all([categoriesRenderPromise, featuredGifFetchPromise])
         .then((values) => {
           const {status, featuredGifs} = values[1];
           this.status = status;
@@ -390,7 +398,12 @@ export class EmojiPicker extends PolymerElement {
   }
 
   onClickTryAgain() {
-    this.fetchAndProcessGifData();
+    // The network error illustration only displays in GIF panel under offline
+    // mode; in this case, after reloading data, we should switch back to GIF
+    // panel (if it is successful).
+    this.fetchAndProcessGifData().then(() => {
+      this.onCategoryButtonClick(CategoryEnum.GIF);
+    });
   }
 
   private canScrollToGroup(category: CategoryEnum, groupId: string): boolean {
@@ -593,7 +606,8 @@ export class EmojiPicker extends PolymerElement {
 
   private clearRecentEmoji(event: events.EmojiClearRecentClickEvent) {
     const category = event.detail.category;
-    this.clearHistoryData(category);
+    const item = event.detail.item;
+    this.clearHistoryData(category, item);
     afterNextRender(this, () => {
       this.updateActiveGroup();
       this.updateHistoryTabDisabledProperty();
@@ -638,8 +652,10 @@ export class EmojiPicker extends PolymerElement {
   }
 
   private async selectGroup(newGroup: string) {
+    await this.ensureFetchAndProcessDataFinished();
+
     if (this.category === CategoryEnum.GIF) {
-      this.setGifGroupElements(newGroup);
+      await this.setGifGroupElements(newGroup);
     }
 
     // focus and scroll to selected group's first emoji.
@@ -1090,14 +1106,19 @@ export class EmojiPicker extends PolymerElement {
   }
 
   /**
-   * Clears history items for a category.
+   * Clears history item(s) for a category.
    */
-  private clearHistoryData(category: CategoryEnum) {
+  private clearHistoryData(category: CategoryEnum, item?: EmojiVariants) {
     if (this.incognito) {
       return;
     }
 
-    this.categoriesHistory[category]?.clearRecents();
+    if (item === undefined) {
+      this.categoriesHistory[category]?.clearRecents();
+    } else {
+      this.categoriesHistory[category]?.clearItem(category, item);
+    }
+
     this.categoryHistoryUpdated(category, true, false);
   }
 
@@ -1260,7 +1281,9 @@ export class EmojiPicker extends PolymerElement {
     });
   }
 
-  private onCategoryButtonClick(newCategory: CategoryEnum) {
+  private async onCategoryButtonClick(newCategory: CategoryEnum) {
+    await this.ensureFetchAndProcessDataFinished();
+
     this.set('category', newCategory);
     this.set('pagination', 1);
 

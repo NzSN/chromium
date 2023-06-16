@@ -26,6 +26,10 @@
 
 namespace {
 
+// For ChromeOS only: If you plan on adding a new accelerator and want it
+// displayed in the Shortcuts app, please follow the instructions at:
+// `ash/webui/shortcut_customization_ui/backend/accelerator_layout_table.h`.
+
 // NOTE: Between each ifdef block, keep the list in the same
 // (mostly-alphabetical) order as the Windows accelerators in
 // ../../app/chrome_dll.rc.
@@ -115,7 +119,7 @@ const AcceleratorMapping kAcceleratorMap[] = {
     {ui::VKEY_8, ui::EF_ALT_DOWN, IDC_SELECT_TAB_7},
     {ui::VKEY_NUMPAD8, ui::EF_ALT_DOWN, IDC_SELECT_TAB_7},
     {ui::VKEY_BROWSER_FAVORITES, ui::EF_NONE, IDC_SHOW_BOOKMARK_BAR},
-#endif  // BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
+#endif  // BUILDFLAG(IS_LINUX)
     {ui::VKEY_B, ui::EF_SHIFT_DOWN | ui::EF_PLATFORM_ACCELERATOR,
      IDC_SHOW_BOOKMARK_BAR},
     {ui::VKEY_OEM_MINUS, ui::EF_PLATFORM_ACCELERATOR, IDC_ZOOM_MINUS},
@@ -190,9 +194,9 @@ const AcceleratorMapping kAcceleratorMap[] = {
     {ui::VKEY_BROWSER_SEARCH, ui::EF_NONE, IDC_FOCUS_SEARCH},
 #endif  // BUILDFLAG(IS_CHROMEOS)
 
-#if BUILDFLAG(GOOGLE_CHROME_BRANDING) && !BUILDFLAG(IS_MAC)
+#if BUILDFLAG(GOOGLE_CHROME_BRANDING)
     {ui::VKEY_I, ui::EF_SHIFT_DOWN | ui::EF_ALT_DOWN, IDC_FEEDBACK},
-#endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING) && !BUILDFLAG(IS_MAC)
+#endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING)
     {ui::VKEY_N, ui::EF_SHIFT_DOWN | ui::EF_PLATFORM_ACCELERATOR,
      IDC_NEW_INCOGNITO_WINDOW},
     {ui::VKEY_T, ui::EF_PLATFORM_ACCELERATOR, IDC_NEW_TAB},

@@ -9,11 +9,11 @@
 import 'chrome://resources/cr_elements/cr_link_row/cr_link_row.js';
 import 'chrome://resources/cr_elements/md_select.css.js';
 import 'chrome://resources/cr_elements/policy/cr_policy_pref_indicator.js';
-import '../../controls/controlled_button.js';
+import '/shared/settings/controls/controlled_button.js';
 import '/shared/settings/controls/settings_toggle_button.js';
 import 'chrome://resources/cr_components/settings_prefs/prefs.js';
 import 'chrome://resources/cr_components/settings_prefs/pref_util.js';
-import '../../settings_shared.css.js';
+import '../settings_shared.css.js';
 
 import {SettingsToggleButtonElement} from '/shared/settings/controls/settings_toggle_button.js';
 import {PrefsMixin} from 'chrome://resources/cr_components/settings_prefs/prefs_mixin.js';
@@ -67,7 +67,7 @@ const SettingsGoogleAssistantSubpageElementBase =
     DeepLinkingMixin(RouteObserverMixin(
         PrefsMixin(WebUiListenerMixin(I18nMixin(PolymerElement)))));
 
-class SettingsGoogleAssistantSubpageElement extends
+export class SettingsGoogleAssistantSubpageElement extends
     SettingsGoogleAssistantSubpageElementBase {
   static get is() {
     return 'settings-google-assistant-subpage';

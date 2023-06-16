@@ -12,25 +12,69 @@
 #include "ui/color/color_recipe.h"
 #include "ui/color/color_transform.h"
 
+namespace {
+
+void ApplyDefaultChromeRefreshToolbarColors(
+    ui::ColorMixer& mixer,
+    const ui::ColorProviderManager::Key& key) {
+  mixer[kColorAppMenuHighlightDefault] = {
+      kColorTabBackgroundInactiveFrameActive};
+  mixer[kColorAppMenuExpandedForegroundDefault] = {
+      kColorTabForegroundInactiveFrameActive};
+  mixer[kColorAppMenuHighlightSeverityLow] = {kColorAppMenuHighlightDefault};
+  mixer[kColorAppMenuHighlightSeverityMedium] = {kColorAppMenuHighlightDefault};
+  mixer[kColorAppMenuHighlightSeverityHigh] = {kColorAppMenuHighlightDefault};
+}
+
+}  // namespace
+
 void AddMaterialChromeColorMixer(ui::ColorProvider* provider,
                                  const ui::ColorProviderManager::Key& key) {
-  if (!ShouldApplyChromeMaterialOverrides(key)) {
-    return;
-  }
-
   // Adds the color recipes for browser UI colors (toolbar, bookmarks bar,
   // downloads bar etc). While both design systems continue to exist, the
   // material recipes are intended to leverage the existing chrome color mixers,
   // overriding when required to do so according to the new material spec.
   // TODO(crbug.com/1408542): Update color recipes to match UX mocks.
   ui::ColorMixer& mixer = provider->AddMixer();
+
+  // Apply default color transformations irrespective of whether a custom theme
+  // is enabled. This is a necessary first pass with chrome refresh flag on to
+  // make themes work with the feature.
+  ApplyDefaultChromeRefreshToolbarColors(mixer, key);
+
+  // The colors for the Profile Menu with the material design should be applied
+  // regardless of whether a custom theme is enabled.
+  // TODO(tluk): Factor the always-applied material color definitions into a
+  // separate file.
+  mixer[kColorProfileMenuHeaderBackground] = {ui::kColorSysTonalContainer};
+  mixer[kColorProfileMenuHeaderLabel] = {ui::kColorSysOnTonalContainer};
+  mixer[kColorProfileMenuIconButton] = {ui::kColorSysOnTonalContainer};
+  mixer[kColorProfileMenuIconButtonBackground] = {ui::kColorSysTonalContainer};
+  mixer[kColorProfileMenuIconButtonBackgroundHovered] = {
+      ui::kColorSysStateHoverOnSubtle};
+
+  if (!ShouldApplyChromeMaterialOverrides(key)) {
+    return;
+  }
+
+  mixer[kColorAppMenuHighlightDefault] = {ui::kColorSysTonalContainer};
+  mixer[kColorAppMenuHighlightSeverityLow] = {kColorAppMenuHighlightDefault};
+  mixer[kColorAppMenuHighlightSeverityMedium] = {kColorAppMenuHighlightDefault};
+  mixer[kColorAppMenuHighlightSeverityHigh] = {kColorAppMenuHighlightDefault};
+  mixer[kColorAppMenuExpandedForegroundDefault] = {
+      ui::kColorSysOnTonalContainer};
+  mixer[kColorAppMenuChipInkDropHover] = {ui::kColorSysStateHoverOnSubtle};
+  mixer[kColorAppMenuChipInkDropRipple] = {ui::kColorSysStateRipplePrimary};
   mixer[kColorAvatarButtonHighlightNormal] =
       AdjustHighlightColorForContrast(ui::kColorSysPrimary, kColorToolbar);
   mixer[kColorBookmarkBarBackground] = {ui::kColorSysBase};
   mixer[kColorBookmarkBarForeground] = {ui::kColorSysOnSurfaceSubtle};
+  mixer[kColorBookmarkBarSeparatorChromeRefresh] = {ui::kColorSysOnBaseDivider};
   mixer[kColorBookmarkButtonIcon] = {kColorBookmarkBarForeground};
-  mixer[kColorBookmarkFolderIcon] = {kColorBookmarkBarForeground};
+  mixer[kColorBookmarkDialogProductImageBorder] = {ui::kColorSysNeutralOutline};
+  mixer[kColorBookmarkDialogTrackPriceIcon] = {ui::kColorSysOnSurfaceSubtle};
   mixer[kColorBookmarkDragImageBackground] = {ui::kColorSysPrimary};
+  mixer[kColorBookmarkFolderIcon] = {kColorBookmarkBarForeground};
   mixer[kColorCapturedTabContentsBorder] = {ui::kColorSysPrimary};
   mixer[kColorDownloadItemForegroundDisabled] = BlendForMinContrast(
       ui::GetResultingPaintColor(ui::kColorSysStateDisabled,
@@ -66,6 +110,7 @@ void AddMaterialChromeColorMixer(ui::ColorProvider* provider,
   mixer[kColorFeaturePromoBubbleDefaultButtonForeground] = {
       kColorFeaturePromoBubbleBackground};
   mixer[kColorFeaturePromoBubbleForeground] = {ui::kColorSysOnPrimary};
+  mixer[kColorFindBarBackground] = {ui::kColorSysSurface};
   mixer[kColorFlyingIndicatorBackground] = {kColorToolbar};
   mixer[kColorFlyingIndicatorForeground] = {kColorToolbarButtonIcon};
   mixer[kColorFrameCaptionActive] = {ui::kColorSysOnHeaderPrimary};
@@ -90,9 +135,12 @@ void AddMaterialChromeColorMixer(ui::ColorProvider* provider,
   mixer[kColorNewTabButtonInkDropFrameInactive] = {
       kColorNewTabButtonInkDropFrameActive};
   mixer[kColorOmniboxChipBackground] = {ui::kColorSysBaseContainerElevated};
-  mixer[kColorOmniboxChipForegroundLowVisibility] = {
-      ui::kColorSysOnSurfaceSubtle};
-  mixer[kColorOmniboxChipForegroundNormalVisibility] = {ui::kColorSysOnSurface};
+  mixer[kColorOmniboxChipForegroundLowVisibility] = {ui::kColorSysOnSurface};
+  mixer[kColorOmniboxChipForegroundNormalVisibility] = {ui::kColorSysPrimary};
+  mixer[kColorOmniboxChipInkDropHover] = {
+      ui::kColorSysStateHoverDimBlendProtection};
+  mixer[kColorOmniboxChipInkDropRipple] = {
+      ui::kColorSysStateRippleNeutralOnSubtle};
   mixer[kColorToolbar] = {ui::kColorSysBase};
   mixer[kColorToolbarButtonBackgroundHighlightedDefault] = {
       ui::kColorSysStateHoverOnSubtle};

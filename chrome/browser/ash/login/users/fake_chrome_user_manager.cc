@@ -19,12 +19,8 @@
 #include "chrome/browser/ash/login/users/chrome_user_manager.h"
 #include "chrome/browser/ash/login/users/chrome_user_manager_util.h"
 #include "chrome/browser/ash/login/users/default_user_image/default_user_images.h"
-#include "chrome/browser/ash/login/users/fake_supervised_user_manager.h"
-#include "chrome/browser/ash/policy/core/browser_policy_connector_ash.h"
 #include "chrome/browser/ash/profiles/profile_helper.h"
 #include "chrome/browser/ash/settings/cros_settings.h"
-#include "chrome/browser/browser_process.h"
-#include "chrome/browser/browser_process_platform_part.h"
 #include "chrome/browser/ui/ash/wallpaper_controller_client_impl.h"
 #include "chrome/test/base/testing_profile.h"
 #include "chromeos/ash/components/login/login_state/login_state.h"
@@ -72,11 +68,8 @@ class FakeTaskRunner : public base::SingleThreadTaskRunner {
 
 namespace ash {
 
-class FakeSupervisedUserManager;
-
 FakeChromeUserManager::FakeChromeUserManager()
-    : ChromeUserManager(new FakeTaskRunner()),
-      supervised_user_manager_(new FakeSupervisedUserManager) {
+    : ChromeUserManager(new FakeTaskRunner()) {
   ProfileHelper::SetProfileToUserForTestingEnabled(true);
 }
 
@@ -223,10 +216,6 @@ FakeChromeUserManager::GetMultiProfileUserController() {
   return multi_profile_user_controller_;
 }
 
-SupervisedUserManager* FakeChromeUserManager::GetSupervisedUserManager() {
-  return supervised_user_manager_.get();
-}
-
 UserImageManager* FakeChromeUserManager::GetUserImageManager(
     const AccountId& account_id) {
   UserImageManagerMap::iterator user_image_manager_it =
@@ -244,34 +233,6 @@ UserImageManager* FakeChromeUserManager::GetUserImageManager(
   UserImageManagerImpl* mgr_raw = mgr.get();
   user_image_managers_[account_id] = std::move(mgr);
   return mgr_raw;
-}
-
-void FakeChromeUserManager::SetUserFlow(const AccountId& account_id,
-                                        UserFlow* flow) {
-  ResetUserFlow(account_id);
-  specific_flows_[account_id] = flow;
-}
-
-UserFlow* FakeChromeUserManager::GetCurrentUserFlow() const {
-  if (!IsUserLoggedIn())
-    return GetDefaultUserFlow();
-  return GetUserFlow(GetActiveUser()->GetAccountId());
-}
-
-UserFlow* FakeChromeUserManager::GetUserFlow(
-    const AccountId& account_id) const {
-  FlowMap::const_iterator it = specific_flows_.find(account_id);
-  if (it != specific_flows_.end())
-    return it->second;
-  return GetDefaultUserFlow();
-}
-
-void FakeChromeUserManager::ResetUserFlow(const AccountId& account_id) {
-  FlowMap::iterator it = specific_flows_.find(account_id);
-  if (it != specific_flows_.end()) {
-    delete it->second;
-    specific_flows_.erase(it);
-  }
 }
 
 void FakeChromeUserManager::SwitchActiveUser(const AccountId& account_id) {
@@ -339,23 +300,12 @@ user_manager::UserList FakeChromeUserManager::GetUsersAllowedForMultiProfile()
   return result;
 }
 
-UserFlow* FakeChromeUserManager::GetDefaultUserFlow() const {
-  if (!default_flow_.get())
-    default_flow_ = std::make_unique<DefaultUserFlow>();
-  return default_flow_.get();
-}
-
 void FakeChromeUserManager::SetOwnerId(const AccountId& account_id) {
   UserManagerBase::SetOwnerId(account_id);
 }
 
 const AccountId& FakeChromeUserManager::GetGuestAccountId() const {
   return user_manager::GuestAccountId();
-}
-
-bool FakeChromeUserManager::IsFirstExecAfterBoot() const {
-  return base::CommandLine::ForCurrentProcess()->HasSwitch(
-      switches::kFirstExecAfterBoot);
 }
 
 void FakeChromeUserManager::AsyncRemoveCryptohome(
@@ -374,21 +324,8 @@ bool FakeChromeUserManager::IsStubAccountId(const AccountId& account_id) const {
 
 bool FakeChromeUserManager::IsDeprecatedSupervisedAccountId(
     const AccountId& account_id) const {
-  const policy::BrowserPolicyConnectorAsh* connector =
-      g_browser_process->platform_part()->browser_policy_connector_ash();
-  // Supervised accounts are not allowed on the Active Directory devices. It
-  // also makes sure "locally-managed.localhost" would work properly and would
-  // not be detected as supervised users.
-  if (connector->IsActiveDirectoryManaged())
-    return false;
   return gaia::ExtractDomainName(account_id.GetUserEmail()) ==
          user_manager::kSupervisedUserDomain;
-}
-
-bool FakeChromeUserManager::HasBrowserRestarted() const {
-  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
-  return base::SysInfo::IsRunningOnChromeOS() &&
-         command_line->HasSwitch(switches::kLoginUser);
 }
 
 const gfx::ImageSkia& FakeChromeUserManager::GetResourceImagekiaNamed(
@@ -566,10 +503,6 @@ bool FakeChromeUserManager::IsCurrentUserOwner() const {
   return active_user_ && GetOwnerAccountId() == active_user_->GetAccountId();
 }
 
-bool FakeChromeUserManager::IsCurrentUserNew() const {
-  return current_user_new_;
-}
-
 bool FakeChromeUserManager::IsCurrentUserNonCryptohomeDataEphemeral() const {
   return current_user_ephemeral_;
 }
@@ -679,10 +612,6 @@ void FakeChromeUserManager::SimulateUserProfileLoad(
   }
 }
 
-void FakeChromeUserManager::SetIsCurrentUserNew(bool is_new) {
-  NOTREACHED();
-}
-
 const std::string& FakeChromeUserManager::GetApplicationLocale() const {
   static const std::string default_locale("en-US");
   return default_locale;
@@ -695,10 +624,6 @@ void FakeChromeUserManager::LoadDeviceLocalAccounts(
 
 bool FakeChromeUserManager::IsEnterpriseManaged() const {
   return is_enterprise_managed_;
-}
-
-void FakeChromeUserManager::PerformPostUserListLoadingActions() {
-  NOTREACHED();
 }
 
 void FakeChromeUserManager::PerformPostUserLoggedInActions(
@@ -731,11 +656,6 @@ void FakeChromeUserManager::SetUserAffiliationForTesting(
   }
   user->SetAffiliation(is_affiliated);
   NotifyUserAffiliationUpdated(*user);
-}
-
-bool FakeChromeUserManager::IsFullManagementDisclosureNeeded(
-    policy::DeviceLocalAccountPolicyBroker* broker) const {
-  return true;
 }
 
 user_manager::User* FakeChromeUserManager::GetActiveUserInternal() const {

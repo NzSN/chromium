@@ -228,12 +228,14 @@ TEST(TelemetryApiConverters, LogicalCpuInfo) {
   constexpr uint32_t kScalingMaxFrequencyKhz = (1 << 30) + 20000;
   constexpr uint32_t kScalingCurrentFrequencyKhz = (1 << 29) + 30000;
   constexpr uint64_t kIdleTime = (1ULL << 52) + 40000;
+  constexpr uint32_t kCoreId = 200;
 
   auto input = crosapi::ProbeLogicalCpuInfo::New(
       crosapi::UInt32Value::New(kMaxClockSpeedKhz),
       crosapi::UInt32Value::New(kScalingMaxFrequencyKhz),
       crosapi::UInt32Value::New(kScalingCurrentFrequencyKhz),
-      crosapi::UInt64Value::New(kIdleTime), std::move(expected_c_states));
+      crosapi::UInt64Value::New(kIdleTime), std::move(expected_c_states),
+      crosapi::UInt32Value::New(kCoreId));
 
   auto result = ConvertPtr<cx_telem::LogicalCpuInfo>(std::move(input));
   ASSERT_TRUE(result.max_clock_speed_khz);
@@ -259,6 +261,8 @@ TEST(TelemetryApiConverters, LogicalCpuInfo) {
   ASSERT_TRUE(result.c_states[0].time_in_state_since_last_boot_us);
   EXPECT_EQ(kCpuCStateTime,
             *result.c_states[0].time_in_state_since_last_boot_us);
+  ASSERT_TRUE(result.core_id);
+  EXPECT_EQ(kCoreId, static_cast<uint32_t>(*result.core_id));
 }
 
 TEST(TelemetryApiConverters, PhysicalCpuInfo) {
@@ -273,13 +277,15 @@ TEST(TelemetryApiConverters, PhysicalCpuInfo) {
   constexpr uint32_t kScalingMaxFrequencyKhz = (1 << 30) + 70000;
   constexpr uint32_t kScalingCurrentFrequencyKhz = (1 << 29) + 60000;
   constexpr uint64_t kIdleTime = (1ULL << 52) + 50000;
+  constexpr uint32_t kCoreId = 200;
 
   std::vector<crosapi::ProbeLogicalCpuInfoPtr> logical_cpus;
   logical_cpus.push_back(crosapi::ProbeLogicalCpuInfo::New(
       crosapi::UInt32Value::New(kMaxClockSpeedKhz),
       crosapi::UInt32Value::New(kScalingMaxFrequencyKhz),
       crosapi::UInt32Value::New(kScalingCurrentFrequencyKhz),
-      crosapi::UInt64Value::New(kIdleTime), std::move(expected_c_states)));
+      crosapi::UInt64Value::New(kIdleTime), std::move(expected_c_states),
+      crosapi::UInt32Value::New(kCoreId)));
 
   constexpr char kModelName[] = "i9";
 
@@ -319,6 +325,8 @@ TEST(TelemetryApiConverters, PhysicalCpuInfo) {
   EXPECT_EQ(
       kCpuCStateTime,
       *result.logical_cpus[0].c_states[0].time_in_state_since_last_boot_us);
+  ASSERT_TRUE(result.logical_cpus[0].core_id);
+  EXPECT_EQ(kCoreId, static_cast<uint32_t>(*result.logical_cpus[0].core_id));
 }
 
 TEST(TelemetryApiConverters, BatteryInfoWithoutSerialNumberPermission) {
@@ -542,22 +550,25 @@ TEST(TelemetryApiConverters, NetworkTypeEnum) {
             Convert(chromeos::network_config::mojom::NetworkType::kWiFi));
 }
 
-TEST(TelemetryApiConverters, NetworkInfo) {
+TEST(TelemetryApiConverters, NetworkInfoWithoutPermission) {
   constexpr char kIpv4Address[] = "1.1.1.1";
   const std::vector<std::string> kIpv6Addresses = {
       "FE80:CD00:0000:0CDE:1257:0000:211E:729C",
       "CD00:FE80:0000:1257:0CDE:0000:729C:211E"};
   constexpr uint32_t kSignalStrength = 100;
+  constexpr char kMacAddress[] = "00-B0-D0-63-C2-26";
 
   auto input = chromeos::network_health::mojom::Network::New();
   input->type = chromeos::network_config::mojom::NetworkType::kWiFi;
   input->state = chromeos::network_health::mojom::NetworkState::kOnline;
   input->ipv4_address = kIpv4Address;
   input->ipv6_addresses = kIpv6Addresses;
+  input->mac_address = kMacAddress;
   input->signal_strength =
       chromeos::network_health::mojom::UInt32Value::New(kSignalStrength);
 
-  auto result = ConvertPtr<cx_telem::NetworkInfo>(std::move(input));
+  auto result = ConvertPtr<cx_telem::NetworkInfo>(
+      std::move(input), /* has_mac_address_permission= */ false);
   EXPECT_EQ(result.type, cx_telem::NetworkType::kWifi);
   EXPECT_EQ(result.state, cx_telem::NetworkState::kOnline);
 
@@ -567,8 +578,121 @@ TEST(TelemetryApiConverters, NetworkInfo) {
   ASSERT_EQ(result.ipv6_addresses.size(), 2LU);
   EXPECT_EQ(result.ipv6_addresses, kIpv6Addresses);
 
+  // mac_address is not converted in ConvertPtr() without permission.
+  EXPECT_FALSE(result.mac_address);
+
   ASSERT_TRUE(result.signal_strength);
   EXPECT_EQ(static_cast<double_t>(*result.signal_strength), kSignalStrength);
+}
+
+TEST(TelemetryApiConverters, NetworkInfoWithPermission) {
+  constexpr char kMacAddress[] = "00-B0-D0-63-C2-26";
+
+  auto input = chromeos::network_health::mojom::Network::New();
+  input->mac_address = kMacAddress;
+
+  auto result = ConvertPtr<cx_telem::NetworkInfo>(
+      std::move(input), /* has_mac_address_permission= */ true);
+
+  ASSERT_TRUE(result.mac_address);
+  EXPECT_EQ(*result.mac_address, kMacAddress);
+}
+
+TEST(TelemetryApiConverters, InternetConnectivityInfoWithoutPermission) {
+  constexpr char kIpv4Address[] = "1.1.1.1";
+  const std::vector<std::string> kIpv6Addresses = {
+      "FE80:CD00:0000:0CDE:1257:0000:211E:729C",
+      "CD00:FE80:0000:1257:0CDE:0000:729C:211E"};
+  constexpr uint32_t kSignalStrength = 100;
+  constexpr char kMacAddress[] = "00-B0-D0-63-C2-26";
+
+  auto network = chromeos::network_health::mojom::Network::New();
+  network->type = chromeos::network_config::mojom::NetworkType::kWiFi;
+  network->state = chromeos::network_health::mojom::NetworkState::kOnline;
+  network->ipv4_address = kIpv4Address;
+  network->ipv6_addresses = kIpv6Addresses;
+  network->mac_address = kMacAddress;
+  network->signal_strength =
+      chromeos::network_health::mojom::UInt32Value::New(kSignalStrength);
+
+  auto input = chromeos::network_health::mojom::NetworkHealthState::New();
+  input->networks.push_back(std::move(network));
+
+  auto result = ConvertPtr<cx_telem::InternetConnectivityInfo>(
+      std::move(input), /* has_mac_address_permission= */ false);
+  ASSERT_EQ(result.networks.size(), 1UL);
+
+  auto result_network = std::move(result.networks.front());
+  EXPECT_EQ(result_network.type, cx_telem::NetworkType::kWifi);
+  EXPECT_EQ(result_network.state, cx_telem::NetworkState::kOnline);
+
+  ASSERT_TRUE(result_network.ipv4_address);
+  EXPECT_EQ(*result_network.ipv4_address, kIpv4Address);
+
+  ASSERT_EQ(result_network.ipv6_addresses.size(), 2LU);
+  EXPECT_EQ(result_network.ipv6_addresses, kIpv6Addresses);
+
+  // mac_address is not converted in ConvertPtr() without permission.
+  EXPECT_FALSE(result_network.mac_address);
+
+  ASSERT_TRUE(result_network.signal_strength);
+  EXPECT_EQ(static_cast<double_t>(*result_network.signal_strength),
+            kSignalStrength);
+}
+
+TEST(TelemetryApiConverters, InternetConnectivityInfoWithPermission) {
+  constexpr char kIpv4Address[] = "1.1.1.1";
+  const std::vector<std::string> kIpv6Addresses = {
+      "FE80:CD00:0000:0CDE:1257:0000:211E:729C",
+      "CD00:FE80:0000:1257:0CDE:0000:729C:211E"};
+  constexpr uint32_t kSignalStrength = 100;
+  constexpr char kMacAddress[] = "00-B0-D0-63-C2-26";
+
+  auto network = chromeos::network_health::mojom::Network::New();
+  network->type = chromeos::network_config::mojom::NetworkType::kWiFi;
+  network->state = chromeos::network_health::mojom::NetworkState::kOnline;
+  network->ipv4_address = kIpv4Address;
+  network->ipv6_addresses = kIpv6Addresses;
+  network->mac_address = kMacAddress;
+  network->signal_strength =
+      chromeos::network_health::mojom::UInt32Value::New(kSignalStrength);
+
+  // Networks with a type like kAll, kMobile and kWireless should not show
+  // up.
+  auto invalid_network = chromeos::network_health::mojom::Network::New();
+  invalid_network->type = chromeos::network_config::mojom::NetworkType::kAll;
+  invalid_network->state =
+      chromeos::network_health::mojom::NetworkState::kOnline;
+  invalid_network->mac_address = "00:00:5e:00:53:fu";
+  invalid_network->ipv4_address = "2.2.2.2";
+  invalid_network->ipv6_addresses = {"FE80:0000:CD00:729C:0CDE:1257:0000:211E"};
+  invalid_network->signal_strength =
+      chromeos::network_health::mojom::UInt32Value::New(100);
+
+  auto input = chromeos::network_health::mojom::NetworkHealthState::New();
+  input->networks.push_back(std::move(invalid_network));
+  input->networks.push_back(std::move(network));
+
+  auto result = ConvertPtr<cx_telem::InternetConnectivityInfo>(
+      std::move(input), /* has_mac_address_permission= */ true);
+  ASSERT_EQ(result.networks.size(), 1UL);
+
+  auto result_network = std::move(result.networks.front());
+  EXPECT_EQ(result_network.type, cx_telem::NetworkType::kWifi);
+  EXPECT_EQ(result_network.state, cx_telem::NetworkState::kOnline);
+
+  ASSERT_TRUE(result_network.ipv4_address);
+  EXPECT_EQ(*result_network.ipv4_address, kIpv4Address);
+
+  ASSERT_EQ(result_network.ipv6_addresses.size(), 2LU);
+  EXPECT_EQ(result_network.ipv6_addresses, kIpv6Addresses);
+
+  ASSERT_TRUE(result_network.mac_address);
+  EXPECT_EQ(*result_network.mac_address, kMacAddress);
+
+  ASSERT_TRUE(result_network.signal_strength);
+  EXPECT_EQ(static_cast<double_t>(*result_network.signal_strength),
+            kSignalStrength);
 }
 
 TEST(TelemetryApiConverters, TpmVersion) {
@@ -923,6 +1047,47 @@ TEST(TelemetryApiConverters, UsbBusInfo) {
 
   EXPECT_EQ(result.version, cx_telem::UsbVersion::kUsb3);
   EXPECT_EQ(result.spec_speed, cx_telem::UsbSpecSpeed::kN20Gbps);
+}
+
+TEST(TelemetryApiConverters, VpdInfoWithoutPermission) {
+  constexpr char kFirstPowerDate[] = "01/01/00";
+  constexpr char kModelName[] = "TestModel";
+  constexpr char kSkuNumber[] = "TestSKU";
+  constexpr char kSerialNumber[] = "TestNumber";
+
+  auto input = crosapi::ProbeCachedVpdInfo::New();
+  input->first_power_date = kFirstPowerDate;
+  input->model_name = kModelName;
+  input->sku_number = kSkuNumber;
+  input->serial_number = kSerialNumber;
+
+  auto result = ConvertPtr<cx_telem::VpdInfo>(
+      std::move(input), /* has_serial_number_permission= */ false);
+
+  ASSERT_TRUE(result.activate_date);
+  EXPECT_EQ(*result.activate_date, kFirstPowerDate);
+
+  ASSERT_TRUE(result.model_name);
+  EXPECT_EQ(*result.model_name, kModelName);
+
+  ASSERT_TRUE(result.sku_number);
+  EXPECT_EQ(*result.sku_number, kSkuNumber);
+
+  // serial_number is not converted in ConvertPtr() without permission.
+  EXPECT_FALSE(result.serial_number);
+}
+
+TEST(TelemetryApiConverters, VpdInfoWithPermission) {
+  constexpr char kSerialNumber[] = "TestNumber";
+
+  auto input = crosapi::ProbeCachedVpdInfo::New();
+  input->serial_number = kSerialNumber;
+
+  auto result = ConvertPtr<cx_telem::VpdInfo>(
+      std::move(input), /* has_serial_number_permission= */ true);
+
+  ASSERT_TRUE(result.serial_number);
+  EXPECT_EQ(*result.serial_number, kSerialNumber);
 }
 
 }  // namespace chromeos::converters

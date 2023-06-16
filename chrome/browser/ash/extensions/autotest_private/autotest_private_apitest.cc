@@ -241,6 +241,10 @@ IN_PROC_BROWSER_TEST_F(AutotestPrivateApiTest, ShelfAPITest) {
   ASSERT_TRUE(RunAutotestPrivateExtensionTest("shelf")) << message_;
 }
 
+IN_PROC_BROWSER_TEST_F(AutotestPrivateApiTest, IsFeatureEnabled) {
+  ASSERT_TRUE(RunAutotestPrivateExtensionTest("isFeatureEnabled")) << message_;
+}
+
 class AutotestPrivateHoldingSpaceApiTest
     : public AutotestPrivateApiTest,
       public ::testing::WithParamInterface<bool /* mark_time_of_first_add */> {
@@ -359,7 +363,7 @@ IN_PROC_BROWSER_TEST_F(AutotestPrivateApiOverviewTest, Drag) {
   ASSERT_TRUE(RunAutotestPrivateExtensionTest("overviewDrag")) << message_;
 }
 
-IN_PROC_BROWSER_TEST_F(AutotestPrivateApiOverviewTest, LeftSnapped) {
+IN_PROC_BROWSER_TEST_F(AutotestPrivateApiOverviewTest, PrimarySnapped) {
   const ash::OverviewInfo info =
       ash::OverviewTestApi().GetOverviewInfo().value();
   const gfx::Point start_point =
@@ -381,7 +385,7 @@ IN_PROC_BROWSER_TEST_F(AutotestPrivateApiOverviewTest, LeftSnapped) {
   generator.MoveTouch(end_point);
   generator.ReleaseTouch();
 
-  ASSERT_TRUE(RunAutotestPrivateExtensionTest("splitviewLeftSnapped"))
+  ASSERT_TRUE(RunAutotestPrivateExtensionTest("splitviewPrimarySnapped"))
       << message_;
 }
 

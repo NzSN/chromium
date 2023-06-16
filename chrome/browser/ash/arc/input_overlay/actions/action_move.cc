@@ -12,7 +12,9 @@
 #include "base/strings/utf_string_conversions.h"
 #include "chrome/browser/ash/arc/input_overlay/actions/action.h"
 #include "chrome/browser/ash/arc/input_overlay/touch_id_manager.h"
+#include "chrome/browser/ash/arc/input_overlay/touch_injector.h"
 #include "chrome/browser/ash/arc/input_overlay/ui/action_label.h"
+#include "chrome/browser/ash/arc/input_overlay/ui/ui_utils.h"
 #include "chrome/browser/ash/arc/input_overlay/util.h"
 #include "third_party/abseil-cpp/absl/types/optional.h"
 #include "ui/events/keycodes/dom/dom_code.h"
@@ -65,9 +67,7 @@ class ActionMove::ActionMoveMouseView : public ActionView {
       return;
     }
 
-    int radius = std::max(kActionMoveMinRadius, action_->GetUIRadius());
-    labels_ = ActionLabel::Show(this, ActionType::MOVE, *input_binding, radius,
-                                allow_reposition_);
+    labels_ = ActionLabel::Show(this, ActionType::MOVE, *input_binding);
   }
 
   // TODO(b/241966781): rewrite for Beta once design is ready.
@@ -77,7 +77,6 @@ class ActionMove::ActionMoveMouseView : public ActionView {
   }
   void OnBindingToKeyboard() override { NOTIMPLEMENTED(); }
   void OnBindingToMouse(std::string mouse_action) override { NOTIMPLEMENTED(); }
-  void OnMenuEntryPressed() override { NOTIMPLEMENTED(); }
   void AddTouchPoint() override { NOTIMPLEMENTED(); }
   void MayUpdateLabelPosition(bool moving) override {}
 
@@ -118,8 +117,7 @@ class ActionMove::ActionMoveKeyView : public ActionView {
 
     const auto& keys = input_binding->keys();
     if (labels_.empty()) {
-      labels_ = ActionLabel::Show(this, ActionType::MOVE, *input_binding,
-                                  radius, allow_reposition_);
+      labels_ = ActionLabel::Show(this, ActionType::MOVE, *input_binding);
     } else {
       DCHECK(labels_.size() == keys.size());
       for (size_t i = 0; i < keys.size(); i++) {
@@ -161,15 +159,11 @@ class ActionMove::ActionMoveKeyView : public ActionView {
   void SetDisplayMode(const DisplayMode mode,
                       ActionLabel* editing_label = nullptr) override {
     ActionView::SetDisplayMode(mode, editing_label);
-    if (menu_entry_) {
-      menu_entry_->SetVisible(false);
-    }
   }
 
   // TODO(cuicuiruan): implement for post MVP once the design is ready.
   void OnBindingToKeyboard() override { NOTIMPLEMENTED(); }
   void OnBindingToMouse(std::string mouse_action) override { NOTIMPLEMENTED(); }
-  void OnMenuEntryPressed() override { NOTIMPLEMENTED(); }
   void AddTouchPoint() override { ActionView::AddTouchPoint(ActionType::MOVE); }
   void MayUpdateLabelPosition(bool moving) override {}
 
@@ -202,9 +196,7 @@ class ActionMove::ActionMoveKeyView : public ActionView {
     DCHECK_LT(left, right);
     DCHECK_LT(top, bottom);
 
-    const int radius = std::max(kActionMoveMinRadius, action_->GetUIRadius());
-    auto size = allow_reposition_ ? TouchPoint::GetSize(ActionType::MOVE)
-                                  : gfx::Size(radius * 2, radius * 2);
+    auto size = TouchPoint::GetSize(ActionType::MOVE);
     size.SetToMax(gfx::Size(right - left, bottom - top));
     SetSize(size);
     SetPositionFromCenterPosition(action_->GetUICenterPosition());
@@ -407,6 +399,10 @@ void ActionMove::UnbindInput(const InputElement& input_element) {
     // TODO(cuicuiruan): Implement for unbinding mouse-bound action move.
     NOTIMPLEMENTED();
   }
+}
+
+ActionType ActionMove::GetType() {
+  return ActionType::MOVE;
 }
 
 bool ActionMove::RewriteKeyEvent(const ui::KeyEvent* key_event,

@@ -9,8 +9,10 @@
 
 #include "base/json/json_value_converter.h"
 #include "base/strings/string_piece.h"
+#include "base/time/time.h"
 #include "base/values.h"
 #include "google_apis/common/parser_util.h"
+#include "third_party/abseil-cpp/absl/types/optional.h"
 #include "url/gurl.h"
 
 namespace google_apis::classroom {
@@ -18,8 +20,19 @@ namespace {
 
 constexpr char kApiResponseCourseWorkKey[] = "courseWork";
 constexpr char kApiResponseCourseWorkItemAlternateLinkKey[] = "alternateLink";
+constexpr char kApiResponseCourseWorkItemDueDateKey[] = "dueDate";
+constexpr char kApiResponseCourseWorkItemDueTimeKey[] = "dueTime";
 constexpr char kApiResponseCourseWorkItemStateKey[] = "state";
 constexpr char kApiResponseCourseWorkItemTitleKey[] = "title";
+
+constexpr char kDueDateYearComponent[] = "year";
+constexpr char kDueDateMonthComponent[] = "month";
+constexpr char kDueDateDayComponent[] = "day";
+
+constexpr char kDueTimeHoursComponent[] = "hours";
+constexpr char kDueTimeMinutesComponent[] = "minutes";
+constexpr char kDueTimeSecondsComponent[] = "seconds";
+constexpr char kDueTimeNanosComponent[] = "nanos";
 
 constexpr char kPublishedCourseWorkItemState[] = "PUBLISHED";
 
@@ -34,6 +47,47 @@ bool ConvertCourseWorkItemState(base::StringPiece input,
 bool ConvertCourseWorkItemAlternateLink(base::StringPiece input, GURL* output) {
   *output = GURL(input);
   return true;
+}
+
+base::TimeDelta GetCourseWorkItemDueTime(
+    const base::Value::Dict& raw_course_work_item) {
+  const auto* const time =
+      raw_course_work_item.FindDict(kApiResponseCourseWorkItemDueTimeKey);
+  if (!time) {
+    return base::TimeDelta();
+  }
+
+  const auto hours = time->FindInt(kDueTimeHoursComponent);
+  const auto minutes = time->FindInt(kDueTimeMinutesComponent);
+  const auto seconds = time->FindInt(kDueTimeSecondsComponent);
+  const auto nanos = time->FindInt(kDueTimeNanosComponent);
+
+  return base::Hours(hours.value_or(0)) + base::Minutes(minutes.value_or(0)) +
+         base::Seconds(seconds.value_or(0)) +
+         base::Nanoseconds(nanos.value_or(0));
+}
+
+absl::optional<CourseWorkItem::DueDateTime> GetCourseWorkItemDueDateTime(
+    const base::Value::Dict& raw_course_work_item) {
+  const auto* const date =
+      raw_course_work_item.FindDict(kApiResponseCourseWorkItemDueDateKey);
+  if (!date) {
+    return absl::nullopt;
+  }
+
+  const auto year = date->FindInt(kDueDateYearComponent);
+  const auto month = date->FindInt(kDueDateMonthComponent);
+  const auto day = date->FindInt(kDueDateDayComponent);
+
+  if (!year.has_value() && !month.has_value() && !day.has_value()) {
+    return absl::nullopt;
+  }
+
+  return CourseWorkItem::DueDateTime{
+      .year = year.value_or(0),
+      .month = month.value_or(0),
+      .day = day.value_or(0),
+      .time_of_day = GetCourseWorkItemDueTime(raw_course_work_item)};
 }
 
 }  // namespace
@@ -58,6 +112,19 @@ void CourseWorkItem::RegisterJSONConverter(
       &CourseWorkItem::alternate_link_, &ConvertCourseWorkItemAlternateLink);
 }
 
+// static
+bool CourseWorkItem::ConvertCourseWorkItem(const base::Value* input,
+                                           CourseWorkItem* output) {
+  base::JSONValueConverter<CourseWorkItem> converter;
+  const base::Value::Dict* dict = input->GetIfDict();
+  if (!dict || !converter.Convert(*dict, output)) {
+    return false;
+  }
+
+  output->due_date_time_ = GetCourseWorkItemDueDateTime(*dict);
+  return true;
+}
+
 // ----- CourseWork -----
 
 CourseWork::CourseWork() = default;
@@ -67,8 +134,10 @@ CourseWork::~CourseWork() = default;
 // static
 void CourseWork::RegisterJSONConverter(
     base::JSONValueConverter<CourseWork>* converter) {
-  converter->RegisterRepeatedMessage<CourseWorkItem>(kApiResponseCourseWorkKey,
-                                                     &CourseWork::items_);
+  // TODO(crbug.com/1444535): Handle base::Value::Dict here.
+  converter->RegisterRepeatedCustomValue<CourseWorkItem>(
+      kApiResponseCourseWorkKey, &CourseWork::items_,
+      &CourseWorkItem::ConvertCourseWorkItem);
   converter->RegisterStringField(kApiResponseNextPageTokenKey,
                                  &CourseWork::next_page_token_);
 }

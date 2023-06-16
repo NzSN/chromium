@@ -32,6 +32,7 @@
 #include "chrome/browser/ui/views/frame/toolbar_button_provider.h"
 #include "chrome/browser/ui/views/toolbar/toolbar_action_hover_card_controller.h"
 #include "chrome/browser/ui/views/toolbar/toolbar_actions_bar_bubble_views.h"
+#include "content/public/browser/web_contents.h"
 #include "extensions/common/extension_features.h"
 #include "ui/base/dragdrop/drag_drop_types.h"
 #include "ui/base/dragdrop/mojom/drag_drop_types.mojom-shared.h"
@@ -167,13 +168,19 @@ ExtensionsToolbarContainer::ExtensionsToolbarContainer(Browser* browser,
     // Do not flip the Extensions icon in RTL.
     extensions_button_->SetFlipCanvasOnPaintForRTLUI(false);
     extensions_button_->SetID(VIEW_ID_EXTENSIONS_MENU_BUTTON);
-    if (features::IsChromeRefresh2023()) {
-      GetTargetLayoutManager()->SetDefault(views::kMarginsKey,
-                                           gfx::Insets::VH(0, 2));
-    }
+  }
+
+  if (GetExtensionsButton() &&
+      (features::IsChromeRefresh2023() ||
+       base::FeatureList::IsEnabled(
+           extensions_features::kExtensionsMenuAccessControl))) {
+    GetTargetLayoutManager()->SetDefault(views::kMarginsKey,
+                                         gfx::Insets::VH(0, 2));
   }
 
   AddMainItem(main_item);
+  UpdateControlsVisibility();
+
   CreateActions();
 
   // TODO(pbos): Consider splitting out tab-strip observing into another class.
@@ -206,7 +213,6 @@ ExtensionsToolbarContainer::~ExtensionsToolbarContainer() {
 }
 
 void ExtensionsToolbarContainer::UpdateAllIcons() {
-  GetExtensionsButton()->UpdateIcon();
   UpdateControlsVisibility();
 
   for (const auto& action : actions_)
@@ -612,6 +618,19 @@ void ExtensionsToolbarContainer::OnShowAccessRequestsInToolbarChanged(
   // button is updated.
 }
 
+void ExtensionsToolbarContainer::OnExtensionDismissedRequests(
+    const extensions::ExtensionId& extension_id,
+    const url::Origin& origin) {
+  auto* web_contents = GetCurrentWebContents();
+  extensions::PermissionsManager::UserSiteSetting site_setting =
+      extensions::PermissionsManager::Get(browser_->profile())
+          ->GetUserSiteSetting(
+              web_contents->GetPrimaryMainFrame()->GetLastCommittedOrigin());
+
+  extensions_controls_->UpdateRequestAccessButton(actions_, site_setting,
+                                                  web_contents);
+}
+
 void ExtensionsToolbarContainer::ReorderViews() {
   const auto& pinned_action_ids = model_->pinned_action_ids();
   for (size_t i = 0; i < pinned_action_ids.size(); ++i)
@@ -955,11 +974,15 @@ void ExtensionsToolbarContainer::UpdateControlsVisibility() {
   if (!web_contents)
     return;
 
+  bool is_restricted_url =
+      model_->IsRestrictedUrl(web_contents->GetLastCommittedURL());
   extensions::PermissionsManager::UserSiteSetting site_setting =
       extensions::PermissionsManager::Get(browser_->profile())
           ->GetUserSiteSetting(
               web_contents->GetPrimaryMainFrame()->GetLastCommittedOrigin());
-  extensions_controls_->UpdateControls(actions_, site_setting, web_contents);
+
+  extensions_controls_->UpdateControls(is_restricted_url, actions_,
+                                       site_setting, web_contents);
 }
 
 void ExtensionsToolbarContainer::UpdateToolbarActionHoverCard(

@@ -6,8 +6,6 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreVideo/CoreVideo.h>
-#include <OpenGL/CGLIOSurface.h>
-#include <OpenGL/gl.h>
 #include <stddef.h>
 
 #include <algorithm>
@@ -307,6 +305,9 @@ bool CreateVideoToolboxSession(
     return false;
   }
 
+#if BUILDFLAG(IS_MAC)
+  // iOS is always hardware-accelerate while on mac, decoder configuration
+  // handling is necessary.
   CFDictionarySetValue(
       decoder_config,
       kVTVideoDecoderSpecification_EnableHardwareAcceleratedVideoDecoder,
@@ -315,6 +316,7 @@ bool CreateVideoToolboxSession(
       decoder_config,
       kVTVideoDecoderSpecification_RequireHardwareAcceleratedVideoDecoder,
       require_hardware ? kCFBooleanTrue : kCFBooleanFalse);
+#endif
 
   // VideoToolbox scales the visible rect to the output size, so we set the
   // output size for a 1:1 ratio. (Note though that VideoToolbox does not handle
@@ -358,9 +360,12 @@ bool InitializeVideoToolboxInternal() {
   if (base::FeatureList::IsEnabled(kSkipVideoToolboxPreload)) {
     // When skipping preload we still need to register vp9, otherwise it won't
     // work at all.
+#if BUILDFLAG(IS_MAC)
+    // TODO: Enable VP9 for a iOS platform(https://crbug.com/1449877)
     if (__builtin_available(macOS 11.0, *)) {
       VTRegisterSupplementalVideoDecoderIfAvailable(kCMVideoCodecType_VP9);
     }
+#endif
     return true;
   }
 
@@ -402,6 +407,8 @@ bool InitializeVideoToolboxInternal() {
 
   session.reset();
 
+#if BUILDFLAG(IS_MAC)
+  // TODO: Enable VP9 for a iOS platform(https://crbug.com/1449877)
   if (__builtin_available(macOS 11.0, *)) {
     VTRegisterSupplementalVideoDecoderIfAvailable(kCMVideoCodecType_VP9);
 
@@ -416,6 +423,7 @@ bool InitializeVideoToolboxInternal() {
       // We don't return false here since VP9 support is optional.
     }
   }
+#endif
 
 #if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
   if (base::FeatureList::IsEnabled(media::kPlatformHEVCDecoderSupport)) {
@@ -1104,7 +1112,7 @@ void VTVideoDecodeAccelerator::DecodeTaskH264(
                 config_.hdr_metadata = gfx::HDRMetadata();
               }
               sei_msg.mastering_display_info.PopulateColorVolumeMetadata(
-                  config_.hdr_metadata->color_volume_metadata);
+                  config_.hdr_metadata->smpte_st_2086);
               break;
             case H264SEIMessage::kSEIContentLightLevelInfo:
               if (!config_.hdr_metadata) {
@@ -1500,7 +1508,7 @@ void VTVideoDecodeAccelerator::DecodeTaskHEVC(
               if (!config_.hdr_metadata)
                 config_.hdr_metadata = gfx::HDRMetadata();
               sei_msg.mastering_display_info.PopulateColorVolumeMetadata(
-                  config_.hdr_metadata->color_volume_metadata);
+                  config_.hdr_metadata->smpte_st_2086);
               break;
             case H265SEIMessage::kSEIContentLightLevelInfo:
               if (!config_.hdr_metadata)
@@ -2241,7 +2249,22 @@ bool VTVideoDecodeAccelerator::SendFrame(const Frame& frame) {
   PictureInfo* picture_info = it->second.get();
   DCHECK(picture_info->gl_images.empty());
 
-  const gfx::ColorSpace color_space = GetImageBufferColorSpace(frame.image);
+  gfx::ColorSpace color_space;
+  if (codec_ == VideoCodec::kVP9) {
+    // Prefer the color space from the config if available. It generally comes
+    // from the color tag which is more expressive than the VP9 bitstream.
+    color_space = config_.container_color_space.ToGfxColorSpace();
+    if (!color_space.IsValid()) {
+      color_space = GetImageBufferColorSpace(frame.image);
+    }
+  } else {
+    // Otherwise prefer the frame color space.
+    color_space = GetImageBufferColorSpace(frame.image);
+    if (!color_space.IsValid()) {
+      color_space = config_.container_color_space.ToGfxColorSpace();
+    }
+  }
+
   std::vector<gfx::BufferPlane> planes;
   if (IsMultiPlaneFormatForHardwareVideoEnabled()) {
     planes.push_back(gfx::BufferPlane::DEFAULT);

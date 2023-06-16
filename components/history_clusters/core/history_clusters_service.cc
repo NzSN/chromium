@@ -107,6 +107,8 @@ HistoryClustersService::KeywordMap DictToKeywordsCache(
   return keyword_map;
 }
 
+constexpr base::TimeDelta kAllKeywordsCacheRefreshAge = base::Hours(2);
+
 }  // namespace
 
 HistoryClustersService::HistoryClustersService(
@@ -119,25 +121,33 @@ HistoryClustersService::HistoryClustersService(
     optimization_guide::NewOptimizationGuideDecider* optimization_guide_decider,
     PrefService* prefs)
     : persist_caches_to_prefs_(GetConfig().persist_caches_to_prefs),
-      is_journeys_enabled_(
+      is_journeys_feature_flag_enabled_(
           GetConfig().is_journeys_enabled_no_locale_check &&
           IsApplicationLocaleSupportedByJourneys(application_locale)),
       history_service_(history_service),
-      context_clusterer_observer_(history_service,
-                                  template_url_service,
-                                  optimization_guide_decider,
-                                  engagement_score_provider),
       pref_service_(prefs) {
-  if (prefs && is_journeys_enabled_) {
+  if (prefs && is_journeys_feature_flag_enabled_) {
     // Log whether the user has Journeys enabled if they are eligible for it.
     base::UmaHistogramBoolean(
         "History.Clusters.JourneysEligibleAndEnabledAtSessionStart",
         prefs->GetBoolean(prefs::kVisible));
   }
 
+  if (!is_journeys_feature_flag_enabled_) {
+    return;
+  }
+
+  // The remaining pieces are only needed for Journeys, so don't instantiate
+  // them if Journeys is not enabled.
+
   if (history_service_) {
     history_service_observation_.Observe(history_service);
   }
+
+  context_clusterer_observer_ =
+      std::make_unique<ContextClustererHistoryServiceObserver>(
+          history_service, template_url_service, optimization_guide_decider,
+          engagement_score_provider);
 
   backend_ = FileClusteringBackend::CreateIfEnabled();
   if (!backend_) {
@@ -158,8 +168,9 @@ base::WeakPtr<HistoryClustersService> HistoryClustersService::GetWeakPtr() {
 
 void HistoryClustersService::Shutdown() {}
 
-bool HistoryClustersService::IsJourneysEnabled() const {
-  return is_journeys_enabled_;
+bool HistoryClustersService::IsJourneysEnabledAndVisible() const {
+  return is_journeys_feature_flag_enabled_ &&
+         pref_service_->GetBoolean(prefs::kVisible);
 }
 
 // static
@@ -218,7 +229,7 @@ void HistoryClustersService::CompleteVisitContextAnnotationsIfReady(
        !visit_context_annotations.status.expect_ukm_page_end_signals)) {
     // If the main Journeys feature is enabled, we want to persist visits.
     // And if the persist-only switch is enabled, we also want to persist them.
-    if (IsJourneysEnabled() ||
+    if (IsJourneysEnabledAndVisible() ||
         GetConfig().persist_context_annotations_in_history_db) {
       history_service_->SetOnCloseContextAnnotationsForVisit(
           visit_context_annotations.visit_row.visit_id,
@@ -236,6 +247,12 @@ HistoryClustersService::QueryClusters(
     QueryClustersContinuationParams continuation_params,
     bool recluster,
     QueryClustersCallback callback) {
+  if (!IsJourneysEnabledAndVisible()) {
+    // TODO(crbug/1441974): Make this into a CHECK after verifying all callers.
+    std::move(callback).Run({}, QueryClustersContinuationParams::DoneParams());
+    return nullptr;
+  }
+
   if (ShouldNotifyDebugMessage()) {
     NotifyDebugMessage("HistoryClustersService::QueryClusters()");
     NotifyDebugMessage("  begin_time = " + GetDebugTime(begin_time));
@@ -256,31 +273,6 @@ HistoryClustersService::QueryClusters(
       weak_ptr_factory_.GetWeakPtr(), incomplete_visit_context_annotations_,
       backend_.get(), history_service_, clustering_request_source, begin_time,
       continuation_params, recluster, std::move(callback));
-}
-
-void HistoryClustersService::RepeatedlyUpdateClusters() {
-  // If `persist_on_query` is enabled, clusters are updated on query and not on
-  // a timer.
-  if (!GetConfig().persist_clusters_in_history_db ||
-      GetConfig().persist_on_query) {
-    return;
-  }
-
-  // Update clusters, both periodically and once after startup because:
-  // 1) To avoid having very stale (up to 90 days) clusters for the initial
-  //    period after startup.
-  // 2) Likewise, to avoid having very stale keywords.
-  // 3) Some users might not keep chrome running for the period.
-  update_clusters_after_startup_delay_timer_.Start(
-      FROM_HERE,
-      base::Minutes(
-          GetConfig()
-              .persist_clusters_in_history_db_after_startup_delay_minutes),
-      this, &HistoryClustersService::UpdateClusters);
-  update_clusters_period_timer_.Start(
-      FROM_HERE,
-      base::Minutes(GetConfig().persist_clusters_in_history_db_period_minutes),
-      this, &HistoryClustersService::UpdateClusters);
 }
 
 void HistoryClustersService::UpdateClusters() {
@@ -343,8 +335,9 @@ void HistoryClustersService::UpdateClusters() {
 
 absl::optional<history::ClusterKeywordData>
 HistoryClustersService::DoesQueryMatchAnyCluster(const std::string& query) {
-  if (!IsJourneysEnabled())
+  if (!IsJourneysEnabledAndVisible()) {
     return absl::nullopt;
+  }
 
   // We don't want any omnibox jank for low-end devices.
   if (base::SysInfo::IsLowEndDevice())
@@ -413,6 +406,31 @@ void HistoryClustersService::OnURLsDeleted(
   ClearKeywordCache();
 }
 
+void HistoryClustersService::RepeatedlyUpdateClusters() {
+  // If `persist_on_query` is enabled, clusters are updated on query and not on
+  // a timer.
+  if (!GetConfig().persist_clusters_in_history_db ||
+      GetConfig().persist_on_query) {
+    return;
+  }
+
+  // Update clusters, both periodically and once after startup because:
+  // 1) To avoid having very stale (up to 90 days) clusters for the initial
+  //    period after startup.
+  // 2) Likewise, to avoid having very stale keywords.
+  // 3) Some users might not keep chrome running for the period.
+  update_clusters_after_startup_delay_timer_.Start(
+      FROM_HERE,
+      base::Minutes(
+          GetConfig()
+              .persist_clusters_in_history_db_after_startup_delay_minutes),
+      this, &HistoryClustersService::UpdateClusters);
+  update_clusters_period_timer_.Start(
+      FROM_HERE,
+      base::Minutes(GetConfig().persist_clusters_in_history_db_period_minutes),
+      this, &HistoryClustersService::UpdateClusters);
+}
+
 void HistoryClustersService::StartKeywordCacheRefresh() {
   // If `all_keywords_cache_` is older than 2 hours, update it with the keywords
   // of all clusters. Otherwise, update `short_keyword_cache_` with the
@@ -433,7 +451,8 @@ void HistoryClustersService::StartKeywordCacheRefresh() {
   }
 
   // 2 hour threshold chosen arbitrarily for cache refresh time.
-  if ((base::Time::Now() - all_keywords_cache_timestamp_) > base::Hours(2)) {
+  if ((base::Time::Now() - all_keywords_cache_timestamp_) >
+      kAllKeywordsCacheRefreshAge) {
     // Update the timestamp right away, to prevent this from running again.
     // (The cache_query_task_tracker_ should also do this.)
     all_keywords_cache_timestamp_ = base::Time::Now();
@@ -485,9 +504,14 @@ void HistoryClustersService::PopulateClusterKeywordCache(
       // sensitive clusters here.
       continue;
     }
-    const size_t visible_visits = base::ranges::count_if(
-        cluster.visits,
-        [](const auto& cluster_visit) { return cluster_visit.score > 0; });
+    const size_t visible_visits =
+        base::ranges::count_if(cluster.visits, [](const auto& cluster_visit) {
+          // Hidden visits shouldn't contribute to the keyword bag, but Done
+          // visits still can, since they are searchable.
+          return cluster_visit.score > 0 &&
+                 cluster_visit.interaction_state !=
+                     history::ClusterVisit::InteractionState::kHidden;
+        });
     if (visible_visits < 2) {
       // Only accept keywords from clusters with at least two visits. This is a
       // simple first-pass technique to avoid overtriggering the omnibox action.
@@ -592,9 +616,14 @@ void HistoryClustersService::LoadCachesFromPrefs() {
   const base::Value::Dict* all_keywords_dict =
       all_cache_dict.FindDict("all_keywords");
   all_keywords_cache_ = DictToKeywordsCache(all_keywords_dict);
-  all_keywords_cache_timestamp_ =
+  // When loading `all_keywords_cache_` from the prefs, make sure it will be
+  // refreshed after 15 seconds, regardless of the persisted timestamp. This is
+  // to account for new synced visits, and to flush away stale data on restart.
+  // Extra 15 seconds is to avoid impacting startup. https://crbug.com/1444256.
+  all_keywords_cache_timestamp_ = std::min(
       base::ValueToTime(all_cache_dict.Find("all_timestamp"))
-          .value_or(all_keywords_cache_timestamp_);
+          .value_or(all_keywords_cache_timestamp_),
+      base::Time::Now() - kAllKeywordsCacheRefreshAge + base::Seconds(15));
 
   base::UmaHistogramCustomTimes(
       "History.Clusters.KeywordCache.LoadCachesFromPrefs.Latency",

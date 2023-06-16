@@ -36,11 +36,11 @@ class MockMerchantPromoCodeManager : public MerchantPromoCodeManager {
               (override));
   MOCK_METHOD(void,
               OnRemoveCurrentSingleFieldSuggestion,
-              (const std::u16string&, const std::u16string&, int),
+              (const std::u16string&, const std::u16string&, PopupItemId),
               (override));
   MOCK_METHOD(void,
               OnSingleFieldSuggestionSelected,
-              (const std::u16string&, int),
+              (const std::u16string&, PopupItemId),
               (override));
 };
 

@@ -30,13 +30,19 @@ OsSettingsManager* OsSettingsManagerFactory::GetForProfile(Profile* profile) {
 
 // static
 OsSettingsManagerFactory* OsSettingsManagerFactory::GetInstance() {
-  return base::Singleton<OsSettingsManagerFactory>::get();
+  static base::NoDestructor<OsSettingsManagerFactory> instance;
+  return instance.get();
 }
 
 OsSettingsManagerFactory::OsSettingsManagerFactory()
     : ProfileKeyedServiceFactory(
           "OsSettingsManager",
-          ProfileSelections::BuildForRegularAndIncognito()) {
+          ProfileSelections::Builder()
+              .WithRegular(ProfileSelection::kOwnInstance)
+              // TODO(crbug.com/1418376): Check if this service is needed in
+              // Guest mode.
+              .WithGuest(ProfileSelection::kOwnInstance)
+              .Build()) {
   DependsOn(
       local_search_service::LocalSearchServiceProxyFactory::GetInstance());
   DependsOn(multidevice_setup::MultiDeviceSetupClientFactory::GetInstance());

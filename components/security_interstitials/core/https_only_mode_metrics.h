@@ -5,6 +5,9 @@
 #ifndef COMPONENTS_SECURITY_INTERSTITIALS_CORE_HTTPS_ONLY_MODE_METRICS_H_
 #define COMPONENTS_SECURITY_INTERSTITIALS_CORE_HTTPS_ONLY_MODE_METRICS_H_
 
+#include <cstddef>
+#include "base/time/time.h"
+
 namespace security_interstitials::https_only_mode {
 
 // The main histogram that records events about HTTPS-First Mode and HTTPS
@@ -19,6 +22,19 @@ extern const char kNavigationRequestSecurityLevelHistogram[];
 // Histogram that records enabled/disabled states for sites. If HFM gets enabled
 // or disabled due to Site Engagement on a site, records an entry.
 extern const char kSiteEngagementHeuristicStateHistogram[];
+
+// Histogram that records the current number of host that have HFM enabled due
+// to the site engagement heuristic. Includes hosts that have HTTP allowed.
+extern const char kSiteEngagementHeuristicHostCountHistogram[];
+// Histogram that records the accumulated number of host that have HFM enabled
+// at some point due to the site engagement heuristic. Includes hosts that have
+// HTTP allowed.
+extern const char kSiteEngagementHeuristicAccumulatedHostCountHistogram[];
+
+// Histogram that records the duration a host has HFM enabled due to the site
+// engagement heuristic. Only recorded for hosts removed from the HFM list.
+// Recorded at the time of navigation when HFM upgrades trigger.
+extern const char kSiteEngagementHeuristicEnforcementDurationHistogram[];
 
 // Recorded by HTTPS-First Mode and HTTPS-Upgrade logic when a navigation is
 // upgraded, or is eligible to be upgraded but wasn't.
@@ -35,9 +51,9 @@ enum class Event {
   // Navigation failed after being upgraded to HTTPS.
   kUpgradeFailed = 2,
 
-  // kUpgradeCertError, kUpgradeNetError, and kUpgradeTimedOut are subsets of
-  // kUpgradeFailed. kUpgradeFailed should also be recorded whenever these
-  // events are recorded.
+  // kUpgradeCertError, kUpgradeNetError, kUpgradeTimedOut, and
+  // kUpgradeRedirectLoop are subsets of kUpgradeFailed. kUpgradeFailed should
+  // also be recorded whenever these events are recorded.
 
   // Navigation failed due to a cert error.
   kUpgradeCertError = 3,
@@ -53,7 +69,10 @@ enum class Event {
   // Mode nor HTTPS Upgrading were enabled.
   kUpgradeNotAttempted = 7,
 
-  kMaxValue = kUpgradeNotAttempted,
+  // Upgrade failed due to encountering a redirect loop and failing early.
+  kUpgradeRedirectLoop = 8,
+
+  kMaxValue = kUpgradeRedirectLoop,
 };
 
 // Recorded by HTTPS-Upgrade logic when each step in a navigation request is
@@ -99,7 +118,11 @@ enum class NavigationRequestSecurityLevel {
   // This bucket is recorded IN ADDITION to kInsecure/kAllowlisted.
   kNonUniqueHostname = 8,
 
-  kMaxValue = kNonUniqueHostname,
+  // Request was insecure (HTTP), but was to a URL that was fully typed (as
+  // opposed to autocompleted) that included an explicit http scheme.
+  kExplicitHttpScheme = 9,
+
+  kMaxValue = kExplicitHttpScheme,
 };
 
 // Recorded by the Site Engagement Heuristic logic, recording whether HFM should
@@ -130,6 +153,10 @@ struct HttpInterstitialState {
   // Whether HTTPS-First Mode is enabled for the current site due to the
   // site engagement heuristic.
   bool enabled_by_engagement_heuristic = false;
+
+  // Whether HTTPS-First Mode is enabled because the user is in the Advanced
+  // Protection program.
+  bool enabled_by_advanced_protection = false;
 };
 
 // Helper to record an HTTPS-First Mode navigation event.
@@ -142,6 +169,17 @@ void RecordNavigationRequestSecurityLevel(NavigationRequestSecurityLevel level);
 
 // Helper to record Site Engagement Heuristic enabled state.
 void RecordSiteEngagementHeuristicState(SiteEngagementHeuristicState state);
+
+// Helper to record metrics about the number of hosts affected by the Site
+// Engagement Heuristic.
+// `current_count` is the number of hosts that currently have HFM enabled.
+// `accumulated_count` is the number of accumulated hosts that had HFM enabled
+// at some point.
+void RecordSiteEngagementHeuristicCurrentHostCounts(size_t current_count,
+                                                    size_t accumulated_count);
+
+void RecordSiteEngagementHeuristicEnforcementDuration(
+    base::TimeDelta enforcement_duration);
 
 }  // namespace security_interstitials::https_only_mode
 

@@ -30,6 +30,7 @@
 دسترسی داشته باشد. <ph name="IDS_BLUETOOTH_DEVICE_CHOOSER_AUTHORIZE_BLUETOOTH_LINK" /></translation>
 <translation id="1547295885616600893">‏ارائه ChromeOS به‌کمک <ph name="BEGIN_LINK_CROS_OSS" />نرم‌افزارهای متن‌باز<ph name="END_LINK_CROS_OSS" /> تکمیلی ممکن شده است.</translation>
 <translation id="1553358976309200471">‏به‌روزرسانی Chrome</translation>
+<translation id="1555506416658437797">ویرایش روش‌های پرداخت.</translation>
 <translation id="1583073672411044740">‏<ph name="EXISTING_USER" /> قبلاً به سیستم این نمایه Chrome وارد شده است. با این کار، نمایه Chrome جدیدی برای <ph name="USER_EMAIL_ADDRESS" /> ایجاد خواهد شد</translation>
 <translation id="1587223624401073077">‏Google Chrome درحال استفاده از دوربین شما است.</translation>
 <translation id="1587325591171447154">‏<ph name="FILE_NAME" /> خطرناک است، بنابراین Chrome آن را مسدود کرده ست.</translation>
@@ -79,10 +80,12 @@
 <translation id="234869673307233423">‏Chrome نمی‌تواند گذرواژه‌هایتان را بررسی کند. بعداً دوباره امتحان کنید.</translation>
 <translation id="235650106824528204">‏سرپرست نمایه کاری می‌تواند داده‌های Chrome را که درطول استفاده از این نمایه ایجاد شده‌اند (مثل ایجاد سابقه نشانک‌ها، گذرواژه‌ها، و دیگر تنظیمات) بردارد. <ph name="LEARN_MORE" /></translation>
 <translation id="2359808026110333948">ادامه</translation>
+<translation id="2399868464369312507">‏Google Chrome می‌خواهد روش‌های پرداخت را ویرایش کند.</translation>
 <translation id="2401189691232800402">‏سیستم ChromeOS</translation>
 <translation id="2467438592969358367">‏Google Chrome می‌خواهد گذرواژه‌های شما را صادر کند. برای اجازه به این کار، گذرواژه Windows خود را تایپ کنید.</translation>
 <translation id="2485422356828889247">حذف نصب</translation>
 <translation id="2534507159460261402">‏Google Pay (در Chrome کپی شد)</translation>
+<translation id="2556847002339236023">‏اگر <ph name="TIMEOUT_DURATION" /> از Chrome استفاده نشود، سازمانتان آن را می‌بندد. داده‌های مرور حذف شد. این داده‌ها می‌تواند شامل سابقه، تکمیل خودکار، و بارگیری‌ها شود.</translation>
 <translation id="2559253115192232574">‏بعداً، سایتی که از آن بازدید می‌کنید می‌تواند برای شخصی کردن آگهی‌هایی که به شما نشان می‌دهد از Chrome بخواهد علایق شما را ببیند. Chrome می‌تواند حداکثر ۳ علاقه را هم‌رسانی کند.</translation>
 <translation id="2563121210305478421">‏Chrome راه‌اندازی مجدد شود؟</translation>
 <translation id="2574930892358684005">‏<ph name="EXISTING_USER" /> قبلاً به سیستم این نمایه Chrome وارد شده است. برای جدا نگه داشتن مرور، Chrome می‌تواند نمایه مختص خودتان را برایتان ایجاد کند.</translation>
@@ -114,6 +117,7 @@
 <translation id="2929907241665500097">‏Chrome به‌روزرسانی نشد؛ مشکلی پیش آمد. <ph name="BEGIN_LINK" />مشکلات به‌روزرسانی Chrome و به‌روزرسانی‌های ناموفق را برطرف کنید.<ph name="END_LINK" /></translation>
 <translation id="2969728957078202736">‏<ph name="PAGE_TITLE" /> - ورود به سیستم شبکه - Chrome</translation>
 <translation id="3019382870990049182">‏برای به‌روزرسانی &amp;ChromeOS Flex، راه‌اندازی مجدد کنید</translation>
+<translation id="3033660625209020231">{NUM_DEVICES,plural, =0{‏افزونه‌های Google Chrome به «دستگاه‌های میانای انسانی» دسترسی داشتند}=1{‏افزونه‌های Google Chrome به «دستگاه‌های میانای انسانی» دسترسی دارند}one{‏افزونه‌های Google Chrome به # «دستگاه میانای انسانی» دسترسی دارند}other{‏افزونه‌های Google Chrome به # «دستگاه میانای انسانی» دسترسی دارند}}</translation>
 <translation id="303514781271618814">‏Chrome ویژگی‌های جدیدی را کاوش می‌کند که به سایت‌ها اجازه می‌دهد با مصرف داده کمتر، همان تجربه مرور را ارائه دهند</translation>
 <translation id="3037838751736561277">‏Google Chrome در حالت پس‌زمینه است.</translation>
 <translation id="3038232873781883849">درانتظار نصب…</translation>
@@ -219,6 +223,7 @@
 <translation id="4970880042055371251">‏نسخه ChromeOS</translation>
 <translation id="4970947549776831107">‏Chrome این فایل را مسدود کرد زیرا این نوع فایل خطرناک است</translation>
 <translation id="4990567037958725628">Google Chrome Canary</translation>
+<translation id="5005958605836556244">{NUM_DEVICES,plural, =0{‏یک افزونه Google Chrome به «دستگاه‌های میانای انسانی» دسترسی داشت}=1{‏یک افزونه Google Chrome به یک «دستگاه میانای انسانی» دسترسی دارد}one{‏یک افزونه Google Chrome به # «دستگاه میانای انسانی» دسترسی دارد}other{‏یک افزونه Google Chrome به # «دستگاه میانای انسانی» دسترسی دارد}}</translation>
 <translation id="5064155331105009416">{COUNT,plural, =1{‏اگر به‌مدت یک دقیقه از Chrome استفاده نشود، سرپرست شما آن را به‌طور خودکار می‌بندد. داده‌های مرور حذف می‌شود. این داده‌ها می‌تواند شامل سابقه، تکمیل خودکار، و بارگیری‌ها شود.}one{‏اگر به‌مدت # دقیقه از Chrome استفاده نشود، سرپرست شما آن را به‌طور خودکار می‌بندد. داده‌های مرور حذف می‌شود. این داده‌ها می‌تواند شامل سابقه، تکمیل خودکار، و بارگیری‌ها شود.}other{‏اگر به‌مدت # دقیقه از Chrome استفاده نشود، سرپرست شما آن را به‌طور خودکار می‌بندد. داده‌های مرور حذف می‌شود. این داده‌ها می‌تواند شامل سابقه، تکمیل خودکار، و بارگیری‌ها شود.}}</translation>
 <translation id="5098668839038261629">‏وقتی روشن باشد، از سیستم Chrome نیز خارج خواهید شد</translation>
 <translation id="5132929315877954718">‏برنامه‌های کاربردی، بازی‌ها، افزونه‌ها و طرح‌های زمینه فوق‌العاده را برای Google Chrome کاوش کنید.</translation>
@@ -248,6 +253,7 @@
 <translation id="5756509061973259733">‏درحال‌حاضر یک نمایه Chrome با این حساب در این دستگاه وجود دارد</translation>
 <translation id="5795887333006832406"><ph name="PAGE_TITLE" /> - Google Chrome Canary</translation>
 <translation id="5804318322022881572">‏Chrome راه‌اندازی نشد. دوباره امتحان کنید.</translation>
+<translation id="585620188971323280">تنظیمات تکمیل روش‌های پرداخت را اصلاح کند.</translation>
 <translation id="5895138241574237353">راه‌اندازی مجدد</translation>
 <translation id="5903106910045431592"><ph name="PAGE_TITLE" /> - ورود به سیستم شبکه</translation>
 <translation id="5924017743176219022">درحال اتصال به اینترنت…</translation>
@@ -265,6 +271,7 @@
 <translation id="6113794647360055231">‏Chrome اکنون بهتر شده است</translation>
 <translation id="6145313976051292476">‏بازکردن فایل‌های PDF در Chrome</translation>
 <translation id="6155960517327665396">‏«بهینه‌سازی حافظه» سرعت Chrome را بیشتر کرده است</translation>
+<translation id="6157638032135951407">‏اگر <ph name="TIMEOUT_DURATION" /> از Chrome استفاده نشود، سازمانتان داده‌های آن را حذف می‌کند. این داده‌ها می‌تواند شامل سابقه، تکمیل خودکار، و بارگیری‌ها شود.</translation>
 <translation id="6169866489629082767"><ph name="PAGE_TITLE" /> - Google Chrome</translation>
 <translation id="6173637689840186878"><ph name="PAGE_TITLE" /> - Google Chrome Beta</translation>
 <translation id="6235018212288296708">‏قانون ورودی برای Google Chrome به منظور اجازه به ترافیک mDNS.</translation>
@@ -280,6 +287,7 @@
 <translation id="6418662306461808273">‏به نمایه Chrome موجود می‌روید؟</translation>
 <translation id="648319183876919572">«مرور ایمن پیشرفته» کارهای بیشتری برای محافظت از شما درمقابل وب‌سایت‌ها و بارگیری‌های خطرناک انجام می‌دهد</translation>
 <translation id="6493527311031785448">‏Google Chrome در تلاش است <ph name="AUTHENTICATION_PURPOSE" /></translation>
+<translation id="6497147134301593682">‏Chrome به‌طور خودکار بسته شد</translation>
 <translation id="6506909944137591434">‏Chrome برای ایجاد نقشه سه‌بعدی از محیط اطرافتان به اجازه دوربین نیاز دارد</translation>
 <translation id="6515495397637126556"><ph name="PAGE_TITLE" /> - Google Chrome Dev</translation>
 <translation id="659498884637196217">‏در «مدیر گذرواژه Google» در این دستگاه</translation>
@@ -316,6 +324,7 @@
 <translation id="7155997830309522122">‏در این صورت، لطفاً گذرواژه ذخیره‌شده در Chrome را ویرایش کنید تا با گذرواژه جدیدتان مطابقت داشته باشد.</translation>
 <translation id="7161904924553537242">‏به Google Chrome خوش آمدید</translation>
 <translation id="7177959540995930968">‏در تنظیمات Chrome می‌توانید اطلاعات بیشتری درباره این ویژگی‌ها کسب کنید.</translation>
+<translation id="7193885263065350793">‏اگر <ph name="TIMEOUT_DURATION" /> از Chrome استفاده نشود، سازمانتان آن را می‌بندد.</translation>
 <translation id="7242029209006116544">‏شما با حساب مدیریت‌شده وارد سیستم می‌شوید و به سرپرست آن اجازه کنترل بر نمایه Google Chrome خود را می‌دهید. داده‌های Chrome شما شامل برنامه‌ها، نشانک‌ها، سابقه، گذرواژه‌ها و سایر تنظیمات برای همیشه به <ph name="USER_NAME" /> مرتبط خواهد شد. می‌توانید این داده‌ها را از طریق داشبورد حساب‌های Google حذف کنید اما نمی‌توانید این داده‌ها را به حساب دیگری مرتبط سازید. در صورت تمایل برای ذخیره داده‌های Chrome موجود به صورت جداگانه می‌توانید نمایه جدیدی ایجاد کنید. <ph name="LEARN_MORE" /></translation>
 <translation id="7295052994004373688">‏از این زبان برای نمایش واسط کاربر Google Chrome استفاده می‌شود</translation>
 <translation id="7296210096911315575">اطلاعات مهم درباره استفاده و ایمنی</translation>
@@ -377,11 +386,13 @@
 <translation id="8418845734693287262">‏ChromeOS نتوانست داده‌هایتان را همگام‌سازی کند، چون جزئیات ورود به حساب شما به‌روز نیست.</translation>
 <translation id="8433638294851456451">‏برای ارسال شماره از اینجا به تلفن Android خود، در هر دو دستگاه به سیستم Chrome وارد شوید.</translation>
 <translation id="8451192282033883849">‏<ph name="MANAGER_NAME" /> حساب شما را مدیریت می‌کند. سرپرست شما می‌تواند این نمایه مرورگر Chrome و داده‌های آن را (مانند نشانک‌ها، سابقه، و گذرواژه‌ها) ببیند و ویرایش کند.</translation>
+<translation id="8496177819998570653">‏مدیر گذرواژه Google</translation>
 <translation id="8498858610309223613">‏لحظاتی پیش به‌روزرسانی امنیتی ویژه‌ای برای Google Chrome اعمال شد. هم‌اکنون بازراه‌اندازی کنید و ما برگه‌هایتان را بازیابی خواهیم کرد.</translation>
 <translation id="8504220326736535258">‏Chrome این فایل را مسدود کرد زیرا حاوی بدافزار است</translation>
 <translation id="8516431725144212809">‏علایق شما به‌طوری‌که Chrome برآورد کرده است</translation>
 <translation id="8521348052903287641">‏قانون ترافیک ورودی Google Chrome نسخه Dev برای امکان دادن به ترافیک mDNS.</translation>
 <translation id="8540666473246803645">Google Chrome</translation>
+<translation id="8544217240017914508">‏Google Chrome می‌خواهد تنظیمات تکمیل روش‌های پرداخت را اصلاح کند.</translation>
 <translation id="8550334526674375523">این نمایه کاری کاملاً مجزا از نمایه شخصی‌تان است.</translation>
 <translation id="8556340503434111824">‏نسخه جدیدی از Google Chrome وجود دارد که سریعتر از همیشه است.</translation>
 <translation id="8571790202382503603">‏با نمایه‌های Chrome می‌توانید همه‌چیزتان را در Chrome جدا کنید. با این کار، راحت‌تر می‌توان کار و سرگرمی را ازهم جدا کرد.</translation>

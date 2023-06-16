@@ -21,6 +21,7 @@
 #include "components/viz/common/resources/resource_format_utils.h"
 #include "components/viz/common/resources/resource_id.h"
 #include "components/viz/common/resources/shared_image_format.h"
+#include "components/viz/common/resources/shared_image_format_utils.h"
 #include "components/viz/common/resources/transferable_resource.h"
 #include "gpu/command_buffer/client/gpu_memory_buffer_manager.h"
 #include "gpu/command_buffer/client/shared_image_interface.h"
@@ -128,7 +129,9 @@ RoundedDisplayFrameFactory::CreateUiResource(const gfx::Size& size,
           ->context_factory()
           ->GetGpuMemoryBufferManager()
           ->CreateGpuMemoryBuffer(
-              size, viz::BufferFormat(kSharedImageFormat.resource_format()),
+              size,
+              viz::SinglePlaneSharedImageFormatToBufferFormat(
+                  kSharedImageFormat),
               gfx::BufferUsage::SCANOUT_CPU_READ_WRITE, gpu::kNullSurfaceHandle,
               nullptr);
 
@@ -233,17 +236,11 @@ RoundedDisplayFrameFactory::CreateCompositorFrame(
       return nullptr;
     }
 
-    gfx::Transform buffer_to_target_transform;
-
-    // Translate the gutter to correct location in the display.
-    buffer_to_target_transform.Translate(gutter->bounds().x(),
-                                         gutter->bounds().y());
-
     // By applying the inverse of root rotation transform, we ensure that our
     // rounded corner textures are not rotated with the rest of the UI. This
     // also saves us from dealing with having the reverse rotation transform
     // requirements of using hardware overlays.
-    buffer_to_target_transform.PostConcat(root_rotation_inverse);
+    const gfx::Transform& buffer_to_target_transform = root_rotation_inverse;
 
     viz::ResourceId resource_id =
         resource_manager.OfferResource(std::move(resource));
@@ -317,7 +314,7 @@ void RoundedDisplayFrameFactory::AppendQuad(
   // Each gutter can be thought of as a single ui::Layer that produces only one
   // quad. Therefore the layer should be of the same size as the texture
   // produced by the gutter making layer_rect the size of the gutter in pixels.
-  const gfx::Rect layer_rect(gutter.bounds().size());
+  const gfx::Rect& layer_rect = gutter.bounds();
 
   viz::SharedQuadState* quad_state =
       render_pass_out.CreateAndAppendSharedQuadState();

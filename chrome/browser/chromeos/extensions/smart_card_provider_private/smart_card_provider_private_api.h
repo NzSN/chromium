@@ -44,16 +44,25 @@ class SmartCardProviderPrivateAPI
       ContextId,                 // EstablishContext
       std::vector<std::string>,  // ListReaders
       std::vector<
-          device::mojom::SmartCardReaderStateOutPtr>,         // GetStatusChange
-      std::tuple<Handle, device::mojom::SmartCardProtocol>>;  // Connect
+          device::mojom::SmartCardReaderStateOutPtr>,        // GetStatusChange
+      std::tuple<Handle, device::mojom::SmartCardProtocol>,  // Connect
+      std::vector<uint8_t>>;                                 // Transmit
 
-  using SmartCardCallback = std::variant<
-      // Cancel, Disconnect
-      base::OnceCallback<void(device::mojom::SmartCardResultPtr)>,
-      ListReadersCallback,
-      GetStatusChangeCallback,
-      ConnectCallback,
-      CreateContextCallback>;
+  // Common to Transmit, Control and GetAttrib.
+  using DataCallback =
+      base::OnceCallback<void(device::mojom::SmartCardDataResultPtr)>;
+
+  // Common to Cancel, Disconnect, SetAttrib, BeginTransaction and
+  // EndTransaction
+  using PlainCallback =
+      base::OnceCallback<void(device::mojom::SmartCardResultPtr)>;
+
+  using SmartCardCallback = std::variant<PlainCallback,
+                                         ListReadersCallback,
+                                         GetStatusChangeCallback,
+                                         ConnectCallback,
+                                         CreateContextCallback,
+                                         DataCallback>;
 
   using ProcessResultCallback = base::OnceCallback<
       void(ResultArgs, device::mojom::SmartCardResultPtr, SmartCardCallback)>;
@@ -86,8 +95,20 @@ class SmartCardProviderPrivateAPI
                device::mojom::SmartCardShareMode share_mode,
                device::mojom::SmartCardProtocolsPtr preferred_protocols,
                ConnectCallback callback) override;
+
+  // device::mojom::SmartCardConnection overrides:
   void Disconnect(device::mojom::SmartCardDisposition disposition,
                   DisconnectCallback callback) override;
+  void Transmit(device::mojom::SmartCardProtocol protocol,
+                const std::vector<uint8_t>& data,
+                TransmitCallback callback) override;
+  void Control(uint32_t control_code,
+               const std::vector<uint8_t>& data,
+               ControlCallback callback) override;
+  void GetAttrib(uint32_t id, GetAttribCallback callback) override;
+  void SetAttrib(uint32_t id,
+                 const std::vector<uint8_t>& data,
+                 SetAttribCallback callback) override;
 
   // Called by extension functions:
   void ReportResult(RequestId request_id,
@@ -122,16 +143,16 @@ class SmartCardProviderPrivateAPI
   void ProcessGetStatusChangeResult(ResultArgs result_args,
                                     device::mojom::SmartCardResultPtr result,
                                     SmartCardCallback callback);
-  void ProcessCancelResult(ResultArgs result_args,
-                           device::mojom::SmartCardResultPtr result,
-                           SmartCardCallback callback);
+  void ProcessPlainResult(ResultArgs result_args,
+                          device::mojom::SmartCardResultPtr result,
+                          SmartCardCallback callback);
   void ProcessConnectResult(ContextId scard_context,
                             ResultArgs result_args,
                             device::mojom::SmartCardResultPtr result,
                             SmartCardCallback callback);
-  void ProcessDisconnectResult(ResultArgs result_args,
-                               device::mojom::SmartCardResultPtr result,
-                               SmartCardCallback callback);
+  void ProcessDataResult(ResultArgs result_args,
+                         device::mojom::SmartCardResultPtr result,
+                         SmartCardCallback callback);
 
   // If the context is free the request is run immediately.
   // Otherwise it is put in a task queue.
@@ -154,6 +175,25 @@ class SmartCardProviderPrivateAPI
                       Handle handle,
                       device::mojom::SmartCardDisposition disposition,
                       DisconnectCallback callback);
+  void SendTransmit(ContextId scard_context,
+                    Handle handle,
+                    device::mojom::SmartCardProtocol protocol,
+                    const std::vector<uint8_t>& data,
+                    TransmitCallback callback);
+  void SendControl(ContextId scard_context,
+                   Handle handle,
+                   uint32_t control_code,
+                   const std::vector<uint8_t>& data,
+                   ControlCallback callback);
+  void SendGetAttrib(ContextId scard_context,
+                     Handle handle,
+                     uint32_t id,
+                     GetAttribCallback callback);
+  void SendSetAttrib(ContextId scard_context,
+                     Handle handle,
+                     uint32_t id,
+                     const std::vector<uint8_t>& data,
+                     SetAttribCallback callback);
 
   // Called when a device::mojom::SmartCardContext loses its mojo connection.
   // eg: because its mojo Remote was destroyed.
@@ -183,6 +223,14 @@ class SmartCardProviderPrivateAPI
                         RequestId request_id);
   void OnDisconnectTimeout(const std::string& provider_extension_id,
                            RequestId request_id);
+  void OnTransmitTimeout(const std::string& provider_extension_id,
+                         RequestId request_id);
+  void OnControlTimeout(const std::string& provider_extension_id,
+                        RequestId request_id);
+  void OnGetAttribTimeout(const std::string& provider_extension_id,
+                          RequestId request_id);
+  void OnSetAttribTimeout(const std::string& provider_extension_id,
+                          RequestId request_id);
 
   template <typename ResultPtr>
   void DispatchEventWithTimeout(
@@ -285,15 +333,15 @@ class SmartCardProviderPrivateReportGetStatusChangeResultFunction
       SMARTCARDPROVIDERPRIVATE_REPORTGETSTATUSCHANGERESULT)
 };
 
-class SmartCardProviderPrivateReportCancelResultFunction
+class SmartCardProviderPrivateReportPlainResultFunction
     : public ExtensionFunction {
  private:
   // ExtensionFunction:
-  ~SmartCardProviderPrivateReportCancelResultFunction() override;
+  ~SmartCardProviderPrivateReportPlainResultFunction() override;
   ResponseAction Run() override;
 
-  DECLARE_EXTENSION_FUNCTION("smartCardProviderPrivate.reportCancelResult",
-                             SMARTCARDPROVIDERPRIVATE_REPORTCANCELRESULT)
+  DECLARE_EXTENSION_FUNCTION("smartCardProviderPrivate.reportPlainResult",
+                             SMARTCARDPROVIDERPRIVATE_REPORTPLAINRESULT)
 };
 
 class SmartCardProviderPrivateReportConnectResultFunction
@@ -307,15 +355,15 @@ class SmartCardProviderPrivateReportConnectResultFunction
                              SMARTCARDPROVIDERPRIVATE_REPORTCONNECTRESULT)
 };
 
-class SmartCardProviderPrivateReportDisconnectResultFunction
+class SmartCardProviderPrivateReportDataResultFunction
     : public ExtensionFunction {
  private:
   // ExtensionFunction:
-  ~SmartCardProviderPrivateReportDisconnectResultFunction() override;
+  ~SmartCardProviderPrivateReportDataResultFunction() override;
   ResponseAction Run() override;
 
-  DECLARE_EXTENSION_FUNCTION("smartCardProviderPrivate.reportDisconnectResult",
-                             SMARTCARDPROVIDERPRIVATE_REPORTDISCONNECTRESULT)
+  DECLARE_EXTENSION_FUNCTION("smartCardProviderPrivate.reportDataResult",
+                             SMARTCARDPROVIDERPRIVATE_REPORTDATARESULT)
 };
 
 }  // namespace extensions

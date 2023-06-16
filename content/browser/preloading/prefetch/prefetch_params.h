@@ -114,12 +114,25 @@ int PrefetchCanaryCheckRetries();
 bool PrefetchShouldBlockUntilHead(
     blink::mojom::SpeculationEagerness prefetch_eagerness);
 
+// Gets the histogram suffix to use for the given eagerness parameter.
+CONTENT_EXPORT std::string GetPrefetchEagernessHistogramSuffix(
+    const blink::mojom::SpeculationEagerness& eagerness);
+
 // Returns whether the client is involved in the Holdback Finch
 // experiment group.
 bool IsContentPrefetchHoldback();
 
 // The maximum retry-after header value that will be persisted.
 base::TimeDelta PrefetchMaximumRetryAfterDelta();
+
+// Returns true if |kPrefetchNewLimits| is enabled.
+bool PrefetchNewLimitsEnabled();
+// Returns the max number of eager prefetches allowed (only used when
+// PrefetchNewLimits is enabled).
+size_t MaxNumberOfEagerPrefetchesPerPageForPrefetchNewLimits();
+// Returns the max number of non-eager prefetches allowed (only used when
+// PrefetchNewLimits is enabled).
+size_t MaxNumberOfNonEagerPrefetchesPerPageForPrefetchNewLimits();
 
 }  // namespace content
 

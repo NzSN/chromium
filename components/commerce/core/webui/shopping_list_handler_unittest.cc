@@ -47,6 +47,19 @@ class MockPage : public shopping_list::mojom::Page {
                void(int64_t bookmark_id, bool is_tracked));
 };
 
+class MockDelegate : public ShoppingListHandler::Delegate {
+ public:
+  MockDelegate() { SetCurrentTabUrl(GURL("http://example.com")); }
+  ~MockDelegate() override = default;
+
+  MOCK_METHOD(absl::optional<GURL>, GetCurrentTabUrl, (), (override));
+
+  void SetCurrentTabUrl(const GURL& url) {
+    ON_CALL(*this, GetCurrentTabUrl)
+        .WillByDefault(testing::Return(absl::make_optional<GURL>(url)));
+  }
+};
+
 void GetEvaluationProductInfos(
     base::OnceClosure closure,
     std::vector<shopping_list::mojom::BookmarkProductInfoPtr> expected,
@@ -95,7 +108,7 @@ class ShoppingListHandlerTest : public testing::Test {
         page_.BindAndGetRemote(),
         mojo::PendingReceiver<shopping_list::mojom::ShoppingListHandler>(),
         bookmark_model_.get(), shopping_service_.get(), pref_service_.get(),
-        &tracker_, "en-us");
+        &tracker_, "en-us", std::make_unique<MockDelegate>());
   }
 
   MockPage page_;
@@ -292,6 +305,9 @@ TEST_F(ShoppingListHandlerTest, TestGetProductInfo_FeatureEnabled) {
 
   std::vector<const bookmarks::BookmarkNode*> bookmark_list;
   bookmark_list.push_back(product);
+  shopping_service_->SetGetAllPriceTrackedBookmarksCallbackValue(bookmark_list);
+  shopping_service_->SetGetAllShoppingBookmarksValue(bookmark_list);
+
   std::vector<shopping_list::mojom::BookmarkProductInfoPtr> mojo_list =
       ShoppingListHandler::BookmarkListToMojoList(*bookmark_model_,
                                                   bookmark_list, "en-us");
@@ -315,6 +331,9 @@ TEST_F(ShoppingListHandlerTest, TestGetAllShoppingInfo_FeatureEnabled) {
   std::vector<const bookmarks::BookmarkNode*> bookmark_list;
   bookmark_list.push_back(product);
   bookmark_list.push_back(product2);
+  shopping_service_->SetGetAllPriceTrackedBookmarksCallbackValue(bookmark_list);
+  shopping_service_->SetGetAllShoppingBookmarksValue(bookmark_list);
+
   std::vector<shopping_list::mojom::BookmarkProductInfoPtr> mojo_list =
       ShoppingListHandler::BookmarkListToMojoList(*bookmark_model_,
                                                   bookmark_list, "en-us");
@@ -322,6 +341,47 @@ TEST_F(ShoppingListHandlerTest, TestGetAllShoppingInfo_FeatureEnabled) {
   handler_->GetAllShoppingBookmarkProductInfo(
       base::BindOnce(&GetEvaluationProductInfos, run_loop.QuitClosure(),
                      std::move(mojo_list)));
+}
+
+TEST_F(ShoppingListHandlerTest,
+       TestGetProductInfoForCurrentUrl_FeatureEligible) {
+  base::RunLoop run_loop;
+
+  absl::optional<commerce::ProductInfo> info;
+  info.emplace();
+  info->title = "example_title";
+  shopping_service_->SetResponseForGetProductInfoForUrl(info);
+
+  handler_->GetProductInfoForCurrentUrl(base::BindOnce(
+      [](base::RunLoop* run_loop,
+         shopping_list::mojom::ProductInfoPtr product_info) {
+        ASSERT_EQ("example_title", product_info->title);
+        run_loop->Quit();
+      },
+      &run_loop));
+
+  run_loop.Run();
+}
+
+TEST_F(ShoppingListHandlerTest,
+       TestGetProductInfoForCurrentUrl_FeatureIneligible) {
+  base::RunLoop run_loop;
+
+  absl::optional<commerce::ProductInfo> info;
+  info.emplace();
+  info->title = "example_title";
+  shopping_service_->SetResponseForGetProductInfoForUrl(info);
+  shopping_service_->SetIsPriceInsightsEligible(false);
+
+  handler_->GetProductInfoForCurrentUrl(base::BindOnce(
+      [](base::RunLoop* run_loop,
+         shopping_list::mojom::ProductInfoPtr product_info) {
+        ASSERT_EQ("", product_info->title);
+        run_loop->Quit();
+      },
+      &run_loop));
+
+  run_loop.Run();
 }
 
 class ShoppingListHandlerFeatureDisableTest : public testing::Test {
@@ -338,7 +398,7 @@ class ShoppingListHandlerFeatureDisableTest : public testing::Test {
         page_.BindAndGetRemote(),
         mojo::PendingReceiver<shopping_list::mojom::ShoppingListHandler>(),
         bookmark_model_.get(), shopping_service_.get(), pref_service_.get(),
-        &tracker_, "en-us");
+        &tracker_, "en-us", nullptr);
   }
 
   MockPage page_;

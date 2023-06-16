@@ -1293,7 +1293,8 @@ TEST_F(WindowStateTest, WindowStateRestoreHistoryBasicFunctionalites) {
   EXPECT_EQ(
       restore_stack[0],
       (WindowState::RestoreState{.window_state_type = WindowStateType::kDefault,
-                                 .actual_bounds_in_screen = default_bounds}));
+                                 .actual_bounds_in_screen = default_bounds,
+                                 .restore_bounds_in_screen = default_bounds}));
   EXPECT_EQ(window_state->GetRestoreWindowState(), WindowStateType::kNormal);
   EXPECT_EQ(window_state->GetRestoreBoundsInScreen(), default_bounds);
 
@@ -1844,8 +1845,8 @@ TEST_F(WindowStateTest, WindowSnapActionSourceUmaMetrics) {
   window_state->Maximize();
 
   // Use keyboard to snap a window.
-  AcceleratorController::Get()->PerformActionIfEnabled(WINDOW_CYCLE_SNAP_LEFT,
-                                                       {});
+  AcceleratorController::Get()->PerformActionIfEnabled(
+      AcceleratorAction::kWindowCycleSnapLeft, {});
   histograms.ExpectBucketCount(kWindowSnapActionSourceHistogram,
                                WindowSnapActionSource::kKeyboardShortcutToSnap,
                                1);
@@ -1884,8 +1885,8 @@ TEST_F(WindowStateTest, WindowSnapActionSourceUmaMetrics) {
   EXPECT_TRUE(Shell::Get()->tablet_mode_controller()->InTabletMode());
 
   // Use keyboard to snap the window in tablet mode.
-  AcceleratorController::Get()->PerformActionIfEnabled(WINDOW_CYCLE_SNAP_LEFT,
-                                                       {});
+  AcceleratorController::Get()->PerformActionIfEnabled(
+      AcceleratorAction::kWindowCycleSnapLeft, {});
   histograms.ExpectBucketCount(kWindowSnapActionSourceHistogram,
                                WindowSnapActionSource::kKeyboardShortcutToSnap,
                                2);

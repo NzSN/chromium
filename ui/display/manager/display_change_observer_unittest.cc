@@ -25,8 +25,8 @@
 #include "ui/display/fake/fake_display_snapshot.h"
 #include "ui/display/manager/display_configurator.h"
 #include "ui/display/manager/display_manager.h"
-#include "ui/display/manager/display_manager_util.h"
 #include "ui/display/manager/managed_display_info.h"
+#include "ui/display/manager/util/display_manager_util.h"
 #include "ui/display/screen.h"
 #include "ui/display/types/display_constants.h"
 #include "ui/display/types/display_mode.h"
@@ -301,8 +301,8 @@ TEST_P(DisplayChangeObserverTest, GetEmptyExternalManagedDisplayModeList) {
       /*connector_index=*/0x0001, gfx::Point(), gfx::Size(),
       DISPLAY_CONNECTION_TYPE_UNKNOWN,
       /*base_connector_id=*/1u, /*path_topology=*/{}, false, false,
-      PrivacyScreenState::kNotSupported, false, false, false, std::string(), {},
-      nullptr, nullptr, 0, gfx::Size(), gfx::ColorSpace(),
+      PrivacyScreenState::kNotSupported, false, false, false, std::string(),
+      base::FilePath(), {}, nullptr, nullptr, 0, gfx::Size(), gfx::ColorSpace(),
       /*bits_per_channel=*/8u, /*hdr_static_metadata=*/{}, kVrrNotCapable,
       absl::nullopt, DrmFormatsAndModifiers());
 
@@ -551,7 +551,12 @@ TEST_P(DisplayChangeObserverTest, HDRDisplayColorSpaces) {
           .SetNativeMode(MakeDisplayMode(1920, 1080, true, 60))
           .SetColorSpace(display_color_space)
           .SetBitsPerChannel(10u)
-          .SetHDRStaticMetadata({600.0, 500.0, 0.01})
+          .SetHDRStaticMetadata(
+              {600.0, 500.0, 0.01,
+               gfx::HDRStaticMetadata::EotfMask({
+                   gfx::HDRStaticMetadata::Eotf::kGammaSdrRange,
+                   gfx::HDRStaticMetadata::Eotf::kPq,
+               })})
           .Build();
 
   ui::DeviceDataManager::CreateInstance();

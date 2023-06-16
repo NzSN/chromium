@@ -252,7 +252,8 @@ void IsolatedWebAppCommandLineInstallManager::OnGetIsolatedWebAppUrlInfo(
   }
 
   command_scheduler_->InstallIsolatedWebApp(
-      url_info.value(), location, std::move(keep_alive),
+      url_info.value(), location,
+      /*expected_version=*/absl::nullopt, std::move(keep_alive),
       std::move(optional_profile_keep_alive),
       base::BindOnce(
           &IsolatedWebAppCommandLineInstallManager::OnInstallIsolatedWebApp,
@@ -262,11 +263,8 @@ void IsolatedWebAppCommandLineInstallManager::OnGetIsolatedWebAppUrlInfo(
 void IsolatedWebAppCommandLineInstallManager::OnInstallIsolatedWebApp(
     base::expected<InstallIsolatedWebAppCommandSuccess,
                    InstallIsolatedWebAppCommandError> result) {
-  if (!result.has_value()) {
-    ReportInstallationResult(base::unexpected(result.error().message));
-  } else {
-    ReportInstallationResult(result.value());
-  }
+  ReportInstallationResult(
+      result.transform_error([](auto error) { return error.message; }));
 }
 
 void IsolatedWebAppCommandLineInstallManager::ReportInstallationResult(

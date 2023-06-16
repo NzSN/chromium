@@ -9,8 +9,8 @@
 #import "base/ios/block_types.h"
 #import "base/mac/foundation_util.h"
 #import "base/test/ios/wait_util.h"
-#import "ios/chrome/browser/application_context/application_context.h"
-#import "ios/chrome/browser/main/test_browser.h"
+#import "ios/chrome/browser/shared/model/application_context/application_context.h"
+#import "ios/chrome/browser/shared/model/browser/test/test_browser.h"
 #import "ios/chrome/browser/shared/model/browser_state/test_chrome_browser_state.h"
 #import "ios/chrome/browser/signin/authentication_service.h"
 #import "ios/chrome/browser/signin/authentication_service_factory.h"
@@ -87,7 +87,8 @@ class TwoScreensSigninCoordinatorTest : public PlatformTest {
     AuthenticationService* auth_service = static_cast<AuthenticationService*>(
         AuthenticationServiceFactory::GetInstance()->GetForBrowserState(
             browser_state_.get()));
-    auth_service->SignIn(fake_identity);
+    auth_service->SignIn(fake_identity,
+                         signin_metrics::AccessPoint::ACCESS_POINT_UNKNOWN);
   }
 
   // Advances the coordinator to the next screen.
@@ -177,4 +178,32 @@ TEST_F(TwoScreensSigninCoordinatorTest, StopWillInterrupt) {
   EXPECT_EQ(signin_completion_info.identity, nil);
   EXPECT_EQ(signin_completion_info.signinCompletionAction,
             SigninCompletionActionNone);
+}
+
+// Tests that the user can cancel without signing in.
+TEST_F(TwoScreensSigninCoordinatorTest, CanceledByUser) {
+  __block SigninCoordinatorResult signin_result;
+  __block SigninCompletionInfo* signin_completion_info;
+  __block BOOL completion_block_done = NO;
+  coordinator_.signinCompletion =
+      ^(SigninCoordinatorResult signinResult,
+        SigninCompletionInfo* signinCompletionInfo) {
+        signin_result = signinResult;
+        signin_completion_info = signinCompletionInfo;
+        completion_block_done = YES;
+      };
+
+  [coordinator_ start];
+  [coordinator_ screenWillFinishPresenting];
+
+  auto completion_condition = ^{
+    return completion_block_done;
+  };
+  base::test::ios::WaitUntilCondition(completion_condition, true,
+                                      base::Seconds(1));
+  EXPECT_EQ(signin_result, SigninCoordinatorResultCanceledByUser);
+  EXPECT_EQ(signin_completion_info.identity, nil);
+  EXPECT_EQ(signin_completion_info.signinCompletionAction,
+            SigninCompletionActionNone);
+  [coordinator_ stop];
 }

@@ -37,7 +37,6 @@ DEFINE_UI_CLASS_PROPERTY_KEY(bool, kFrameRateThrottleKey, false)
 DEFINE_UI_CLASS_PROPERTY_KEY(bool, kHideInOverviewKey, false)
 DEFINE_UI_CLASS_PROPERTY_KEY(bool, kHideInShelfKey, false)
 DEFINE_UI_CLASS_PROPERTY_KEY(bool, kIsDraggingTabsKey, false)
-DEFINE_UI_CLASS_PROPERTY_KEY(bool, kIsGameKey, false)
 DEFINE_UI_CLASS_PROPERTY_KEY(bool, kHideInDeskMiniViewKey, false)
 DEFINE_UI_CLASS_PROPERTY_KEY(bool, kForceVisibleInMiniViewKey, false)
 DEFINE_OWNED_UI_CLASS_PROPERTY_KEY(bool, kMinimizeOnBackKey, nullptr)
@@ -68,6 +67,5 @@ DEFINE_OWNED_UI_CLASS_PROPERTY_KEY(gfx::Rect,
 DEFINE_UI_CLASS_PROPERTY_KEY(ResizeShadowType,
                              kResizeShadowTypeKey,
                              ResizeShadowType::kUnlock)
-DEFINE_OWNED_UI_CLASS_PROPERTY_KEY(std::string, kDeskGuidKey, nullptr)
 
 }  // namespace ash

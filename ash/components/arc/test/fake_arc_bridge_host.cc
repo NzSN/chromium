@@ -104,6 +104,10 @@ void FakeArcBridgeHost::OnBootPhaseMonitorInstanceReady(
 void FakeArcBridgeHost::OnCameraInstanceReady(
     mojo::PendingRemote<mojom::CameraInstance> camera_remote) {}
 
+void FakeArcBridgeHost::OnChromeFeatureFlagsInstanceReady(
+    mojo::PendingRemote<mojom::ChromeFeatureFlagsInstance>
+        chrome_feature_flags_remote) {}
+
 void FakeArcBridgeHost::OnClipboardInstanceReady(
     mojo::PendingRemote<mojom::ClipboardInstance> clipboard_remote) {}
 
@@ -185,7 +189,8 @@ void FakeArcBridgeHost::OnOemCryptoInstanceReady(
     mojo::PendingRemote<mojom::OemCryptoInstance> oemcrypto_remote) {}
 
 void FakeArcBridgeHost::OnPaymentAppInstanceReady(
-    mojo::PendingRemote<mojom::PaymentAppInstance> payment_app_remote) {}
+    mojo::PendingRemote<chromeos::payments::mojom::PaymentAppInstance>
+        payment_app_remote) {}
 
 void FakeArcBridgeHost::OnPipInstanceReady(
     mojo::PendingRemote<mojom::PipInstance> pip_remote) {}

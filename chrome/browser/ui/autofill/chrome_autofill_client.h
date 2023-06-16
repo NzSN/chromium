@@ -25,6 +25,7 @@
 #include "components/autofill/core/browser/payments/legal_message_line.h"
 #include "components/autofill/core/browser/ui/payments/card_unmask_prompt_controller_impl.h"
 #include "components/autofill/core/browser/ui/payments/card_unmask_prompt_options.h"
+#include "components/autofill/core/browser/ui/popup_item_ids.h"
 #include "components/signin/public/identity_manager/account_info.h"
 #include "content/public/browser/visibility.h"
 #include "content/public/browser/web_contents_observer.h"
@@ -146,6 +147,10 @@ class ChromeAutofillClient : public ContentAutofillClient,
       const VirtualCardEnrollmentFields& virtual_card_enrollment_fields,
       base::OnceClosure accept_virtual_card_callback,
       base::OnceClosure decline_virtual_card_callback) override;
+  void ShowMandatoryReauthOptInPrompt(
+      base::OnceClosure accept_mandatory_reauth_callback,
+      base::OnceClosure cancel_mandatory_reauth_callback,
+      base::RepeatingClosure close_mandatory_reauth_callback) override;
 #if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_IOS)
   void HideVirtualCardEnrollBubbleAndIconIfVisible() override;
 #endif
@@ -234,7 +239,8 @@ class ChromeAutofillClient : public ContentAutofillClient,
       AutofillProgressDialogType autofill_progress_dialog_type,
       base::OnceClosure cancel_callback) override;
   void CloseAutofillProgressDialog(
-      bool show_confirmation_before_closing) override;
+      bool show_confirmation_before_closing,
+      base::OnceClosure no_interactive_authentication_callback) override;
   bool IsAutocompleteEnabled() const override;
   bool IsPasswordManagerEnabled() override;
   void PropagateAutofillPredictions(
@@ -246,7 +252,7 @@ class ChromeAutofillClient : public ContentAutofillClient,
   void DidFillOrPreviewField(const std::u16string& autofilled_value,
                              const std::u16string& profile_full_name) override;
   bool IsContextSecure() const override;
-  void ExecuteCommand(int id) override;
+  void ExecuteCommand(PopupItemId popup_item_id) override;
   void OpenPromoCodeOfferDetailsURL(const GURL& url) override;
   LogManager* GetLogManager() const override;
   FormInteractionsFlowId GetCurrentFormInteractionsFlowId() override;
@@ -281,6 +287,11 @@ class ChromeAutofillClient : public ContentAutofillClient,
   void OnZoomChanged(
       const zoom::ZoomController::ZoomChangedEventData& data) override;
 #endif
+
+  AutofillProgressDialogControllerImpl*
+  AutofillProgressDialogControllerForTesting() {
+    return autofill_progress_dialog_controller_.get();
+  }
 
  protected:
   explicit ChromeAutofillClient(content::WebContents* web_contents);

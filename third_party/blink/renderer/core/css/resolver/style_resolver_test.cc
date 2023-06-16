@@ -1507,6 +1507,12 @@ TEST_F(StyleResolverTestCQ, DependsOnSizeContainerQueries) {
   EXPECT_TRUE(c->ComputedStyleRef().DependsOnSizeContainerQueries());
   EXPECT_TRUE(d->ComputedStyleRef().DependsOnSizeContainerQueries());
   EXPECT_FALSE(e->ComputedStyleRef().DependsOnSizeContainerQueries());
+
+  EXPECT_FALSE(a->ComputedStyleRef().DependsOnStyleContainerQueries());
+  EXPECT_FALSE(b->ComputedStyleRef().DependsOnStyleContainerQueries());
+  EXPECT_FALSE(c->ComputedStyleRef().DependsOnStyleContainerQueries());
+  EXPECT_FALSE(d->ComputedStyleRef().DependsOnStyleContainerQueries());
+  EXPECT_FALSE(e->ComputedStyleRef().DependsOnStyleContainerQueries());
 }
 
 TEST_F(StyleResolverTestCQ, DependsOnSizeContainerQueriesPseudo) {
@@ -1571,6 +1577,50 @@ TEST_F(StyleResolverTestCQ, DependsOnSizeContainerQueriesMPC) {
 
   EXPECT_TRUE(a->ComputedStyleRef().DependsOnSizeContainerQueries());
   EXPECT_FALSE(b->ComputedStyleRef().DependsOnSizeContainerQueries());
+}
+
+TEST_F(StyleResolverTestCQ, DependsOnStyleContainerQueries) {
+  GetDocument().documentElement()->setInnerHTML(R"HTML(
+    <style>
+      #a { color: red; }
+      @container style(--foo: bar) {
+        #b { color: blue; }
+        span { color: green; }
+        #d { color: coral; }
+      }
+    </style>
+    <div id=a></div>
+    <span id=b></span>
+    <span id=c></span>
+    <div id=d></div>
+    <div id=e></div>
+  )HTML");
+
+  UpdateAllLifecyclePhasesForTest();
+
+  auto* a = GetDocument().getElementById("a");
+  auto* b = GetDocument().getElementById("b");
+  auto* c = GetDocument().getElementById("c");
+  auto* d = GetDocument().getElementById("d");
+  auto* e = GetDocument().getElementById("e");
+
+  ASSERT_TRUE(a);
+  ASSERT_TRUE(b);
+  ASSERT_TRUE(c);
+  ASSERT_TRUE(d);
+  ASSERT_TRUE(e);
+
+  EXPECT_FALSE(a->ComputedStyleRef().DependsOnStyleContainerQueries());
+  EXPECT_TRUE(b->ComputedStyleRef().DependsOnStyleContainerQueries());
+  EXPECT_TRUE(c->ComputedStyleRef().DependsOnStyleContainerQueries());
+  EXPECT_TRUE(d->ComputedStyleRef().DependsOnStyleContainerQueries());
+  EXPECT_FALSE(e->ComputedStyleRef().DependsOnStyleContainerQueries());
+
+  EXPECT_FALSE(a->ComputedStyleRef().DependsOnSizeContainerQueries());
+  EXPECT_FALSE(b->ComputedStyleRef().DependsOnSizeContainerQueries());
+  EXPECT_FALSE(c->ComputedStyleRef().DependsOnSizeContainerQueries());
+  EXPECT_FALSE(d->ComputedStyleRef().DependsOnSizeContainerQueries());
+  EXPECT_FALSE(e->ComputedStyleRef().DependsOnSizeContainerQueries());
 }
 
 TEST_F(StyleResolverTest, NoCascadeLayers) {
@@ -2167,6 +2217,7 @@ TEST_F(StyleResolverTest, IsInertWithFrameAndFullscreen) {
   EXPECT_FALSE(body->GetComputedStyle()->IsInert());
   EXPECT_FALSE(div->GetComputedStyle()->IsInert());
   EXPECT_FALSE(div_text->GetComputedStyle()->IsInert());
+  ExitFullscreen(document);
 }
 
 TEST_F(StyleResolverTest, IsInertWithBackdrop) {
@@ -2221,6 +2272,7 @@ TEST_F(StyleResolverTest, IsInertWithBackdrop) {
   EXPECT_FALSE(IsBackdropInert(html));
   EXPECT_FALSE(IsBackdropInert(body));
   EXPECT_FALSE(IsBackdropInert(dialog));
+  ExitFullscreen(document);
 }
 
 TEST_F(StyleResolverTest, IsInertWithDialogAndFullscreen) {

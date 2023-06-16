@@ -11,11 +11,10 @@ import static org.junit.Assert.fail;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
 
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import org.chromium.net.CronetTestRule;
+import org.chromium.base.test.util.Batch;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -28,11 +27,9 @@ import java.util.concurrent.ThreadFactory;
 /**
  * Tests the MessageLoop implementation.
  */
+@Batch(Batch.UNIT_TESTS)
 @RunWith(AndroidJUnit4.class)
 public class MessageLoopTest {
-    @Rule
-    public final CronetTestRule mTestRule = new CronetTestRule();
-
     private Thread mTestThread;
     private final ExecutorService mExecutorService =
             Executors.newSingleThreadExecutor(new ExecutorThreadFactory());

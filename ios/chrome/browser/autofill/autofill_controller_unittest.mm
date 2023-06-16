@@ -506,8 +506,7 @@ void AutofillControllerTest::SetUpForSuggestions(
   PersonalDataManager* personal_data_manager =
       PersonalDataManagerFactory::GetForBrowserState(
           ChromeBrowserState::FromBrowserState(browser_state_.get()));
-  AutofillProfile profile(base::Uuid::GenerateRandomV4().AsLowercaseString(),
-                          "https://www.example.com/");
+  AutofillProfile profile;
   profile.SetRawInfo(NAME_FULL, u"Homer Simpson");
   profile.SetRawInfo(ADDRESS_HOME_LINE1, u"123 Main Street");
   profile.SetRawInfo(ADDRESS_HOME_CITY, u"Springfield");
@@ -525,6 +524,11 @@ void AutofillControllerTest::SetUpForSuggestions(
 // suggestions being sent to the AutofillAgent, once data has been loaded into a
 // test data manager.
 TEST_F(AutofillControllerTest, ProfileSuggestions) {
+  if (@available(iOS 16.3, *)) {
+    // TODO(crbug.com/1442607): Re-enable when fixed on iOS16.3+.
+    return;
+  }
+
   SetUpForSuggestions(kProfileFormHtml, 1);
   ForceViewRendering(web_state()->GetView());
   ResetWaitForSuggestionRetrieval();
@@ -540,6 +544,11 @@ TEST_F(AutofillControllerTest, ProfileSuggestions) {
 // Tests that the system is able to offer suggestions for an anonymous form when
 // there is another anonymous form on the page.
 TEST_F(AutofillControllerTest, ProfileSuggestionsTwoAnonymousForms) {
+  if (@available(iOS 16.3, *)) {
+    // TODO(crbug.com/1442607): Re-enable when fixed on iOS16.3+.
+    return;
+  }
+
   SetUpForSuggestions(
       [NSString stringWithFormat:@"%@%@", kProfileFormHtml, kProfileFormHtml],
       2);
@@ -558,6 +567,11 @@ TEST_F(AutofillControllerTest, ProfileSuggestionsTwoAnonymousForms) {
 // in suggestions being sent to the AutofillAgent, once data has been loaded
 // into a test data manager.
 TEST_F(AutofillControllerTest, ProfileSuggestionsFromSelectField) {
+  if (@available(iOS 16.3, *)) {
+    // TODO(crbug.com/1442607): Re-enable when fixed on iOS16.3+.
+    return;
+  }
+
   SetUpForSuggestions(kProfileFormHtml, 1);
   ForceViewRendering(web_state()->GetView());
   ResetWaitForSuggestionRetrieval();
@@ -572,14 +586,18 @@ TEST_F(AutofillControllerTest, ProfileSuggestionsFromSelectField) {
 
 // Checks that multiple profiles will offer a matching number of suggestions.
 TEST_F(AutofillControllerTest, MultipleProfileSuggestions) {
+  if (@available(iOS 16.3, *)) {
+    // TODO(crbug.com/1442607): Re-enable when fixed on iOS16.3+.
+    return;
+  }
+
   PersonalDataManager* personal_data_manager =
       PersonalDataManagerFactory::GetForBrowserState(
           ChromeBrowserState::FromBrowserState(browser_state_.get()));
   personal_data_manager->SetSyncServiceForTest(nullptr);
   PersonalDataManagerFinishedProfileTasksWaiter waiter(personal_data_manager);
 
-  AutofillProfile profile(base::Uuid::GenerateRandomV4().AsLowercaseString(),
-                          "https://www.example.com/");
+  AutofillProfile profile;
   profile.SetRawInfo(NAME_FULL, u"Homer Simpson");
   profile.SetRawInfo(ADDRESS_HOME_LINE1, u"123 Main Street");
   profile.SetRawInfo(ADDRESS_HOME_CITY, u"Springfield");
@@ -591,8 +609,7 @@ TEST_F(AutofillControllerTest, MultipleProfileSuggestions) {
   waiter.Wait();
 
   EXPECT_EQ(1U, personal_data_manager->GetProfiles().size());
-  AutofillProfile profile2(base::Uuid::GenerateRandomV4().AsLowercaseString(),
-                           "https://www.example.com/");
+  AutofillProfile profile2;
   profile2.SetRawInfo(NAME_FULL, u"Larry Page");
   profile2.SetRawInfo(ADDRESS_HOME_LINE1, u"1600 Amphitheatre Parkway");
   profile2.SetRawInfo(ADDRESS_HOME_CITY, u"Mountain View");

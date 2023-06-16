@@ -31,6 +31,7 @@
 #include "components/omnibox/browser/autocomplete_input.h"
 #include "components/omnibox/browser/autocomplete_match.h"
 #include "components/omnibox/browser/autocomplete_provider_client.h"
+#include "components/omnibox/browser/autocomplete_scoring_signals_annotator.h"
 #include "components/omnibox/browser/history_cluster_provider.h"
 #include "components/omnibox/browser/history_url_provider.h"
 #include "components/omnibox/browser/omnibox_field_trial.h"
@@ -106,11 +107,10 @@ int CalculateScoreFromFactors(size_t typed_length,
   // Due to appending 3 chars when updating shortcuts, and expanding the last
   // word when updating or creating shortcuts, the shortcut text can be longer
   // than the user's previous inputs (see
-  // `ShortcutsBackend::AddOrUpdateShortcut()`). As an approximation, ignore 3
-  // or 10 chars in the shortcut text. Shortcuts are often deduped with higher
-  // scoring history suggestions anyway.
-  const size_t adjustment =
-      OmniboxFieldTrial::IsShortcutExpandingEnabled() ? 10 : 3;
+  // `ShortcutsBackend::AddOrUpdateShortcut()`). As an approximation, ignore 10
+  // chars in the shortcut text. Shortcuts are often deduped with higher scoring
+  // history suggestions anyway.
+  const size_t adjustment = 10;
   const size_t adjusted_text_length =
       std::max(shortcut_text_length, typed_length + adjustment) - adjustment;
   // Using the square root of the typed fraction boosts the base score rapidly
@@ -197,7 +197,8 @@ void ShortcutsProvider::Start(const AutocompleteInput& input,
   if (input.focus_type() == metrics::OmniboxFocusType::INTERACTION_DEFAULT &&
       input.type() != metrics::OmniboxInputType::EMPTY &&
       !input.text().empty() && initialized_) {
-    GetMatches(input, OmniboxFieldTrial::IsLogUrlScoringSignalsEnabled());
+    GetMatches(input,
+               OmniboxFieldTrial::IsPopulatingUrlScoringSignalsEnabled());
   }
 }
 
@@ -262,16 +263,6 @@ void ShortcutsProvider::GetMatches(const AutocompleteInput& input,
        base::StartsWith(it->first, term_string, base::CompareCase::SENSITIVE);
        ++it) {
     const ShortcutsDatabase::Shortcut& shortcut = it->second;
-
-    // Allow `HISTORY_CLUSTER` suggestions only if the appropriate feature is
-    // enabled.
-#if !BUILDFLAG(IS_IOS)
-    if (!history_clusters::GetConfig()
-             .omnibox_history_cluster_provider_shortcuts &&
-        shortcut.match_core.type == AutocompleteMatch::Type::HISTORY_CLUSTER) {
-      continue;
-    }
-#endif  // !BUILDFLAG(IS_IOS)
 
     const GURL stripped_destination_url(AutocompleteMatch::GURLToStrippedGURL(
         shortcut.match_core.destination_url, input, template_url_service,
@@ -357,7 +348,8 @@ void ShortcutsProvider::GetMatches(const AutocompleteInput& input,
         auto match = ShortcutToACMatch(
             *shortcut_match.shortcut, shortcut_match.stripped_destination_url,
             relevance, input, fixed_up_input, term_string);
-        if (populate_scoring_signals) {
+        if (populate_scoring_signals &&
+            AutocompleteScoringSignalsAnnotator::IsEligibleMatch(match)) {
           PopulateScoringSignals(shortcut_match, &match);
         }
         return match;
@@ -512,11 +504,8 @@ AutocompleteMatch ShortcutsProvider::ShortcutToACMatch(
             match.inline_autocompletion.empty();
       }
 #if !BUILDFLAG(IS_IOS)
-    } else if (match.type != AutocompleteMatch::Type::HISTORY_CLUSTER ||
-               history_clusters::GetConfig()
-                   .omnibox_history_cluster_provider_allow_default) {
-      // Don't try to default history cluster suggestions unless
-      // `omnibox_history_cluster_provider_allow_default` is enabled.
+    } else if (match.type != AutocompleteMatch::Type::HISTORY_CLUSTER) {
+      // Don't default history cluster suggestions.
 #else
     } else {
 #endif

@@ -14,7 +14,6 @@
 #import "components/feature_engagement/public/tracker.h"
 #import "components/omnibox/browser/autocomplete_match.h"
 #import "components/omnibox/browser/autocomplete_result.h"
-#import "components/omnibox/browser/omnibox_edit_model_delegate.h"
 #import "components/omnibox/browser/omnibox_log.h"
 #import "components/omnibox/common/omnibox_features.h"
 #import "components/search_engines/template_url_service.h"
@@ -23,15 +22,14 @@
 #import "ios/chrome/browser/bookmarks/bookmarks_utils.h"
 #import "ios/chrome/browser/bookmarks/local_or_syncable_bookmark_model_factory.h"
 #import "ios/chrome/browser/default_browser/utils.h"
-#import "ios/chrome/browser/feature_engagement/tracker_factory.h"
 #import "ios/chrome/browser/https_upgrades/https_upgrade_service_factory.h"
 #import "ios/chrome/browser/prerender/prerender_service.h"
 #import "ios/chrome/browser/prerender/prerender_service_factory.h"
 #import "ios/chrome/browser/search_engines/template_url_service_factory.h"
 #import "ios/chrome/browser/sessions/ios_chrome_session_tab_helper.h"
 #import "ios/chrome/browser/shared/model/browser_state/chrome_browser_state.h"
+#import "ios/chrome/browser/shared/model/url/chrome_url_constants.h"
 #import "ios/chrome/browser/ui/omnibox/web_omnibox_edit_model_delegate.h"
-#import "ios/chrome/browser/url/chrome_url_constants.h"
 #import "ios/chrome/common/intents/SearchInChromeIntent.h"
 #import "ios/chrome/grit/ios_strings.h"
 #import "ios/web/public/navigation/navigation_manager.h"
@@ -45,9 +43,13 @@
 
 ChromeOmniboxClientIOS::ChromeOmniboxClientIOS(
     WebOmniboxEditModelDelegate* edit_model_delegate,
-    ChromeBrowserState* browser_state)
+    ChromeBrowserState* browser_state,
+    feature_engagement::Tracker* tracker)
     : edit_model_delegate_(edit_model_delegate),
-      browser_state_(browser_state) {}
+      browser_state_(browser_state),
+      engagement_tracker_(tracker) {
+  CHECK(engagement_tracker_);
+}
 
 ChromeOmniboxClientIOS::~ChromeOmniboxClientIOS() {}
 
@@ -160,8 +162,10 @@ void ChromeOmniboxClientIOS::OnUserPastedInOmniboxResultingInValidURL() {
 
   if (!browser_state_->IsOffTheRecord() &&
       HasRecentValidURLPastesAndRecordsCurrentPaste()) {
-    feature_engagement::TrackerFactory::GetForBrowserState(browser_state_)
-        ->NotifyEvent(feature_engagement::events::kBlueDotPromoCriterionMet);
+    engagement_tracker_->NotifyEvent(
+        feature_engagement::events::kBlueDotPromoCriterionMet);
+    engagement_tracker_->NotifyEvent(
+        feature_engagement::events::kDefaultBrowserVideoPromoConditionsMet);
   }
 }
 
@@ -227,6 +231,9 @@ void ChromeOmniboxClientIOS::OnURLOpenedFromOmnibox(OmniboxLog* log) {
           [interaction donateInteractionWithCompletion:nil];
         }));
   }
+
+  engagement_tracker_->NotifyEvent(
+      feature_engagement::events::kOpenUrlFromOmnibox);
 }
 
 void ChromeOmniboxClientIOS::DiscardNonCommittedNavigations() {
@@ -244,4 +251,26 @@ gfx::Image ChromeOmniboxClientIOS::GetFavicon() const {
   return favicon::WebFaviconDriver::FromWebState(
              edit_model_delegate_->GetWebState())
       ->GetFavicon();
+}
+
+void ChromeOmniboxClientIOS::OnAutocompleteAccept(
+    const GURL& destination_url,
+    TemplateURLRef::PostContent* post_content,
+    WindowOpenDisposition disposition,
+    ui::PageTransition transition,
+    AutocompleteMatchType::Type match_type,
+    base::TimeTicks match_selection_timestamp,
+    bool destination_url_entered_without_scheme,
+    bool destination_url_entered_with_http_scheme,
+    const std::u16string& text,
+    const AutocompleteMatch& match,
+    const AutocompleteMatch& alternative_nav_match,
+    IDNA2008DeviationCharacter deviation_char_in_hostname) {
+  edit_model_delegate_->OnNavigate(
+      destination_url, post_content, disposition, transition,
+      destination_url_entered_without_scheme, match);
+}
+
+LocationBarModel* ChromeOmniboxClientIOS::GetLocationBarModel() {
+  return edit_model_delegate_->GetLocationBarModel();
 }

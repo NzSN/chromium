@@ -359,12 +359,17 @@ TEST_F(DocumentProviderTest, ParseDocumentSearchResults) {
             GURL("https://documentprovider.tld/doc?id=1"));
   EXPECT_EQ(matches[0].relevance, 1234);  // Server-specified.
   EXPECT_EQ(matches[0].stripped_destination_url, GURL(kSampleStrippedURL));
+  EXPECT_EQ(matches[0].fill_into_edit,
+            base::UTF8ToUTF16(std::string(kSampleOriginalURL)));
 
   EXPECT_EQ(matches[1].contents, u"Document 2 longer title");
   EXPECT_EQ(matches[1].destination_url,
             GURL("https://documentprovider.tld/doc?id=2"));
   EXPECT_EQ(matches[1].relevance, 0);
-  EXPECT_TRUE(matches[1].stripped_destination_url.is_empty());
+  EXPECT_EQ(matches[1].stripped_destination_url,
+            GURL("http://documentprovider.tld/doc?id=2"));
+  EXPECT_EQ(matches[1].fill_into_edit,
+            u"https://documentprovider.tld/doc?id=2");
 
   EXPECT_EQ(matches[2].contents, u"Document 3 longer title");
   EXPECT_EQ(matches[2].destination_url,
@@ -374,6 +379,8 @@ TEST_F(DocumentProviderTest, ParseDocumentSearchResults) {
   // using |AutocompleteMatch::GURLToStrippedGURL()|.
   EXPECT_EQ(matches[2].stripped_destination_url,
             "http://sites.google.com/google.com/abc/def");
+  EXPECT_EQ(matches[2].fill_into_edit,
+            u"http://sites.google.com/google.com/abc/def");
 
   EXPECT_FALSE(provider_->backoff_for_session_);
 }
@@ -595,13 +602,15 @@ TEST_F(DocumentProviderTest, ParseDocumentSearchResultsBreakTies) {
   EXPECT_EQ(matches[1].destination_url,
             GURL("https://documentprovider.tld/doc?id=2"));
   EXPECT_EQ(matches[1].relevance, 1233);  // Tie demoted
-  EXPECT_TRUE(matches[1].stripped_destination_url.is_empty());
+  EXPECT_EQ(matches[1].stripped_destination_url,
+            GURL("http://documentprovider.tld/doc?id=2"));
 
   EXPECT_EQ(matches[2].contents, u"Document 3");
   EXPECT_EQ(matches[2].destination_url,
             GURL("https://documentprovider.tld/doc?id=3"));
   EXPECT_EQ(matches[2].relevance, 1232);  // Tie demoted, twice.
-  EXPECT_TRUE(matches[2].stripped_destination_url.is_empty());
+  EXPECT_EQ(matches[2].stripped_destination_url,
+            GURL("http://documentprovider.tld/doc?id=3"));
 
   EXPECT_FALSE(provider_->backoff_for_session_);
 }
@@ -656,7 +665,8 @@ TEST_F(DocumentProviderTest, ParseDocumentSearchResultsBreakTiesCascade) {
   EXPECT_EQ(matches[1].destination_url,
             GURL("https://documentprovider.tld/doc?id=2"));
   EXPECT_EQ(matches[1].relevance, 1233);  // Tie demoted
-  EXPECT_TRUE(matches[1].stripped_destination_url.is_empty());
+  EXPECT_EQ(matches[1].stripped_destination_url,
+            GURL("http://documentprovider.tld/doc?id=2"));
 
   EXPECT_EQ(matches[2].contents, u"Document 3");
   EXPECT_EQ(matches[2].destination_url,
@@ -664,7 +674,8 @@ TEST_F(DocumentProviderTest, ParseDocumentSearchResultsBreakTiesCascade) {
   // Document 2's demotion caused an implicit tie.
   // Ensure we demote this one as well.
   EXPECT_EQ(matches[2].relevance, 1232);
-  EXPECT_TRUE(matches[2].stripped_destination_url.is_empty());
+  EXPECT_EQ(matches[2].stripped_destination_url,
+            GURL("http://documentprovider.tld/doc?id=3"));
 
   EXPECT_FALSE(provider_->backoff_for_session_);
 }
@@ -719,14 +730,16 @@ TEST_F(DocumentProviderTest, ParseDocumentSearchResultsBreakTiesZeroLimit) {
   EXPECT_EQ(matches[1].destination_url,
             GURL("https://documentprovider.tld/doc?id=2"));
   EXPECT_EQ(matches[1].relevance, 0);  // Tie demoted
-  EXPECT_TRUE(matches[1].stripped_destination_url.is_empty());
+  EXPECT_EQ(matches[1].stripped_destination_url,
+            GURL("http://documentprovider.tld/doc?id=2"));
 
   EXPECT_EQ(matches[2].contents, u"Document 3");
   EXPECT_EQ(matches[2].destination_url,
             GURL("https://documentprovider.tld/doc?id=3"));
   // Tie is demoted further.
   EXPECT_EQ(matches[2].relevance, 0);
-  EXPECT_TRUE(matches[2].stripped_destination_url.is_empty());
+  EXPECT_EQ(matches[2].stripped_destination_url,
+            GURL("http://documentprovider.tld/doc?id=3"));
 
   EXPECT_FALSE(provider_->backoff_for_session_);
 }
@@ -1237,16 +1250,9 @@ TEST_F(DocumentProviderTest, Logging) {
 }
 
 TEST_F(DocumentProviderTest, LowQualitySuggestions) {
-  auto test = [&](int limit_enabled, const std::string& response_str,
+  auto test = [&](const std::string& response_str,
                   const std::string& input_text,
                   const std::vector<int> expected_scores) {
-    base::test::ScopedFeatureList feature_list;
-    feature_list.InitAndEnableFeatureWithParameters(
-        omnibox::kDocumentProvider,
-        {{std::string(
-              OmniboxFieldTrial::kDocumentProviderMaxLowQualitySuggestions
-                  .name),
-          limit_enabled ? "1" : "100"}});
     absl::optional<base::Value> response = base::JSONReader::Read(response_str);
     provider_->input_.UpdateText(base::UTF8ToUTF16(input_text), 0, {});
     ACMatches matches = provider_->ParseDocumentSearchResults(*response);
@@ -1260,8 +1266,7 @@ TEST_F(DocumentProviderTest, LowQualitySuggestions) {
     SCOPED_TRACE(
         "Unowned and non-title matching docs are limited. Title matching docs "
         "are not limited.");
-    test(true,
-         R"({"results": [
+    test(R"({"results": [
           {"title": "bad title1 title2",  "score": 1000, "url": "good url isn't sufficient"},
           {"title": "bad title1 title2",  "score": 999,  "url": "url"},
           {"title": "bad title1 title2",  "score": 998,  "url": "url"},
@@ -1279,8 +1284,8 @@ TEST_F(DocumentProviderTest, LowQualitySuggestions) {
 
   {
     SCOPED_TRACE("Owned docs are not limited.");
-    test(true,
-         R"({"results": [
+    test(
+        R"({"results": [
           {"title": "bad title1 title2",  "score": 1000, "url": "good url isn't sufficient"},
           {"title": "bad title1 title2",  "score": 999,  "url": "url"},
           {"title": "bad title1 title2",  "score": 998,  "url": "url", "metadata": {"owner": {"emailAddresses": [{"emailAddress": "badEmail1@gmail.com"}, {"emailAddress": "gOOdemaIl@gmail.com"}]}}},
@@ -1289,30 +1294,12 @@ TEST_F(DocumentProviderTest, LowQualitySuggestions) {
           {"title": "good title1 title2", "score": 995,  "url": "url"},
           {"title": "good title1 title2", "score": 994,  "url": "url"}
         ]})",
-         "goo title1", {1000, 0, 998, 0, 996, 995, 994});
-  }
-
-  {
-    SCOPED_TRACE(
-        "When the limit is disabled, unowned and non-title matching docs are "
-        "not limited.");
-    test(false,
-         R"({"results": [
-          {"title": "bad title1 title2",  "score": 1000, "url": "good url isn't sufficient"},
-          {"title": "bad title1 title2",  "score": 999,  "url": "url"},
-          {"title": "bad title1 title2",  "score": 998,  "url": "url"},
-          {"title": "goOd tItLE1 title2", "score": 997,  "url": "url"},
-          {"title": "good title1 title2", "score": 996,  "url": "url"},
-          {"title": "good title1 title2", "score": 995,  "url": "url"},
-          {"title": "good title1 title2", "score": 994,  "url": "url"}
-        ]})",
-         "goo title1", {1000, 999, 998, 997, 996, 995, 994});
+        "goo title1", {1000, 0, 998, 0, 996, 995, 994});
   }
 
   {
     SCOPED_TRACE("Responses with missing owner don't crash and are limited.");
-    test(true,
-         R"({"results": [
+    test(R"({"results": [
             {"title": "title", "score": 1000,  "url": "url", "metadata":
               { "owner": { "emailAddresses": [{}] } }
             },

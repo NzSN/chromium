@@ -22,6 +22,7 @@
 #include "third_party/blink/renderer/core/layout/ng/ng_box_fragment.h"
 #include "third_party/blink/renderer/core/layout/ng/ng_constraint_space.h"
 #include "third_party/blink/renderer/core/layout/ng/ng_constraint_space_builder.h"
+#include "third_party/blink/renderer/core/layout/ng/ng_disable_side_effects_scope.h"
 #include "third_party/blink/renderer/core/layout/ng/ng_fragment.h"
 #include "third_party/blink/renderer/core/layout/ng/ng_layout_input_node.h"
 #include "third_party/blink/renderer/core/layout/ng/ng_length_utils.h"
@@ -835,6 +836,10 @@ void NGFlexLayoutAlgorithm::ConstructAndAppendFlexItems(
       if (!layout_result) {
         NGConstraintSpace child_space = BuildSpaceForIntrinsicBlockSize(
             child, max_content_contribution, phase);
+        absl::optional<NGDisableSideEffectsScope> disable_side_effects;
+        if (phase != Phase::kLayout && !Node().GetLayoutBox()->NeedsLayout()) {
+          disable_side_effects.emplace();
+        }
         layout_result = child.Layout(child_space, /* break_token */ nullptr);
         DCHECK(layout_result);
       }
@@ -1322,6 +1327,11 @@ void NGFlexLayoutAlgorithm::PlaceFlexItems(
                !flex_item.layout_result_)
             << "If we already have a 'measure' result from "
                "ConstructAndAppendFlexItems, we don't want to evict it.";
+        absl::optional<NGDisableSideEffectsScope> disable_side_effects;
+        if (is_computing_multiline_column_intrinsic_size &&
+            !flex_item.ng_input_node_.GetLayoutBox()->NeedsLayout()) {
+          disable_side_effects.emplace();
+        }
         flex_item.layout_result_ = flex_item.ng_input_node_.Layout(
             child_space, nullptr /*break token*/);
         // TODO(layout-dev): Handle abortions caused by block fragmentation.
@@ -2512,17 +2522,13 @@ MinMaxSizesResult NGFlexLayoutAlgorithm::ComputeMinMaxSizes(
           Node(), BorderScrollbarPadding()))
     return *result;
 
-  if (RuntimeEnabledFeatures::NewFlexboxSizingEnabled()) {
-    // TODO(crbug.com/240765): Implement all the cases here.
-    if (is_column_) {
-      if (algorithm_.IsMultiline()) {
-        return ComputeMinMaxSizeOfMultilineColumnContainer();
-      } else {
-        // singleline column flexbox
-      }
-    } else {
-      return ComputeMinMaxSizeOfRowContainer();
-    }
+  if (RuntimeEnabledFeatures::LayoutFlexNewColumnAlgorithmEnabled() &&
+      is_column_ && algorithm_.IsMultiline()) {
+    return ComputeMinMaxSizeOfMultilineColumnContainer();
+  }
+  if (RuntimeEnabledFeatures::LayoutFlexNewRowAlgorithmEnabled() &&
+      !is_column_) {
+    return ComputeMinMaxSizeOfRowContainer();
   }
 
   MinMaxSizes sizes;

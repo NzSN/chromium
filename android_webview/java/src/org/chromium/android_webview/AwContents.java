@@ -78,8 +78,8 @@ import org.chromium.base.metrics.ScopedSysTraceEvent;
 import org.chromium.base.task.AsyncTask;
 import org.chromium.base.task.PostTask;
 import org.chromium.base.task.TaskTraits;
-import org.chromium.components.autofill.AutofillActionModeCallback;
 import org.chromium.components.autofill.AutofillProvider;
+import org.chromium.components.autofill.AutofillSelectionMenuItemProvider;
 import org.chromium.components.content_capture.OnscreenContentProvider;
 import org.chromium.components.embedder_support.util.WebResourceResponseInfo;
 import org.chromium.components.navigation_interception.InterceptNavigationDelegate;
@@ -692,7 +692,8 @@ public class AwContents implements SmartClipProvider {
             // The shouldOverrideUrlLoading call might have resulted in posting messages to the
             // UI thread. Using sendMessage here (instead of calling onPageStarted directly)
             // will allow those to run in order.
-            if (!AwFeatureList.pageStartedOnCommitEnabled(navigationHandle.isRendererInitiated())) {
+            if (!AwComputedFlags.pageStartedOnCommitEnabled(
+                        navigationHandle.isRendererInitiated())) {
                 GURL url = navigationHandle.getBaseUrlForDataUrl().isEmpty()
                         ? navigationHandle.getUrl()
                         : navigationHandle.getBaseUrlForDataUrl();
@@ -1050,7 +1051,7 @@ public class AwContents implements SmartClipProvider {
                         }
                     }, containerView);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
-                    && AwFeatureList.isEnabled(AwFeatures.WEBVIEW_DISPLAY_CUTOUT)) {
+                    && AwFeatureMap.getInstance().isEnabled(AwFeatures.WEBVIEW_DISPLAY_CUTOUT)) {
                 mDisplayCutoutController =
                         new AwDisplayCutoutController(new AwDisplayCutoutController.Delegate() {
                             @Override
@@ -1171,8 +1172,8 @@ public class AwContents implements SmartClipProvider {
             mAutofillProvider.setWebContents(mWebContents);
         }
         SelectionPopupController.fromWebContents(mWebContents)
-                .setNonSelectionActionModeCallback(
-                        new AutofillActionModeCallback(mContext, mAutofillProvider));
+                .setNonSelectionAdditionalMenuItemProvider(
+                        new AutofillSelectionMenuItemProvider(mContext, mAutofillProvider));
         AwContentsJni.get().initializeAndroidAutofill(mNativeAwContents);
     }
 
@@ -1629,8 +1630,8 @@ public class AwContents implements SmartClipProvider {
 
     private JavascriptInjector getJavascriptInjector() {
         if (mJavascriptInjector == null) {
-            mJavascriptInjector = JavascriptInjector.fromWebContents(
-                    mWebContents, AwFeatureList.isEnabled(AwFeatures.WEBVIEW_JAVA_JS_BRIDGE_MOJO));
+            mJavascriptInjector = JavascriptInjector.fromWebContents(mWebContents,
+                    AwFeatureMap.getInstance().isEnabled(AwFeatures.WEBVIEW_JAVA_JS_BRIDGE_MOJO));
         }
         return mJavascriptInjector;
     }
@@ -2549,6 +2550,9 @@ public class AwContents implements SmartClipProvider {
      */
     public void goBackOrForward(int steps) {
         if (TRACE) Log.i(TAG, "%s goBackOrForward=%d", this, steps);
+        if (!canGoBackOrForward(steps)) {
+            return;
+        }
         if (!isDestroyed(WARN)) mNavigationController.goToOffset(steps);
     }
 

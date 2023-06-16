@@ -92,8 +92,8 @@ class MerchantPromoCodeManagerTest : public testing::Test {
   base::test::TaskEnvironment task_environment_;
   test::AutofillUnitTestEnvironment autofill_test_environment_;
   TestAutofillClient autofill_client_;
-  std::unique_ptr<MerchantPromoCodeManager> merchant_promo_code_manager_;
   std::unique_ptr<TestPersonalDataManager> personal_data_manager_;
+  std::unique_ptr<MerchantPromoCodeManager> merchant_promo_code_manager_;
   FormFieldData test_field_;
   AutofillField autofill_field_;
 };
@@ -124,7 +124,7 @@ TEST_F(MerchantPromoCodeManagerTest, ShowsPromoCodeSuggestions) {
           _, autoselect_first_suggestion,
           UnorderedElementsAre(
               Field(&Suggestion::main_text, promo_code_suggestion.main_text),
-              Field(&Suggestion::frontend_id, POPUP_ITEM_ID_SEPARATOR),
+              Field(&Suggestion::popup_item_id, PopupItemId::kSeparator),
               Field(&Suggestion::main_text, footer_suggestion.main_text))))
       .Times(3);
 
@@ -540,10 +540,10 @@ TEST_F(MerchantPromoCodeManagerTest,
   SetUpPromoCodeOffer(last_committed_origin_url,
                       GURL("https://offer-details-url.com/"));
 
-  // Check that non promo code frontend id's do not log as offer suggestion
+  // Check that non promo code popup item id's do not log as offer suggestion
   // selected.
   merchant_promo_code_manager_->OnSingleFieldSuggestionSelected(
-      test_promo_code, POPUP_ITEM_ID_AUTOCOMPLETE_ENTRY);
+      test_promo_code, PopupItemId::kAutocompleteEntry);
   histogram_tester.ExpectBucketCount(
       "Autofill.Offer.Suggestion2.GPayPromoCodeOffer",
       autofill_metrics::OffersSuggestionsEvent::kOfferSuggestionSelected, 0);
@@ -556,7 +556,7 @@ TEST_F(MerchantPromoCodeManagerTest,
 
   // Simulate selecting a promo code offer suggestion.
   merchant_promo_code_manager_->OnSingleFieldSuggestionSelected(
-      test_promo_code, POPUP_ITEM_ID_MERCHANT_PROMO_CODE_ENTRY);
+      test_promo_code, PopupItemId::kMerchantPromoCodeEntry);
 
   // Check that the histograms logged correctly.
   histogram_tester.ExpectBucketCount(
@@ -575,7 +575,7 @@ TEST_F(MerchantPromoCodeManagerTest,
 
   // Simulate selecting a promo code offer suggestion.
   merchant_promo_code_manager_->OnSingleFieldSuggestionSelected(
-      test_promo_code, POPUP_ITEM_ID_MERCHANT_PROMO_CODE_ENTRY);
+      test_promo_code, PopupItemId::kMerchantPromoCodeEntry);
 
   // Check that the histograms logged correctly.
   histogram_tester.ExpectBucketCount(
@@ -605,10 +605,10 @@ TEST_F(MerchantPromoCodeManagerTest,
   SetUpPromoCodeOffer(last_committed_origin_url,
                       GURL("https://offer-details-url.com/"));
 
-  // Check that non promo code footer frontend id's do not log as offer
+  // Check that non promo code footer popup item id's do not log as offer
   // suggestions footer selected.
   merchant_promo_code_manager_->OnSingleFieldSuggestionSelected(
-      test_promo_code, POPUP_ITEM_ID_AUTOCOMPLETE_ENTRY);
+      test_promo_code, PopupItemId::kAutocompleteEntry);
   histogram_tester.ExpectBucketCount(
       "Autofill.Offer.Suggestion2.GPayPromoCodeOffer",
       autofill_metrics::OffersSuggestionsEvent::
@@ -623,7 +623,7 @@ TEST_F(MerchantPromoCodeManagerTest,
 
   // Simulate selecting a promo code offer suggestion.
   merchant_promo_code_manager_->OnSingleFieldSuggestionSelected(
-      test_promo_code, POPUP_ITEM_ID_SEE_PROMO_CODE_DETAILS);
+      test_promo_code, PopupItemId::kSeePromoCodeDetails);
 
   // Check that the histograms logged correctly.
   histogram_tester.ExpectBucketCount(
@@ -645,7 +645,7 @@ TEST_F(MerchantPromoCodeManagerTest,
 
   // Simulate selecting a promo code offer suggestion.
   merchant_promo_code_manager_->OnSingleFieldSuggestionSelected(
-      test_promo_code, POPUP_ITEM_ID_SEE_PROMO_CODE_DETAILS);
+      test_promo_code, PopupItemId::kSeePromoCodeDetails);
 
   // Check that the histograms logged correctly.
   histogram_tester.ExpectBucketCount(

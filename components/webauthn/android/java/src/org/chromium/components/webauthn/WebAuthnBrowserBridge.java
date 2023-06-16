@@ -28,13 +28,16 @@ public class WebAuthnBrowserBridge {
      * @param credentialList The list of credentials that can be used as autofill suggestions.
      * @param isConditionalRequest Boolean indicating whether this is a conditional UI request or
      *     not.
-     * @param callback The callback to be invoked with the credential ID of a selected credential.
+     * @param getAssertionCallback The callback to be invoked with the credential ID of a selected
+     *         credential.
+     * @param hybridCallback The callback to be invoked if a user initiates a cross-device hybrid
+     *     sign-in.
      */
     public void onCredentialsDetailsListReceived(RenderFrameHost frameHost,
             List<WebAuthnCredentialDetails> credentialList, boolean isConditionalRequest,
-            Callback<byte[]> callback) {
+            Callback<byte[]> getAssertionCallback, Runnable hybridCallback) {
         assert credentialList != null;
-        assert callback != null;
+        assert getAssertionCallback != null;
 
         if (mNativeWebAuthnBrowserBridge == 0) {
             mNativeWebAuthnBrowserBridge =
@@ -46,7 +49,7 @@ public class WebAuthnBrowserBridge {
                 credentialList.toArray(new WebAuthnCredentialDetails[credentialList.size()]);
         WebAuthnBrowserBridgeJni.get().onCredentialsDetailsListReceived(
                 mNativeWebAuthnBrowserBridge, WebAuthnBrowserBridge.this, credentialArray,
-                frameHost, isConditionalRequest, callback);
+                frameHost, isConditionalRequest, getAssertionCallback, hybridCallback);
     }
 
     /**
@@ -60,7 +63,7 @@ public class WebAuthnBrowserBridge {
      *         completed conditional request.
      */
     public void onCredManConditionalRequestPending(
-            RenderFrameHost frameHost, boolean hasResults, Runnable fullAssertion) {
+            RenderFrameHost frameHost, boolean hasResults, Callback<Boolean> fullAssertion) {
         if (mNativeWebAuthnBrowserBridge == 0) {
             mNativeWebAuthnBrowserBridge =
                     WebAuthnBrowserBridgeJni.get().createNativeWebAuthnBrowserBridge(
@@ -72,17 +75,33 @@ public class WebAuthnBrowserBridge {
     }
 
     /**
-     * Cancels an outstanding Conditional UI request that was initiated through
-     * onCredentialsDetailsListReceived. This causes the callback to be invoked with an
-     * empty credential.
+     * Notifies the C++ side that the credMan UI is closed.
+     *
+     * @param frameHost The RenderFrameHost related to this CredMan call
+     * @param success true iff user is authenticated
+     */
+    public void onCredManUiClosed(RenderFrameHost frameHost, boolean success) {
+        if (mNativeWebAuthnBrowserBridge == 0) {
+            mNativeWebAuthnBrowserBridge =
+                    WebAuthnBrowserBridgeJni.get().createNativeWebAuthnBrowserBridge(
+                            WebAuthnBrowserBridge.this);
+        }
+
+        WebAuthnBrowserBridgeJni.get().onCredManUiClosed(
+                mNativeWebAuthnBrowserBridge, frameHost, success);
+    }
+
+    /**
+     * Notifies the native code that an outstanding Conditional UI request initiated through
+     * onCredentialsDetailsListReceived has been completed or canceled.
      *
      * @param frameHost The RenderFrameHost for the frame that generated the cancellation.
      */
-    public void cancelRequest(RenderFrameHost frameHost) {
+    public void cleanupRequest(RenderFrameHost frameHost) {
         // This should never be called without a bridge already having been created.
         assert mNativeWebAuthnBrowserBridge != 0;
 
-        WebAuthnBrowserBridgeJni.get().cancelRequest(mNativeWebAuthnBrowserBridge, frameHost);
+        WebAuthnBrowserBridgeJni.get().cleanupRequest(mNativeWebAuthnBrowserBridge, frameHost);
     }
 
     @CalledByNative
@@ -112,9 +131,12 @@ public class WebAuthnBrowserBridge {
         long createNativeWebAuthnBrowserBridge(WebAuthnBrowserBridge caller);
         void onCredentialsDetailsListReceived(long nativeWebAuthnBrowserBridge,
                 WebAuthnBrowserBridge caller, WebAuthnCredentialDetails[] credentialList,
-                RenderFrameHost frameHost, boolean isConditionalRequest, Callback<byte[]> callback);
+                RenderFrameHost frameHost, boolean isConditionalRequest,
+                Callback<byte[]> getAssertionCallback, Runnable hybridCallback);
         void onCredManConditionalRequestPending(long nativeWebAuthnBrowserBridge,
-                RenderFrameHost frameHost, boolean hasResults, Runnable fullAssertion);
-        void cancelRequest(long nativeWebAuthnBrowserBridge, RenderFrameHost frameHost);
+                RenderFrameHost frameHost, boolean hasResults, Callback<Boolean> fullAssertion);
+        void onCredManUiClosed(
+                long nativeWebAuthnBrowserBridge, RenderFrameHost frameHost, boolean success);
+        void cleanupRequest(long nativeWebAuthnBrowserBridge, RenderFrameHost frameHost);
     }
 }

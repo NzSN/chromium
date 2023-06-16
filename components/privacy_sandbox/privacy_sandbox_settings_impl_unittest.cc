@@ -6,6 +6,7 @@
 
 #include "base/json/values_util.h"
 #include "base/test/gtest_util.h"
+#include "base/test/metrics/histogram_tester.h"
 #include "base/test/scoped_feature_list.h"
 #include "components/browsing_topics/test_util.h"
 #include "components/content_settings/core/browser/cookie_settings.h"
@@ -55,6 +56,7 @@ constexpr auto kIsIncognito = StateKey::kIsIncognito;
 constexpr auto kIsRestrictedAccount = StateKey::kIsRestrictedAccount;
 constexpr auto kHasAppropriateTopicsConsent =
     StateKey::kHasAppropriateTopicsConsent;
+constexpr auto kAttestationsMap = StateKey::kAttestationsMap;
 
 // using enum privacy_sandbox_test_util::InputKey;
 using privacy_sandbox_test_util::InputKey;
@@ -110,6 +112,8 @@ constexpr auto CONTENT_SETTING_BLOCK = ContentSetting::CONTENT_SETTING_BLOCK;
 // using enum content_settings::CookieControlsMode;
 constexpr auto kBlockThirdParty =
     content_settings::CookieControlsMode::kBlockThirdParty;
+
+constexpr int kTestTaxonomyVersion = 1;
 
 using privacy_sandbox_test_util::MultipleInputKeys;
 using privacy_sandbox_test_util::MultipleOutputKeys;
@@ -198,9 +202,12 @@ class PrivacySandboxSettingsTest : public testing::Test {
   base::test::ScopedFeatureList feature_list_;
   base::test::ScopedFeatureList disabled_topics_feature_list_;
 
+  using Status = PrivacySandboxSettingsImpl::Status;
+
  private:
   content::BrowserTaskEnvironment browser_task_environment_;
-  raw_ptr<privacy_sandbox_test_util::MockPrivacySandboxSettingsDelegate>
+  raw_ptr<privacy_sandbox_test_util::MockPrivacySandboxSettingsDelegate,
+          DanglingUntriaged>
       mock_delegate_;
   sync_preferences::TestingPrefServiceSyncable prefs_;
   browsing_topics::MockBrowsingTopicsService mock_browsing_topics_service_;
@@ -861,11 +868,11 @@ TEST_F(PrivacySandboxSettingsTest, OnFirstPartySetsEnabledChanged) {
 TEST_F(PrivacySandboxSettingsTest, IsTopicAllowed) {
   // Confirm that allowing / blocking topics is correctly reflected by
   // IsTopicsAllowed().
-  CanonicalTopic topic(Topic(1), CanonicalTopic::AVAILABLE_TAXONOMY);
-  CanonicalTopic child_topic(Topic(7), CanonicalTopic::AVAILABLE_TAXONOMY);
-  CanonicalTopic grandchild_topic(Topic(8), CanonicalTopic::AVAILABLE_TAXONOMY);
+  CanonicalTopic topic(Topic(1), kTestTaxonomyVersion);
+  CanonicalTopic child_topic(Topic(7), kTestTaxonomyVersion);
+  CanonicalTopic grandchild_topic(Topic(8), kTestTaxonomyVersion);
 
-  CanonicalTopic unrelated_topic(Topic(57), CanonicalTopic::AVAILABLE_TAXONOMY);
+  CanonicalTopic unrelated_topic(Topic(57), kTestTaxonomyVersion);
 
   // Check that a topic and its descendants get blocked.
   privacy_sandbox_settings()->SetTopicAllowed(topic, false);
@@ -926,8 +933,8 @@ TEST_F(PrivacySandboxSettingsTest, IsTopicAllowed) {
 TEST_F(PrivacySandboxSettingsTest, IsTopicAllowed_ByFinchSettings) {
   // Confirm that blocking topics in Finch is correctly reflected by
   // IsTopicAllowed().
-  CanonicalTopic topic(Topic(1), CanonicalTopic::AVAILABLE_TAXONOMY);
-  CanonicalTopic child_topic(Topic(7), CanonicalTopic::AVAILABLE_TAXONOMY);
+  CanonicalTopic topic(Topic(1), kTestTaxonomyVersion);
+  CanonicalTopic child_topic(Topic(7), kTestTaxonomyVersion);
 
   // Check that not setting the Finch setting does not cause an error or block a
   // topic.
@@ -950,21 +957,24 @@ TEST_F(PrivacySandboxSettingsTest, IsTopicAllowed_ByFinchSettings) {
   // Try blocking a list of topics.
   ResetDisabledTopicsFeature("1,9,44,330");
   for (int topic_id : {1, 9, 44, 330}) {
-    CanonicalTopic canonical_topic = CanonicalTopic(Topic(topic_id), 1);
+    CanonicalTopic canonical_topic =
+        CanonicalTopic(Topic(topic_id), kTestTaxonomyVersion);
     EXPECT_FALSE(privacy_sandbox_settings()->IsTopicAllowed(canonical_topic));
   }
 
   // Try blocking a list of topics with extra whitespace.
   ResetDisabledTopicsFeature(" 1  , 9,44, 330  ");
   for (int topic_id : {1, 9, 44, 330}) {
-    CanonicalTopic canonical_topic = CanonicalTopic(Topic(topic_id), 1);
+    CanonicalTopic canonical_topic =
+        CanonicalTopic(Topic(topic_id), kTestTaxonomyVersion);
     EXPECT_FALSE(privacy_sandbox_settings()->IsTopicAllowed(canonical_topic));
   }
 
   // Try blocking a list of topics where some aren't real topics.
   ResetDisabledTopicsFeature(" 0,1,9,44,330,2920");
   for (int topic_id : {1, 9, 44, 330}) {
-    CanonicalTopic canonical_topic = CanonicalTopic(Topic(topic_id), 1);
+    CanonicalTopic canonical_topic =
+        CanonicalTopic(Topic(topic_id), kTestTaxonomyVersion);
     EXPECT_FALSE(privacy_sandbox_settings()->IsTopicAllowed(canonical_topic));
   }
 
@@ -975,9 +985,9 @@ TEST_F(PrivacySandboxSettingsTest, IsTopicAllowed_ByFinchSettings) {
 
 TEST_F(PrivacySandboxSettingsTest, ClearingTopicSettings) {
   // Confirm that time range deletions affect the correct settings.
-  CanonicalTopic topic_a(Topic(1), CanonicalTopic::AVAILABLE_TAXONOMY);
-  CanonicalTopic topic_b(Topic(57), CanonicalTopic::AVAILABLE_TAXONOMY);
-  CanonicalTopic topic_c(Topic(86), CanonicalTopic::AVAILABLE_TAXONOMY);
+  CanonicalTopic topic_a(Topic(1), kTestTaxonomyVersion);
+  CanonicalTopic topic_b(Topic(57), kTestTaxonomyVersion);
+  CanonicalTopic topic_c(Topic(86), kTestTaxonomyVersion);
   EXPECT_TRUE(privacy_sandbox_settings()->IsTopicAllowed(topic_a));
   EXPECT_TRUE(privacy_sandbox_settings()->IsTopicAllowed(topic_b));
   EXPECT_TRUE(privacy_sandbox_settings()->IsTopicAllowed(topic_c));
@@ -1120,8 +1130,6 @@ class PrivacySandboxSettingsM1Test : public PrivacySandboxSettingsTest {
   }
 
  protected:
-  using Status = PrivacySandboxSettingsImpl::Status;
-
   void RunTestCase(const TestState& test_state,
                    const TestInput& test_input,
                    const TestOutput& test_output) {
@@ -1677,6 +1685,359 @@ TEST_F(PrivacySandboxSettingsM1Test, TopicsConsentStatus) {
                kIsTopicsAllowedForContextMetric,
            },
            static_cast<int>(Status::kApisDisabled)}});
+}
+
+class PrivacySandboxSettingsM1RestrictedNotice
+    : public PrivacySandboxSettingsM1Test {
+  void InitializeFeaturesBeforeStart() override {
+    feature_list_.InitAndEnableFeatureWithParameters(
+        privacy_sandbox::kPrivacySandboxSettings4,
+        {{"notice-required", "true"},
+         {privacy_sandbox::kPrivacySandboxSettings4RestrictedNotice.name,
+          "true"}});
+  }
+};
+
+TEST_F(PrivacySandboxSettingsM1RestrictedNotice,
+       AllApisAreOffExceptMeasurementForRestrictedAccounts) {
+  RunTestCase(
+      TestState{{MultipleStateKeys{kM1TopicsEnabledUserPrefValue,
+                                   kM1FledgeEnabledUserPrefValue,
+                                   kM1AdMeasurementEnabledUserPrefValue,
+                                   kIsRestrictedAccount},
+                 true}},
+      TestInput{
+          {kTopFrameOrigin, url::Origin::Create(GURL("https://top-frame.com"))},
+          {kTopicsURL, GURL("https://embedded.com")},
+          {MultipleInputKeys{kFledgeAuctionPartyOrigin,
+                             kAdMeasurementReportingOrigin, kAccessingOrigin},
+           url::Origin::Create(GURL("https://embedded.com"))},
+          {kAdMeasurementSourceOrigin,
+           url::Origin::Create(GURL("https://source-origin.com"))},
+          {kAdMeasurementDestinationOrigin,
+           url::Origin::Create(GURL("https://dest-origin.com"))}},
+      TestOutput{
+          {MultipleOutputKeys{kIsTopicsAllowed, kIsTopicsAllowedForContext,
+                              kIsFledgeAllowed, kIsSharedStorageAllowed,
+                              kIsSharedStorageSelectURLAllowed},
+           false},
+          {MultipleOutputKeys{
+               kIsTopicsAllowedMetric, kIsTopicsAllowedForContextMetric,
+               kIsFledgeAllowedMetric, kIsSharedStorageAllowedMetric,
+               kIsSharedStorageSelectURLAllowedMetric},
+           static_cast<int>(Status::kRestricted)},
+
+          {MultipleOutputKeys{kIsAttributionReportingAllowed,
+                              kIsAttributionReportingEverAllowed,
+                              kMaySendAttributionReport,
+                              kIsPrivateAggregationAllowed},
+           true},
+          {MultipleOutputKeys{kIsAttributionReportingEverAllowedMetric,
+                              kMaySendAttributionReportMetric,
+                              kIsPrivateAggregationAllowedMetric},
+           static_cast<int>(Status::kAllowed)}});
+}
+
+class PrivacySandboxAttestationsTest : public PrivacySandboxSettingsM1Test {
+  void InitializeFeaturesBeforeStart() override {
+    feature_list_.InitWithFeatures(
+        /*enabled_features=*/{privacy_sandbox::kPrivacySandboxSettings4,
+                              privacy_sandbox::
+                                  kEnforcePrivacySandboxAttestations},
+        /*disabled_features=*/{});
+  }
+};
+
+// When the attestations map has no enrollments at all (i.e., no enrollment
+// for the site in question), attestation fails.
+TEST_F(PrivacySandboxAttestationsTest, NoEnrollments) {
+  GURL top_frame_url("https://top-frame.com");
+  GURL enrollee_url("https://embedded.com");
+  RunTestCase(
+      TestState{{MultipleStateKeys{kM1TopicsEnabledUserPrefValue,
+                                   kM1FledgeEnabledUserPrefValue,
+                                   kM1AdMeasurementEnabledUserPrefValue},
+                 true},
+                {kAttestationsMap, PrivacySandboxAttestationsMap{}}},
+      TestInput{
+          {kTopicsURL, enrollee_url},
+          {kTopFrameOrigin, url::Origin::Create(top_frame_url)},
+          {kAdMeasurementReportingOrigin, url::Origin::Create(enrollee_url)},
+          {kFledgeAuctionPartyOrigin, url::Origin::Create(enrollee_url)},
+          {kAdMeasurementSourceOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAdMeasurementDestinationOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAccessingOrigin, url::Origin::Create(enrollee_url)}},
+      TestOutput{
+          {MultipleOutputKeys{
+               kIsTopicsAllowedForContext, kIsAttributionReportingAllowed,
+               kMaySendAttributionReport, kIsFledgeAllowed,
+               kIsSharedStorageAllowed, kIsPrivateAggregationAllowed},
+           false},
+          {MultipleOutputKeys{kIsTopicsAllowedForContextMetric,
+                              kIsAttributionReportingAllowedMetric,
+                              kMaySendAttributionReportMetric,
+                              kIsFledgeAllowedMetric,
+                              kIsSharedStorageAllowedMetric,
+                              kIsPrivateAggregationAllowedMetric},
+           static_cast<int>(Status::kAttestationFailed)}});
+}
+
+// When the site in question is enrolled but has no attestations at all (i.e.,
+// no attestation for the API in question), attestation fails.
+TEST_F(PrivacySandboxAttestationsTest, EnrollmentWithoutAttestations) {
+  GURL top_frame_url("https://top-frame.com");
+  GURL enrollee_url("https://embedded.com");
+  RunTestCase(
+      TestState{{MultipleStateKeys{kM1TopicsEnabledUserPrefValue,
+                                   kM1FledgeEnabledUserPrefValue,
+                                   kM1AdMeasurementEnabledUserPrefValue},
+                 true},
+                {kAttestationsMap,
+                 PrivacySandboxAttestationsMap{
+                     {net::SchemefulSite(enrollee_url), {}}}}},
+      TestInput{
+          {kTopicsURL, enrollee_url},
+          {kTopFrameOrigin, url::Origin::Create(top_frame_url)},
+          {kAdMeasurementReportingOrigin, url::Origin::Create(enrollee_url)},
+          {kFledgeAuctionPartyOrigin, url::Origin::Create(enrollee_url)},
+          {kAdMeasurementSourceOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAdMeasurementDestinationOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAccessingOrigin, url::Origin::Create(enrollee_url)}},
+      TestOutput{
+          {MultipleOutputKeys{
+               kIsTopicsAllowedForContext, kIsAttributionReportingAllowed,
+               kMaySendAttributionReport, kIsFledgeAllowed,
+               kIsSharedStorageAllowed, kIsPrivateAggregationAllowed},
+           false},
+          {MultipleOutputKeys{kIsTopicsAllowedForContextMetric,
+                              kIsAttributionReportingAllowedMetric,
+                              kMaySendAttributionReportMetric,
+                              kIsFledgeAllowedMetric,
+                              kIsSharedStorageAllowedMetric,
+                              kIsPrivateAggregationAllowedMetric},
+           static_cast<int>(Status::kAttestationFailed)}});
+}
+
+TEST_F(PrivacySandboxAttestationsTest, TopicsAttestation) {
+  GURL top_frame_url("https://top-frame.com");
+  GURL enrollee_url("https://embedded.com");
+  RunTestCase(
+      TestState{{MultipleStateKeys{kM1TopicsEnabledUserPrefValue,
+                                   kM1FledgeEnabledUserPrefValue,
+                                   kM1AdMeasurementEnabledUserPrefValue},
+                 true},
+                {kAttestationsMap,
+                 PrivacySandboxAttestationsMap{
+                     {net::SchemefulSite(enrollee_url),
+                      {PrivacySandboxAttestationsGatedAPI::kTopics}}}}},
+      TestInput{
+          {kTopicsURL, enrollee_url},
+          {kTopFrameOrigin, url::Origin::Create(top_frame_url)},
+          {kAdMeasurementReportingOrigin, url::Origin::Create(enrollee_url)},
+          {kFledgeAuctionPartyOrigin, url::Origin::Create(enrollee_url)},
+          {kAdMeasurementSourceOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAdMeasurementDestinationOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAccessingOrigin, url::Origin::Create(enrollee_url)}},
+      TestOutput{{kIsTopicsAllowedForContext, true},
+                 {MultipleOutputKeys{kIsAttributionReportingAllowed,
+                                     kMaySendAttributionReport,
+                                     kIsFledgeAllowed, kIsSharedStorageAllowed,
+                                     kIsPrivateAggregationAllowed},
+                  false},
+                 {kIsTopicsAllowedForContextMetric,
+                  static_cast<int>(Status::kAllowed)},
+                 {MultipleOutputKeys{kIsAttributionReportingAllowedMetric,
+                                     kMaySendAttributionReportMetric,
+                                     kIsFledgeAllowedMetric,
+                                     kIsSharedStorageAllowedMetric,
+                                     kIsPrivateAggregationAllowedMetric},
+                  static_cast<int>(Status::kAttestationFailed)}});
+}
+
+TEST_F(PrivacySandboxAttestationsTest, PrivateAggregationAttestation) {
+  GURL top_frame_url("https://top-frame.com");
+  GURL enrollee_url("https://embedded.com");
+  RunTestCase(
+      TestState{
+          {MultipleStateKeys{kM1TopicsEnabledUserPrefValue,
+                             kM1FledgeEnabledUserPrefValue,
+                             kM1AdMeasurementEnabledUserPrefValue},
+           true},
+          {kAttestationsMap,
+           PrivacySandboxAttestationsMap{
+               {net::SchemefulSite(enrollee_url),
+                {PrivacySandboxAttestationsGatedAPI::kPrivateAggregation}}}}},
+      TestInput{
+          {kTopicsURL, enrollee_url},
+          {kTopFrameOrigin, url::Origin::Create(top_frame_url)},
+          {kAdMeasurementReportingOrigin, url::Origin::Create(enrollee_url)},
+          {kFledgeAuctionPartyOrigin, url::Origin::Create(enrollee_url)},
+          {kAdMeasurementSourceOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAdMeasurementDestinationOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAccessingOrigin, url::Origin::Create(enrollee_url)}},
+      TestOutput{{kIsPrivateAggregationAllowed, true},
+                 {MultipleOutputKeys{kIsTopicsAllowedForContext,
+                                     kIsAttributionReportingAllowed,
+                                     kMaySendAttributionReport,
+                                     kIsFledgeAllowed, kIsSharedStorageAllowed},
+                  false},
+                 {kIsPrivateAggregationAllowedMetric,
+                  static_cast<int>(Status::kAllowed)},
+                 {MultipleOutputKeys{kIsTopicsAllowedForContextMetric,
+                                     kIsAttributionReportingAllowedMetric,
+                                     kMaySendAttributionReportMetric,
+                                     kIsFledgeAllowedMetric,
+                                     kIsSharedStorageAllowedMetric},
+                  static_cast<int>(Status::kAttestationFailed)}});
+}
+
+TEST_F(PrivacySandboxAttestationsTest, SharedStorageAttestation) {
+  GURL top_frame_url("https://top-frame.com");
+  GURL enrollee_url("https://embedded.com");
+  RunTestCase(
+      TestState{{MultipleStateKeys{kM1TopicsEnabledUserPrefValue,
+                                   kM1FledgeEnabledUserPrefValue,
+                                   kM1AdMeasurementEnabledUserPrefValue},
+                 true},
+                {kAttestationsMap,
+                 PrivacySandboxAttestationsMap{
+                     {net::SchemefulSite(enrollee_url),
+                      {PrivacySandboxAttestationsGatedAPI::kSharedStorage}}}}},
+      TestInput{
+          {kTopicsURL, enrollee_url},
+          {kTopFrameOrigin, url::Origin::Create(top_frame_url)},
+          {kAdMeasurementReportingOrigin, url::Origin::Create(enrollee_url)},
+          {kFledgeAuctionPartyOrigin, url::Origin::Create(enrollee_url)},
+          {kAdMeasurementSourceOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAdMeasurementDestinationOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAccessingOrigin, url::Origin::Create(enrollee_url)}},
+      TestOutput{
+          {kIsSharedStorageAllowed, true},
+          {MultipleOutputKeys{kIsTopicsAllowedForContext,
+                              kIsAttributionReportingAllowed,
+                              kMaySendAttributionReport, kIsFledgeAllowed,
+                              kIsPrivateAggregationAllowed},
+           false},
+          {kIsSharedStorageAllowedMetric, static_cast<int>(Status::kAllowed)},
+          {MultipleOutputKeys{kIsTopicsAllowedForContextMetric,
+                              kIsAttributionReportingAllowedMetric,
+                              kMaySendAttributionReportMetric,
+                              kIsFledgeAllowedMetric,
+                              kIsPrivateAggregationAllowedMetric},
+           static_cast<int>(Status::kAttestationFailed)}});
+}
+
+TEST_F(PrivacySandboxAttestationsTest, FledgeAttestation) {
+  GURL top_frame_url("https://top-frame.com");
+  GURL enrollee_url("https://embedded.com");
+  RunTestCase(
+      TestState{
+          {MultipleStateKeys{kM1TopicsEnabledUserPrefValue,
+                             kM1FledgeEnabledUserPrefValue,
+                             kM1AdMeasurementEnabledUserPrefValue},
+           true},
+          {kAttestationsMap,
+           PrivacySandboxAttestationsMap{
+               {net::SchemefulSite(enrollee_url),
+                {PrivacySandboxAttestationsGatedAPI::kProtectedAudience}}}}},
+      TestInput{
+          {kTopicsURL, enrollee_url},
+          {kTopFrameOrigin, url::Origin::Create(top_frame_url)},
+          {kAdMeasurementReportingOrigin, url::Origin::Create(enrollee_url)},
+          {kFledgeAuctionPartyOrigin, url::Origin::Create(enrollee_url)},
+          {kAdMeasurementSourceOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAdMeasurementDestinationOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAccessingOrigin, url::Origin::Create(enrollee_url)}},
+      TestOutput{{kIsFledgeAllowed, true},
+                 {MultipleOutputKeys{
+                      kIsTopicsAllowedForContext,
+                      kIsAttributionReportingAllowed, kMaySendAttributionReport,
+                      kIsSharedStorageAllowed, kIsPrivateAggregationAllowed},
+                  false},
+                 {kIsFledgeAllowedMetric, static_cast<int>(Status::kAllowed)},
+                 {MultipleOutputKeys{kIsTopicsAllowedForContextMetric,
+                                     kIsAttributionReportingAllowedMetric,
+                                     kMaySendAttributionReportMetric,
+                                     kIsSharedStorageAllowedMetric,
+                                     kIsPrivateAggregationAllowedMetric},
+                  static_cast<int>(Status::kAttestationFailed)}});
+}
+
+TEST_F(PrivacySandboxAttestationsTest, AttributionReportingAttestation) {
+  GURL top_frame_url("https://top-frame.com");
+  GURL enrollee_url("https://embedded.com");
+  RunTestCase(
+      TestState{
+          {MultipleStateKeys{kM1TopicsEnabledUserPrefValue,
+                             kM1FledgeEnabledUserPrefValue,
+                             kM1AdMeasurementEnabledUserPrefValue},
+           true},
+          {kAttestationsMap,
+           PrivacySandboxAttestationsMap{
+               {net::SchemefulSite(enrollee_url),
+                {PrivacySandboxAttestationsGatedAPI::kAttributionReporting}}}}},
+      TestInput{
+          {kTopicsURL, enrollee_url},
+          {kTopFrameOrigin, url::Origin::Create(top_frame_url)},
+          {kAdMeasurementReportingOrigin, url::Origin::Create(enrollee_url)},
+          {kFledgeAuctionPartyOrigin, url::Origin::Create(enrollee_url)},
+          {kAdMeasurementSourceOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAdMeasurementDestinationOrigin,
+           url::Origin::Create(GURL(top_frame_url))},
+          {kAccessingOrigin, url::Origin::Create(enrollee_url)}},
+      TestOutput{{MultipleOutputKeys{kIsAttributionReportingAllowed,
+                                     kMaySendAttributionReport},
+                  true},
+                 {MultipleOutputKeys{kIsTopicsAllowedForContext,
+                                     kIsFledgeAllowed, kIsSharedStorageAllowed,
+                                     kIsPrivateAggregationAllowed},
+                  false},
+                 {MultipleOutputKeys{kIsAttributionReportingAllowedMetric,
+                                     kMaySendAttributionReportMetric},
+                  static_cast<int>(Status::kAllowed)},
+                 {MultipleOutputKeys{kIsTopicsAllowedForContextMetric,
+                                     kIsFledgeAllowedMetric,
+                                     kIsSharedStorageAllowedMetric,
+                                     kIsPrivateAggregationAllowedMetric},
+                  static_cast<int>(Status::kAttestationFailed)}});
+}
+
+TEST_F(PrivacySandboxAttestationsTest, SetOverrideFromDevtools) {
+  privacy_sandbox_test_util::SetupTestState(
+      prefs(), host_content_settings_map(),
+      /*privacy_sandbox_enabled=*/true,
+      /*block_third_party_cookies=*/false,
+      /*default_cookie_setting=*/ContentSetting::CONTENT_SETTING_ALLOW,
+      /*user_cookie_exceptions=*/{},
+      /*managed_cookie_setting=*/privacy_sandbox_test_util::kNoSetting,
+      /*managed_cookie_exceptions=*/{});
+  privacy_sandbox_settings()->SetAllPrivacySandboxAllowedForTesting();
+
+  GURL top_level_url("https://top-level-origin.com");
+  GURL caller_url("https://embedded.com");
+
+  // With an empty attestation map, Topics is not allowed.
+  EXPECT_FALSE(privacy_sandbox_settings()->IsTopicsAllowedForContext(
+      url::Origin::Create(top_level_url), caller_url));
+
+  // With an override of the site from a devtools call, Topics is allowed.
+  privacy_sandbox_settings()->AddPrivacySandboxAttestationOverride(
+      GURL("https://embedded.com"));
+  EXPECT_TRUE(privacy_sandbox_settings()->IsTopicsAllowedForContext(
+      url::Origin::Create(top_level_url), caller_url));
 }
 
 }  // namespace privacy_sandbox

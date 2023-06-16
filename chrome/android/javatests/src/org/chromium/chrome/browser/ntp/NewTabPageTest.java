@@ -27,12 +27,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import androidx.test.InstrumentationRegistry;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.espresso.contrib.RecyclerViewActions;
 import androidx.test.filters.LargeTest;
 import androidx.test.filters.MediumTest;
 import androidx.test.filters.SmallTest;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -134,7 +134,7 @@ import java.util.concurrent.TimeUnit;
 @ParameterAnnotations.UseRunnerDelegate(ChromeJUnit4RunnerDelegate.class)
 @CommandLineFlags.
 Add({ChromeSwitches.DISABLE_FIRST_RUN_EXPERIENCE, "disable-features=IPH_FeedHeaderMenu"})
-@Features.DisableFeatures({ChromeFeatureList.QUERY_TILES, ChromeFeatureList.VIDEO_TUTORIALS})
+@Features.DisableFeatures({ChromeFeatureList.QUERY_TILES})
 public class NewTabPageTest {
     /**
      * Parameter set controlling whether scrollable mvt is enabled.
@@ -974,11 +974,11 @@ public class NewTabPageTest {
                 singleTabCardView.getVisibility());
 
         TabObserver tabObserver = ntp.getTabObserverForTesting();
-        ntp.setShownAsHomeSurfaceForTesting(false);
-        Assert.assertFalse(
+        ntp.setIsHiddenForTesting(true);
+        Assert.assertTrue(
                 "The variable controlling whether to show the single tab card hasn't been "
                         + "set to false.",
-                ntp.getShownAsHomeSurfaceForTesting());
+                ntp.getIsHiddenForTesting());
         ntpLayout.setMostVisitedTilesCoordinatorForTesting(null);
         TestThreadUtils.runOnUiThreadBlocking(
                 () -> { tabObserver.onShown(newTab, TabSelectionType.FROM_NEW); });
@@ -1078,13 +1078,6 @@ public class NewTabPageTest {
         assertEquals("The single tab card is still visible after updating with the new tab "
                         + "page information.",
                 View.GONE, singleTabCardView.getVisibility());
-        TextView new_title = singleTabCardView.findViewById(R.id.tab_title_view);
-        TestThreadUtils.runOnUiThreadBlocking(() -> {
-            String newMostRecentTabTitleForCheck = "";
-            assertEquals("The title of the single tab card is wrong after updating with "
-                            + "the new tab page information.",
-                    newMostRecentTabTitleForCheck, new_title.getText());
-        });
     }
 
     private void captureThumbnail() {

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "chrome/browser/web_applications/externally_managed_app_manager_impl.h"
+#include "base/functional/callback_helpers.h"
+#include "chrome/browser/web_applications/externally_managed_app_manager.h"
 
 #include <map>
 #include <memory>
@@ -148,7 +149,7 @@ class TestExternallyManagedAppInstallTaskManager {
   bool should_save_requests_ = false;
 };
 
-class TestExternallyManagedAppManager : public ExternallyManagedAppManagerImpl {
+class TestExternallyManagedAppManager : public ExternallyManagedAppManager {
  public:
   struct TestTaskResult {
     webapps::InstallResultCode code;
@@ -159,7 +160,7 @@ class TestExternallyManagedAppManager : public ExternallyManagedAppManagerImpl {
       Profile* profile,
       FakeWebAppProvider& provider,
       TestExternallyManagedAppInstallTaskManager& test_install_task_manager)
-      : ExternallyManagedAppManagerImpl(profile),
+      : ExternallyManagedAppManager(profile),
         provider_(provider),
         test_install_task_manager_(test_install_task_manager) {}
 
@@ -211,7 +212,7 @@ class TestExternallyManagedAppManager : public ExternallyManagedAppManagerImpl {
         std::move(install_options));
   }
 
-  std::unique_ptr<ExternallyManagedAppRegistrationTaskBase> StartRegistration(
+  std::unique_ptr<ExternallyManagedAppRegistrationTaskBase> CreateRegistration(
       GURL install_url) override {
     ++registration_run_count_;
     last_registered_install_url_ = install_url;
@@ -250,7 +251,7 @@ class TestExternallyManagedAppManager : public ExternallyManagedAppManagerImpl {
   }
 
   void ReleaseWebContents() override {
-    ExternallyManagedAppManagerImpl::ReleaseWebContents();
+    ExternallyManagedAppManager::ReleaseWebContents();
 
     // May be called more than once, if ExternallyManagedAppManager finishes all
     // tasks before it is shutdown.
@@ -285,6 +286,7 @@ class TestExternallyManagedAppManager : public ExternallyManagedAppManagerImpl {
               externally_managed_app_manager_impl->ui_manager(),
               externally_managed_app_manager_impl->finalizer(),
               externally_managed_app_manager_impl->command_scheduler(),
+              /*data_retriever_factory=*/base::NullCallback(),
               std::move(install_options)),
           externally_managed_app_manager_impl_(
               externally_managed_app_manager_impl),
@@ -373,6 +375,8 @@ class TestExternallyManagedAppManager : public ExternallyManagedAppManagerImpl {
         const TestExternallyManagedAppRegistrationTask&) = delete;
     ~TestExternallyManagedAppRegistrationTask() override = default;
 
+    void Start() override {}
+
    private:
     void OnProgress(const GURL& install_url) {
       if (externally_managed_app_manager_impl_->MaybePreemptRegistration())
@@ -406,6 +410,15 @@ class TestExternallyManagedAppManager : public ExternallyManagedAppManagerImpl {
 
 }  // namespace
 
+// Why is this called ExternallyManagedAppManagerImplTest and exists along side
+// ExternallyManagedAppManagerTest unit tests?
+// - Because ExternallyManagedAppManager used to be split up into
+//   ExternallyManagedAppManager and ExternallyManagedAppManagerImpl and each
+//   had tests written for them separately.
+// - These tests are too volumous and baked with their own test suite class
+//   semantics that there's no easy way to merge them together.
+// Let this file be legacy unit tests and prefer adding to the
+// ExternallyManagedAppManagerTest unit test suite instead.
 class ExternallyManagedAppManagerImplTest
     : public WebAppTest,
       public testing::WithParamInterface<test::ExternalPrefMigrationTestCases> {
@@ -552,7 +565,7 @@ class ExternallyManagedAppManagerImplTest
     return externally_managed_app_manager_impl_->install_run_count();
   }
 
-  // Number of times ExternallyManagedAppManagerImpl::StartRegistration was
+  // Number of times ExternallyManagedAppManager::StartRegistration was
   // called. Reflects how many times we've tried to cache service worker
   // resources for a web app.
   size_t registration_run_count() {
@@ -598,9 +611,10 @@ class ExternallyManagedAppManagerImplTest
   WebAppCommandScheduler& command_scheduler() { return provider().scheduler(); }
 
  private:
-  raw_ptr<FakeWebAppProvider> provider_;
-  raw_ptr<FakeInstallFinalizer> install_finalizer_;
-  raw_ptr<TestExternallyManagedAppManager> externally_managed_app_manager_impl_;
+  raw_ptr<FakeWebAppProvider, DanglingUntriaged> provider_;
+  raw_ptr<FakeInstallFinalizer, DanglingUntriaged> install_finalizer_;
+  raw_ptr<TestExternallyManagedAppManager, DanglingUntriaged>
+      externally_managed_app_manager_impl_;
 
   TestExternallyManagedAppInstallTaskManager test_install_task_manager_;
   base::test::ScopedFeatureList scoped_feature_list_;

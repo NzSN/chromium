@@ -37,7 +37,6 @@ import org.chromium.chrome.browser.DevToolsServer;
 import org.chromium.chrome.browser.app.bluetooth.BluetoothNotificationService;
 import org.chromium.chrome.browser.app.feature_guide.notifications.FeatureNotificationGuideDelegate;
 import org.chromium.chrome.browser.app.usb.UsbNotificationService;
-import org.chromium.chrome.browser.app.video_tutorials.VideoTutorialShareHelper;
 import org.chromium.chrome.browser.bluetooth.BluetoothNotificationManager;
 import org.chromium.chrome.browser.bookmarkswidget.BookmarkWidgetProvider;
 import org.chromium.chrome.browser.contacts_picker.ChromePickerAdapter;
@@ -66,7 +65,6 @@ import org.chromium.chrome.browser.metrics.WebApkUninstallUmaTracker;
 import org.chromium.chrome.browser.notifications.channels.ChannelsUpdater;
 import org.chromium.chrome.browser.ntp.FeedPositionUtils;
 import org.chromium.chrome.browser.offlinepages.measurements.OfflineMeasurementsBackgroundTask;
-import org.chromium.chrome.browser.omnibox.voice.AssistantVoiceSearchService;
 import org.chromium.chrome.browser.optimization_guide.OptimizationGuideBridgeFactory;
 import org.chromium.chrome.browser.partnercustomizations.PartnerBrowserCustomizations;
 import org.chromium.chrome.browser.photo_picker.DecoderService;
@@ -434,16 +432,10 @@ public class ProcessInitializationHandler {
         deferredStartupHandler.addDeferredTask(
                 () -> EnterpriseInfo.getInstance().logDeviceEnterpriseInfo());
         deferredStartupHandler.addDeferredTask(
-                () -> VideoTutorialShareHelper.saveUrlsToSharedPrefs());
-        deferredStartupHandler.addDeferredTask(
                 () -> TosDialogBehaviorSharedPrefInvalidator.refreshSharedPreferenceIfTosSkipped());
         deferredStartupHandler.addDeferredTask(
                 () -> OfflineMeasurementsBackgroundTask.clearPersistedDataFromPrefs());
         deferredStartupHandler.addDeferredTask(() -> QueryTileUtils.isQueryTilesEnabledOnNTP());
-        deferredStartupHandler.addDeferredTask(
-                ()
-                        -> AssistantVoiceSearchService.reportStartupUserEligibility(
-                                ContextUtils.getApplicationContext()));
         deferredStartupHandler.addDeferredTask(() -> {
             GlobalAppLocaleController.getInstance().maybeSetupLocaleManager();
             GlobalAppLocaleController.getInstance().recordOverrideLanguageMetrics();

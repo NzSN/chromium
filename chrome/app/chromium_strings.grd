@@ -276,12 +276,31 @@ If you update this file, be sure also to update google_chrome_strings.grd. -->
         <part file="settings_chromium_strings.grdp" />
       </if>
 
-      <message name="IDS_PRODUCT_NAME" desc="The Chrome application name">
-        Chromium
-      </message>
-      <message name="IDS_SHORT_PRODUCT_NAME" desc="The Chrome application short name.">
-        Chromium
-      </message>
+      <!--
+        Even though Google Chrome for Testing is a separate brand, there is
+        no separate file for it. Instead, we use the same file as Chromium, with
+        a few select overrides for the most prominent end-user strings.
+
+        Rationale: https://goo.gle/chrome-for-testing#bookmark=id.n1rat320av91
+      -->
+      <if expr="_is_chrome_for_testing_branded">
+        <then>
+          <message name="IDS_PRODUCT_NAME" desc="The Chrome for Testing application name" translateable="false">
+            Google Chrome for Testing
+          </message>
+          <message name="IDS_SHORT_PRODUCT_NAME" desc="The Chrome for Testing application short name." translateable="false">
+            Chrome for Testing
+          </message>
+        </then>
+        <else>
+          <message name="IDS_PRODUCT_NAME" desc="The Chromium application name">
+            Chromium
+          </message>
+          <message name="IDS_SHORT_PRODUCT_NAME" desc="The Chromium application short name.">
+            Chromium
+          </message>
+        </else>
+      </if>
       <if expr="is_win">
         <message name="IDS_SXS_SHORTCUT_NAME" desc="Unused in Chromium builds" translateable="false">
         </message>
@@ -661,7 +680,7 @@ Permissions you've already given to websites and apps may apply to this account.
         Chromium blocked this file because it has malware
       </message>
       <message name="IDS_DOWNLOAD_BUBBLE_SUBPAGE_SUMMARY_DEEP_SCANNING_PROMPT"
-               desc="Subpage summary of warning for Deep Scanning.">
+                       desc="Subpage summary of warning for Deep Scanning.">
         Chromium recommends scanning this file because it may be dangerous
       </message>
 
@@ -747,6 +766,17 @@ Permissions you've already given to websites and apps may apply to this account.
         </message>
       </if>
 
+      <!-- Extension Safety Check Detail Page strings -->
+      <message name="IDS_SAFETY_CHECK_EXTENSIONS_MALWARE" desc="The text explaining the reason for disabling extension. The extension in question contains malware.">
+        This extension contains malware and is unsafe. Remove it from Chromium so it can no longer see and change your data on sites you visit, including your personal info.
+      </message>
+       <message name="IDS_SAFETY_CHECK_EXTENSIONS_POLICY_VIOLATION" desc="The text explaining the reason for disabling extension. The extension in question violates Chrome Web Store policy.">
+          This extension violates the Chrome Web Store policy, and might be unsafe. Remove it from Chromium so it can no longer see and change your data on sites you visit, including your personal info.
+      </message>
+      <message name="IDS_SAFETY_CHECK_EXTENSIONS_UNPUBLISHED" desc="The text explaining the reason for disabling extension. The extension in question was unpublished by the developer.">
+          This extension was unpublished by its developer, and might be unsafe. Remove it from Chromium so it can no longer see and change your data on sites you visit, including your personal info.
+      </message>
+
       <!-- chrome://settings/extensions page -->
       <message name="IDS_EXTENSIONS_ITEM_SHOW_ACCESS_REQUESTS_IN_TOOLBAR" desc="The label on the toggle to allow the extension to show site access requests in the toolbar.">
         Allow extension to show access requests in the Chromium toolbar
@@ -788,17 +818,35 @@ Permissions you've already given to websites and apps may apply to this account.
       </message>
 
       <if expr="use_titlecase and not chromeos_ash">
-        <message name="IDS_ABOUT" desc="In Title Case: The text label of the About Chrome menu item">
-          About &amp;Chromium
-        </message>
+        <if expr="_is_chrome_for_testing_branded">
+          <then>
+            <message name="IDS_ABOUT" desc="In Title Case: The text label of the About Chrome for Testing menu item">
+              About &amp;Google Chrome for Testing
+            </message>
+          </then>
+          <else>
+            <message name="IDS_ABOUT" desc="In Title Case: The text label of the About Chrome menu item">
+              About &amp;Chromium
+            </message>
+          </else>
+        </if>
         <message name="IDS_RELAUNCH_TO_UPDATE" desc="In Title Case: The text label of the relaunch to update Chrome menu item">
           Relaunch to Update &amp;Chromium
         </message>
       </if>
       <if expr="not use_titlecase and not chromeos_ash">
-        <message name="IDS_ABOUT" desc="The text label of the About Chrome menu item">
-          About &amp;Chromium
-        </message>
+        <if expr="_is_chrome_for_testing_branded">
+          <then>
+            <message name="IDS_ABOUT" desc="The text label of the About Chrome for Testing menu item">
+              About &amp;Google Chrome for Testing
+            </message>
+          </then>
+          <else>
+            <message name="IDS_ABOUT" desc="The text label of the About Chrome menu item">
+              About &amp;Chromium
+            </message>
+          </else>
+        </if>
         <message name="IDS_RELAUNCH_TO_UPDATE" desc="The text label of the relaunch to update Chrome menu item">
           Relaunch to update &amp;Chromium
         </message>
@@ -831,7 +879,7 @@ Permissions you've already given to websites and apps may apply to this account.
       </if>
 
       <message name="IDS_VIEW_PASSWORDS" desc="Item in the app menu which shows Password Manager page">
-        Password Manager
+        P&amp;assword Manager
       </message>
 
       <!-- Chrome sign-in page -->
@@ -1378,6 +1426,19 @@ Permissions you've already given to websites and apps may apply to this account.
       <message name="IDS_DESKTOP_MEDIA_PICKER_TITLE_WEB_CONTENTS_ONLY" desc="Title for the window picker dialog shown when desktop capture of a tab is requested by an app.">
         Share a Chromium tab
       </message>
+      <!-- Idle timeout bubble. -->
+      <message name="IDS_IDLE_BUBBLE_TITLE_CLOSE" desc="Title of a bubble that informs the user that Chrome closed automatically, because they were away from the computer for X minutes.">
+        Chromium was automatically closed
+      </message>
+      <message name="IDS_IDLE_BUBBLE_BODY_CLOSE_AND_CLEAR" desc="Body of a bubble that informs the user that Chromium closed + cleared data automatically, because they were away from the computer for X minutes.">
+        Your organization closes Chromium when it isn't used for <ph name="TIMEOUT_DURATION">$1<ex>30 minutes</ex></ph>. Browsing data was deleted. This could include history, autofill, and downloads.
+      </message>
+      <message name="IDS_IDLE_BUBBLE_BODY_CLEAR" desc="Body of a bubble that informs the user that Chromium cleared data automatically, because they were away from the computer for X minutes.">
+        Your organization deletes Chromium data when it isn't used for <ph name="TIMEOUT_DURATION">$1<ex>30 minutes</ex></ph>. This could include history, autofill, and downloads.
+      </message>
+      <message name="IDS_IDLE_BUBBLE_BODY_CLOSE" desc="Body of a bubble that informs the user that Chromium closed automatically, because they were away from the computer for X minutes.">
+        Your organization closes Chromium when it isn't used for <ph name="TIMEOUT_DURATION">$1<ex>30 minutes</ex></ph>.
+      </message>
       <!-- Idle timeout dialog. -->
       <if expr="not is_android and not is_chromeos">
         <message name="IDS_IDLE_TIMEOUT_CLOSE_TITLE" desc="Title of the Idle Timeout dialog, warning the user that their windows are about to close.">
@@ -1692,6 +1753,9 @@ Permissions you've already given to websites and apps may apply to this account.
             Memory Saver made Chromium faster
           </message>
         </if>
+        <message name="IDS_HIGH_EFFICIENCY_DIALOG_BODY_V2" desc="Body text for a dialog describing that Memory Saver mode will use less memory.">
+          While this tab was inactive, memory was freed up to keep Chromium fast. You can choose to always exclude this site from being inactive.
+        </message>
       </if>
 
       <!-- High Efficiency IPH strings -->
@@ -1706,6 +1770,24 @@ Permissions you've already given to websites and apps may apply to this account.
             Make Chromium faster
           </message>
         </if>
+      </if>
+
+      <!-- Payments settings DeviceAuthentication strings -->
+      <if expr="is_macosx">
+        <message name="IDS_PAYMENTS_AUTOFILL_MANDATORY_REAUTH_PROMPT" desc="Message to be displayed to the user in the device authentication prompt when they click on the mandatory auth toggle on the Payments settings page, irrespective to enable or disable it. When mandatory auth toggle is enabled, we would authenticate the user before autofilling in the payment details. Note: MacOS has the wording 'Chromium is trying to' prepended onto the message during user auth.">
+          modify settings for filling payment methods.
+        </message>
+        <message name="IDS_PAYMENTS_AUTOFILL_EDIT_CARD_MANDATORY_REAUTH_PROMPT" desc="Message to be displayed to the user in the device authentication prompt when they try to edit a local card on the Payments settings page if the mandatory auth toggle is enabled. If the user auth was succesful, we would then show the edit card dialog. Note: MacOS has the wording 'Chromium is trying to' prepended onto the message during user auth.">
+          edit payment methods.
+        </message>
+      </if>
+      <if expr="is_win">
+        <message name="IDS_PAYMENTS_AUTOFILL_MANDATORY_REAUTH_PROMPT" desc="Message to be displayed to the user in the device authentication prompt when they click on the mandatory auth toggle on the Payments settings page, irrespective to enable or disable it. When mandatory auth toggle is enabled, we would authenticate the user before autofilling in the payment details.">
+          Chromium is trying to modify settings for filling payment methods.
+        </message>
+        <message name="IDS_PAYMENTS_AUTOFILL_EDIT_CARD_MANDATORY_REAUTH_PROMPT" desc="Message to be displayed to the user in the device authentication prompt when they try to edit a local card on the Payments settings page if the mandatory auth toggle is enabled. If the user auth was succesful, we would then show the edit card dialog.">
+          Chromium is trying to edit payment methods.
+        </message>
       </if>
     </messages>
   </release>

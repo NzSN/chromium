@@ -119,6 +119,14 @@ TEST_F(BubbleDialogModelHostTest, ElementIDsReportedCorrectly) {
   bubble_widget->CloseNow();
 }
 
+TEST_F(BubbleDialogModelHostTest, DefaultButtonWithoutOverride) {
+  auto host = std::make_unique<BubbleDialogModelHost>(
+      ui::DialogModel::Builder().AddCancelButton(base::OnceClosure()).Build(),
+      /*anchor_view=*/nullptr, BubbleBorder::Arrow::TOP_RIGHT);
+  EXPECT_EQ(host->GetDefaultDialogButton(),
+            ui::DialogButton::DIALOG_BUTTON_CANCEL);
+}
+
 TEST_F(BubbleDialogModelHostTest, OverrideDefaultButton) {
   auto host = std::make_unique<BubbleDialogModelHost>(
       ui::DialogModel::Builder()
@@ -128,6 +136,17 @@ TEST_F(BubbleDialogModelHostTest, OverrideDefaultButton) {
       /*anchor_view=*/nullptr, BubbleBorder::Arrow::TOP_RIGHT);
   EXPECT_EQ(host->GetDefaultDialogButton(),
             ui::DialogButton::DIALOG_BUTTON_CANCEL);
+}
+
+TEST_F(BubbleDialogModelHostTest, OverrideNoneDefaultButton) {
+  auto host = std::make_unique<BubbleDialogModelHost>(
+      ui::DialogModel::Builder()
+          .AddCancelButton(base::OnceClosure())
+          .OverrideDefaultButton(ui::DialogButton::DIALOG_BUTTON_NONE)
+          .Build(),
+      /*anchor_view=*/nullptr, BubbleBorder::Arrow::TOP_RIGHT);
+  EXPECT_EQ(host->GetDefaultDialogButton(),
+            ui::DialogButton::DIALOG_BUTTON_NONE);
 }
 
 TEST_F(BubbleDialogModelHostTest, OverrideDefaultButtonDeathTest) {
@@ -157,6 +176,38 @@ TEST_F(BubbleDialogModelHostTest,
             ui::DialogButton::DIALOG_BUTTON_CANCEL);
   EXPECT_EQ(host->GetInitiallyFocusedView()->GetProperty(kElementIdentifierKey),
             kFocusedField);
+}
+
+TEST_F(BubbleDialogModelHostTest, SetEnabledButtons) {
+  constexpr char16_t kExtraButtonText[] = u"Button";
+
+  std::unique_ptr<Widget> anchor_widget =
+      CreateTestWidget(Widget::InitParams::TYPE_WINDOW);
+  anchor_widget->Show();
+
+  auto host_unique = std::make_unique<BubbleDialogModelHost>(
+      ui::DialogModel::Builder()
+          .AddOkButton(base::DoNothing())
+          .AddCancelButton(base::DoNothing(),
+                           ui::DialogModelButton::Params().SetEnabled(false))
+          .AddExtraButton(base::DoNothing(), ui::DialogModelButton::Params()
+                                                 .SetLabel(kExtraButtonText)
+                                                 .SetEnabled(true))
+          .Build(),
+      anchor_widget->GetContentsView(), BubbleBorder::Arrow::TOP_RIGHT);
+
+  auto* host = host_unique.get();
+  Widget* const bubble_widget =
+      BubbleDialogDelegate::CreateBubble(std::move(host_unique));
+  test::WidgetVisibleWaiter waiter(bubble_widget);
+  bubble_widget->Show();
+  waiter.Wait();
+
+  EXPECT_EQ(host->GetOkButton()->GetEnabled(), true);
+  EXPECT_EQ(host->GetCancelButton()->GetEnabled(), false);
+  EXPECT_EQ(host->GetExtraView()->GetEnabled(), true);
+
+  bubble_widget->CloseNow();
 }
 
 }  // namespace views

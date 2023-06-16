@@ -33,7 +33,6 @@
 #include "base/timer/timer.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
-#include "chrome/browser/ash/authpolicy/authpolicy_helper.h"
 #include "chrome/browser/ash/login/error_screens_histogram_helper.h"
 #include "chrome/browser/ash/login/helper.h"
 #include "chrome/browser/ash/login/login_pref_names.h"
@@ -227,12 +226,6 @@ std::string GetSSOProfile() {
   policy::BrowserPolicyConnectorAsh* connector =
       g_browser_process->platform_part()->browser_policy_connector_ash();
   return connector->GetSSOProfile();
-}
-
-std::string GetRealm() {
-  policy::BrowserPolicyConnectorAsh* connector =
-      g_browser_process->platform_part()->browser_policy_connector_ash();
-  return connector->GetRealm();
 }
 
 std::string GetChromeType() {
@@ -434,11 +427,6 @@ void GaiaScreenHandler::LoadGaiaWithPartitionAndVersionAndConsent(
   const std::string app_locale = g_browser_process->GetApplicationLocale();
   if (!app_locale.empty())
     params.Set("hl", app_locale);
-
-  std::string realm(GetRealm());
-  if (!realm.empty()) {
-    params.Set("realm", realm);
-  }
 
   const std::string enterprise_enrollment_domain(
       GetEnterpriseEnrollmentDomain());
@@ -1180,6 +1168,10 @@ void GaiaScreenHandler::Hide() {
 
 void GaiaScreenHandler::SetGaiaPath(GaiaScreenHandler::GaiaPath gaia_path) {
   gaia_path_ = gaia_path;
+}
+
+GaiaScreenHandler::GaiaPath GaiaScreenHandler::GetGaiaPath() {
+  return gaia_path_;
 }
 
 void GaiaScreenHandler::LoadGaiaAsync(const AccountId& account_id) {

@@ -5,6 +5,7 @@
 #ifndef CHROME_BROWSER_ANDROID_CUSTOMTABS_TEXT_FRAGMENT_LOOKUP_STATE_TRACKER_H_
 #define CHROME_BROWSER_ANDROID_CUSTOMTABS_TEXT_FRAGMENT_LOOKUP_STATE_TRACKER_H_
 
+#include "base/gtest_prod_util.h"
 #include "content/public/browser/web_contents_observer.h"
 #include "content/public/browser/web_contents_user_data.h"
 
@@ -28,14 +29,30 @@ class TextFragmentLookupStateTracker
   // `state_key` is opaque id used by client to keep track of the request.
   void LookupTextFragment(const std::string& state_key,
                           const std::vector<std::string>& text_directives,
-                          OnResultCallback on_result_callback) const;
+                          OnResultCallback on_result_callback);
+
+  void FindScrollAndHighlight(const std::string& text_directive) const;
 
  private:
   friend class content::WebContentsUserData<TextFragmentLookupStateTracker>;
+  FRIEND_TEST_ALL_PREFIXES(TextFragmentLookupStateTrackerTest,
+                           ExtractAllowedTextDirectives);
 
   explicit TextFragmentLookupStateTracker(content::WebContents* web_contents);
 
+  // Extracts the first allowed number of text directives based on the remaining
+  // quota of lookups of the current page.
+  std::vector<std::string> ExtractAllowedTextDirectives(
+      const std::vector<std::string>& text_directives) const;
+
+  // Implements `content::WebContentsObserver`:
+  void PrimaryPageChanged(content::Page& page) override;
+
+  size_t max_lookups_per_page() const;
+
   WEB_CONTENTS_USER_DATA_KEY_DECL();
+
+  size_t lookup_count_ = 0;
 };
 
 }  // namespace customtabs

@@ -28,6 +28,7 @@
 #include "base/test/test_future.h"
 #include "base/types/expected.h"
 #include "chrome/browser/ui/web_applications/test/isolated_web_app_test_utils.h"
+#include "chrome/browser/web_applications/isolated_web_apps/error/unusable_swbn_file_error.h"
 #include "chrome/browser/web_applications/isolated_web_apps/isolated_web_app_location.h"
 #include "chrome/browser/web_applications/isolated_web_apps/isolated_web_app_response_reader_factory.h"
 #include "chrome/browser/web_applications/isolated_web_apps/isolated_web_app_url_info.h"
@@ -41,6 +42,7 @@
 #include "chrome/browser/web_applications/test/web_app_install_test_utils.h"
 #include "chrome/browser/web_applications/web_app_command_manager.h"
 #include "chrome/browser/web_applications/web_app_constants.h"
+#include "chrome/browser/web_applications/web_app_helpers.h"
 #include "chrome/browser/web_applications/web_app_icon_manager.h"
 #include "chrome/browser/web_applications/web_app_install_finalizer.h"
 #include "chrome/browser/web_applications/web_app_install_info.h"
@@ -126,11 +128,12 @@ IsolatedWebAppLocation CreateDevProxyLocation(
 
 blink::mojom::ManifestPtr CreateDefaultManifest(const GURL& application_url) {
   auto manifest = blink::mojom::Manifest::New();
-  manifest->id = u"";
+  manifest->id = application_url.DeprecatedGetOriginAsURL();
   manifest->scope = application_url.Resolve("/");
   manifest->start_url = application_url.Resolve("/testing-start-url.html");
   manifest->display = DisplayMode::kStandalone;
   manifest->short_name = u"test short manifest name";
+  manifest->version = u"1.0.0";
   return manifest;
 }
 
@@ -181,7 +184,7 @@ std::unique_ptr<MockDataRetriever> CreateDefaultDataRetriever(
 class FakeResponseReaderFactory : public IsolatedWebAppResponseReaderFactory {
  public:
   explicit FakeResponseReaderFactory(
-      absl::optional<IsolatedWebAppResponseReaderFactory::Error> bundle_error)
+      base::expected<void, UnusableSwbnFileError> bundle_status)
       : IsolatedWebAppResponseReaderFactory(
             nullptr,
             base::BindRepeating(
@@ -189,7 +192,7 @@ class FakeResponseReaderFactory : public IsolatedWebAppResponseReaderFactory {
                          web_package::SignedWebBundleSignatureVerifier> {
                   return nullptr;
                 })),
-        bundle_error_(std::move(bundle_error)) {}
+        bundle_status_(std::move(bundle_status)) {}
 
   void CreateResponseReader(const base::FilePath& web_bundle_path,
                             const web_package::SignedWebBundleId& web_bundle_id,
@@ -197,15 +200,15 @@ class FakeResponseReaderFactory : public IsolatedWebAppResponseReaderFactory {
                             Callback callback) override {
     // Signatures _must_ be verified during installation.
     CHECK(!skip_signature_verification);
-    if (bundle_error_) {
-      std::move(callback).Run(base::unexpected(std::move(*bundle_error_)));
+    if (!bundle_status_.has_value()) {
+      std::move(callback).Run(base::unexpected(bundle_status_.error()));
     } else {
       std::move(callback).Run(nullptr);
     }
   }
 
  private:
-  absl::optional<IsolatedWebAppResponseReaderFactory::Error> bundle_error_;
+  base::expected<void, UnusableSwbnFileError> bundle_status_;
 };
 
 class InstallIsolatedWebAppCommandTest : public ::testing::Test {
@@ -250,8 +253,9 @@ class InstallIsolatedWebAppCommandTest : public ::testing::Test {
     std::unique_ptr<WebAppUrlLoader> url_loader;
     std::unique_ptr<content::WebContents> web_contents;
     absl::optional<IsolatedWebAppLocation> location;
+    absl::optional<base::Version> expected_version;
     raw_ptr<WebAppInstallFinalizer> install_finalizer = nullptr;
-    absl::optional<IsolatedWebAppResponseReaderFactory::Error> bundle_error;
+    base::expected<void, UnusableSwbnFileError> bundle_status = base::ok();
   };
 
   base::expected<InstallIsolatedWebAppCommandSuccess,
@@ -282,10 +286,10 @@ class InstallIsolatedWebAppCommandTest : public ::testing::Test {
       url_loader = std::move(test_url_loader);
     }
 
-    auto command = CreateCommand(parameters.url_info, std::move(web_contents),
-                                 parameters.location, std::move(url_loader),
-                                 test_future.GetCallback(),
-                                 std::move(parameters.bundle_error));
+    auto command = CreateCommand(
+        parameters.url_info, std::move(web_contents), parameters.location,
+        parameters.expected_version, std::move(url_loader),
+        test_future.GetCallback(), std::move(parameters.bundle_status));
 
     command->SetDataRetrieverForTesting(
         data_retriever != nullptr ? std::move(data_retriever)
@@ -299,21 +303,21 @@ class InstallIsolatedWebAppCommandTest : public ::testing::Test {
       const IsolatedWebAppUrlInfo& url_info,
       std::unique_ptr<content::WebContents> web_contents,
       absl::optional<IsolatedWebAppLocation> location,
+      absl::optional<base::Version> expected_version,
       std::unique_ptr<WebAppUrlLoader> url_loader,
       base::OnceCallback<
           void(base::expected<InstallIsolatedWebAppCommandSuccess,
                               InstallIsolatedWebAppCommandError>)> callback,
-      absl::optional<IsolatedWebAppResponseReaderFactory::Error> bundle_error =
-          absl::nullopt) {
+      base::expected<void, UnusableSwbnFileError> bundle_status = base::ok()) {
     if (!location.has_value()) {
       location = CreateDevProxyLocation();
     }
 
     return std::make_unique<InstallIsolatedWebAppCommand>(
-        url_info, location.value(), std::move(web_contents),
-        std::move(url_loader), /*keep_alive=*/nullptr,
-        /*profile_keep_alive=*/nullptr, std::move(callback),
-        std::make_unique<FakeResponseReaderFactory>(std::move(bundle_error)));
+        url_info, location.value(), expected_version, std::move(web_contents),
+        std::move(url_loader), /*optional_keep_alive=*/nullptr,
+        /*optional_profile_keep_alive=*/nullptr, std::move(callback),
+        std::make_unique<FakeResponseReaderFactory>(std::move(bundle_status)));
   }
 
   base::expected<InstallIsolatedWebAppCommandSuccess,
@@ -557,6 +561,69 @@ TEST_F(InstallIsolatedWebAppCommandTest,
               IsInstallationError(HasSubstr("App is not installable")));
 }
 
+struct InvalidVersionParam {
+  absl::optional<std::u16string> version;
+  std::string error;
+  std::string test_name;
+};
+
+class InstallIsolatedWebAppCommandInvalidVersionTest
+    : public InstallIsolatedWebAppCommandTest,
+      public ::testing::WithParamInterface<InvalidVersionParam> {};
+
+TEST_P(InstallIsolatedWebAppCommandInvalidVersionTest, InstallationFails) {
+  IsolatedWebAppUrlInfo url_info = CreateRandomIsolatedWebAppUrlInfo();
+  std::unique_ptr<MockDataRetriever> fake_data_retriever =
+      CreateDefaultDataRetriever(url_info.origin().GetURL());
+
+  auto manifest = CreateDefaultManifest(url_info.origin().GetURL());
+  manifest->version = GetParam().version;
+
+  ON_CALL(*fake_data_retriever, CheckInstallabilityAndRetrieveManifest)
+      .WillByDefault(ReturnManifest(
+          manifest, CreateDefaultManifestURL(url_info.origin().GetURL())));
+
+  EXPECT_THAT(ExecuteCommand(
+                  Parameters{
+                      .url_info = url_info,
+                  },
+                  std::move(fake_data_retriever)),
+              IsInstallationError(HasSubstr(GetParam().error)));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    /* no prefix */,
+    InstallIsolatedWebAppCommandInvalidVersionTest,
+    ::testing::Values(
+        InvalidVersionParam{.version = absl::nullopt,
+                            .error = "`version` is not present",
+                            .test_name = "NoVersion"},
+        InvalidVersionParam{
+            .version = u"\xD801",
+            .error = "Failed to convert manifest `version` from UTF16 to UTF8",
+            .test_name = "InvalidUtf8"},
+        InvalidVersionParam{.version = u"10",
+                            .error = "Failed to parse `version`",
+                            .test_name = "InvalidVersionFormat"}),
+    [](const ::testing::TestParamInfo<
+        InstallIsolatedWebAppCommandInvalidVersionTest::ParamType>& info) {
+      return info.param.test_name;
+    });
+
+TEST_F(InstallIsolatedWebAppCommandTest,
+       InstallationFailsWhenAppVersionDoesNotMatchExpectedVersion) {
+  IsolatedWebAppUrlInfo url_info = CreateRandomIsolatedWebAppUrlInfo();
+  std::unique_ptr<MockDataRetriever> fake_data_retriever =
+      CreateDefaultDataRetriever(url_info.origin().GetURL());
+
+  EXPECT_THAT(
+      ExecuteCommand(Parameters{.url_info = url_info,
+                                .expected_version = base::Version("99.99.99")},
+                     std::move(fake_data_retriever)),
+      IsInstallationError(
+          HasSubstr("does not match the version provided in the manifest")));
+}
+
 TEST_F(InstallIsolatedWebAppCommandTest, CommandLocksOnAppIdAndWebContents) {
   base::test::TestFuture<base::expected<InstallIsolatedWebAppCommandSuccess,
                                         InstallIsolatedWebAppCommandError>>
@@ -567,8 +634,9 @@ TEST_F(InstallIsolatedWebAppCommandTest, CommandLocksOnAppIdAndWebContents) {
       url_info,
       content::WebContents::Create(
           content::WebContents::CreateParams(profile())),
-      CreateDevProxyLocation(), std::make_unique<TestWebAppUrlLoader>(),
-      test_future.GetCallback());
+      CreateDevProxyLocation(),
+      /*expected_version=*/absl::nullopt,
+      std::make_unique<TestWebAppUrlLoader>(), test_future.GetCallback());
   EXPECT_THAT(
       command->lock_description(),
       AllOf(Property(&LockDescription::type, Eq(LockDescription::Type::kApp)),
@@ -686,40 +754,10 @@ using InstallIsolatedWebAppCommandManifestTest =
     InstallIsolatedWebAppCommandTest;
 
 TEST_F(InstallIsolatedWebAppCommandManifestTest,
-       InstallationFailsWhenManifestHasNoId) {
-  IsolatedWebAppUrlInfo url_info = CreateRandomIsolatedWebAppUrlInfo();
-  blink::mojom::ManifestPtr manifest =
-      CreateDefaultManifest(url_info.origin().GetURL());
-  manifest->id = absl::nullopt;
-
-  EXPECT_THAT(
-      ExecuteCommandWithManifest(url_info, manifest.Clone()),
-      IsInstallationError(HasSubstr(
-          "Manifest `id` is not present. manifest_url: " +
-          CreateDefaultManifestURL(url_info.origin().GetURL()).spec())));
-
-  EXPECT_THAT(web_app_registrar().GetAppById(url_info.app_id()), IsNull());
-}
-
-TEST_F(InstallIsolatedWebAppCommandManifestTest,
-       FailsWhenManifestIdHasInvalidUTF8Character) {
-  IsolatedWebAppUrlInfo url_info = CreateRandomIsolatedWebAppUrlInfo();
-  blink::mojom::ManifestPtr manifest =
-      CreateDefaultManifest(url_info.origin().GetURL());
-  char16_t invalid_utf8_chars = {0xD801};
-  manifest->id = std::u16string{invalid_utf8_chars};
-
-  EXPECT_THAT(ExecuteCommandWithManifest(url_info, manifest.Clone()),
-              IsInstallationError(HasSubstr(
-                  "Failed to convert manifest `id` from UTF16 to UTF8")));
-}
-
-TEST_F(InstallIsolatedWebAppCommandManifestTest,
        PassesManifestIdToFinalizerWhenManifestIdIsEmpty) {
   IsolatedWebAppUrlInfo url_info = CreateRandomIsolatedWebAppUrlInfo();
   blink::mojom::ManifestPtr manifest =
       CreateDefaultManifest(url_info.origin().GetURL());
-  manifest->id = u"";
 
   EXPECT_TRUE(
       ExecuteCommandWithManifest(url_info, manifest.Clone()).has_value());
@@ -732,7 +770,7 @@ TEST_F(InstallIsolatedWebAppCommandManifestTest,
   IsolatedWebAppUrlInfo url_info = CreateRandomIsolatedWebAppUrlInfo();
   blink::mojom::ManifestPtr manifest =
       CreateDefaultManifest(url_info.origin().GetURL());
-  manifest->id = u"test-manifest-id";
+  manifest->id = url_info.origin().GetURL().Resolve("/test-manifest-id");
 
   EXPECT_THAT(ExecuteCommandWithManifest(url_info, manifest.Clone()),
               IsInstallationError(HasSubstr(R"(Manifest `id` must be "/")")));
@@ -1138,7 +1176,7 @@ TEST_F(InstallIsolatedWebAppCommandMetricsTest,
   IsolatedWebAppUrlInfo url_info = CreateRandomIsolatedWebAppUrlInfo();
   blink::mojom::ManifestPtr manifest =
       CreateDefaultManifest(url_info.origin().GetURL());
-  manifest->id = u"test manifest id";
+  manifest->id = url_info.origin().GetURL().Resolve("/test manifest id");
 
   base::HistogramTester histogram_tester;
 
@@ -1170,21 +1208,24 @@ class InstallIsolatedWebAppCommandBundleTest
 
 TEST_P(InstallIsolatedWebAppCommandBundleTest, InstallsWhenThereIsNoError) {
   IsolatedWebAppUrlInfo url_info = CreateEd25519IsolatedWebAppUrlInfo();
+
   EXPECT_TRUE(ExecuteCommand(Parameters{
                                  .url_info = url_info,
                                  .location = location_,
-                                 .bundle_error = absl::nullopt,
+                                 .bundle_status = base::ok(),
                              })
                   .has_value());
 }
 
 TEST_P(InstallIsolatedWebAppCommandBundleTest, ErrorsOnBundleError) {
   IsolatedWebAppUrlInfo url_info = CreateEd25519IsolatedWebAppUrlInfo();
-  EXPECT_THAT(
-      ExecuteCommand(Parameters{.url_info = url_info,
-                                .location = location_,
-                                .bundle_error = MetadataError("test error")}),
-      IsInstallationError(HasSubstr("test error")));
+  EXPECT_THAT(ExecuteCommand(Parameters{
+                  .url_info = url_info,
+                  .location = location_,
+                  .bundle_status = base::unexpected(UnusableSwbnFileError(
+                      UnusableSwbnFileError::Error::kMetadataParserVersionError,
+                      "test error"))}),
+              IsInstallationError(HasSubstr("test error")));
 }
 
 TEST_P(InstallIsolatedWebAppCommandBundleTest,
@@ -1196,7 +1237,7 @@ TEST_P(InstallIsolatedWebAppCommandBundleTest,
   auto installation_result =
       ExecuteCommand(Parameters{.url_info = url_info,
                                 .location = location_,
-                                .bundle_error = absl::nullopt});
+                                .bundle_status = base::ok()});
   if (GetParam()) {
     EXPECT_TRUE(installation_result.has_value());
   } else {

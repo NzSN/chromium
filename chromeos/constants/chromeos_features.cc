@@ -5,6 +5,7 @@
 #include "chromeos/constants/chromeos_features.h"
 
 #include "base/feature_list.h"
+#include "base/metrics/field_trial_params.h"
 
 #if BUILDFLAG(IS_CHROMEOS_LACROS)
 #include "chromeos/startup/browser_params_proxy.h"
@@ -71,12 +72,6 @@ BASE_FEATURE(kJelly, "Jelly", base::FEATURE_DISABLED_BY_DEFAULT);
 // controls all system UI updates and new system components. go/jelly-flags
 BASE_FEATURE(kJellyroll, "Jellyroll", base::FEATURE_DISABLED_BY_DEFAULT);
 
-// Enables system authentication on Ash for password manager, which uses
-// WebUI instead by default. Cleanup CL: https://crrev.com/c/4055733/2.
-BASE_FEATURE(kPasswordManagerSystemAuthentication,
-             "PasswordManagerSystemAuthentication",
-             base::FEATURE_ENABLED_BY_DEFAULT);
-
 // Controls whether to enable quick answers V2 settings sub-toggles.
 BASE_FEATURE(kQuickAnswersV2SettingsSubToggle,
              "QuickAnswersV2SettingsSubToggle",
@@ -101,6 +96,12 @@ bool IsClipboardHistoryRefreshEnabled() {
 #endif
 }
 
+BASE_FEATURE(kRoundedWindows,
+             "RoundedWindows",
+             base::FEATURE_DISABLED_BY_DEFAULT);
+
+const char kRoundedWindowsRadius[] = "window_radius";
+
 bool IsCloudGamingDeviceEnabled() {
 #if BUILDFLAG(IS_CHROMEOS_LACROS)
   return chromeos::BrowserParamsProxy::Get()->IsCloudGamingDevice();
@@ -123,10 +124,6 @@ bool IsJellyrollEnabled() {
   return IsJellyEnabled() || base::FeatureList::IsEnabled(kJellyroll);
 }
 
-bool IsPasswordManagerSystemAuthenticationEnabled() {
-  return base::FeatureList::IsEnabled(kPasswordManagerSystemAuthentication);
-}
-
 bool IsQuickAnswersV2TranslationDisabled() {
   return base::FeatureList::IsEnabled(kDisableQuickAnswersV2Translation);
 }
@@ -145,6 +142,21 @@ bool IsUploadOfficeToCloudEnabled() {
 #else
   return base::FeatureList::IsEnabled(kUploadOfficeToCloud);
 #endif
+}
+
+bool IsRoundedWindowsEnabled() {
+  // Rounded windows are under the Jelly feature.
+  return base::FeatureList::IsEnabled(kRoundedWindows) &&
+         base::FeatureList::IsEnabled(kJelly);
+}
+
+int RoundedWindowsRadiusInDip() {
+  if (!IsRoundedWindowsEnabled()) {
+    return 0;
+  }
+
+  return base::GetFieldTrialParamByFeatureAsInt(
+      kRoundedWindows, kRoundedWindowsRadius, /*default_value=*/8);
 }
 
 }  // namespace chromeos::features

@@ -8,9 +8,8 @@
 #include <string>
 
 #include "base/memory/weak_ptr.h"
-#include "chrome/browser/ash/login/enrollment/enterprise_enrollment_helper.h"
+#include "chrome/browser/ash/login/enrollment/enrollment_launcher.h"
 #include "chrome/browser/ash/login/oobe_screen.h"
-#include "chromeos/ash/components/dbus/authpolicy/active_directory_info.pb.h"
 
 class GoogleServiceAuthError;
 
@@ -57,8 +56,8 @@ class EnrollmentScreenView
   };
   enum class GaiaButtonsType {
     kDefault,
-    kEnterprisePreffered,
-    kKioskPreffered
+    kEnterprisePreferred,
+    kKioskPreferred
   };
   enum class UserErrorType { kConsumerDomain, kBusinessDomain };
 
@@ -90,17 +89,14 @@ class EnrollmentScreenView
   // Reloads the signin screen.
   virtual void ReloadSigninScreen() = 0;
 
+  // Resets shown enrollment screen.
+  virtual void ResetEnrollmentScreen() = 0;
+
   // Shows error related to user account eligibility.
   virtual void ShowUserError(const std::string& email) = 0;
 
   // Shows error that enrollment is not allowed during trial run.
   virtual void ShowEnrollmentDuringTrialNotAllowedError() = 0;
-
-  // Shows the Active Directory domain joining screen.
-  virtual void ShowActiveDirectoryScreen(const std::string& domain_join_config,
-                                         const std::string& machine_name,
-                                         const std::string& username,
-                                         authpolicy::ErrorType error) = 0;
 
   // Shows the device attribute prompt screen.
   virtual void ShowAttributePromptScreen(const std::string& asset_id,
@@ -119,7 +115,7 @@ class EnrollmentScreenView
   virtual void ShowAuthError(const GoogleServiceAuthError& error) = 0;
 
   // Show non-authentication error.
-  virtual void ShowOtherError(EnterpriseEnrollmentHelper::OtherError error) = 0;
+  virtual void ShowOtherError(EnrollmentLauncher::OtherError error) = 0;
 
   // Update the UI to report the `status` of the enrollment procedure.
   virtual void ShowEnrollmentStatus(policy::EnrollmentStatus status) = 0;

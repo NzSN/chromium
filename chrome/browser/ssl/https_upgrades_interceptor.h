@@ -30,6 +30,7 @@ class ThrottlingURLLoader;
 
 namespace content {
 class BrowserContext;
+class NavigationUIData;
 class WebContents;
 }  // namespace content
 
@@ -47,10 +48,12 @@ class HttpsUpgradesInterceptor : public content::URLLoaderRequestInterceptor,
                                  public network::mojom::URLLoader {
  public:
   static std::unique_ptr<HttpsUpgradesInterceptor> MaybeCreateInterceptor(
-      int frame_tree_node_id);
+      int frame_tree_node_id,
+      content::NavigationUIData* navigation_ui_data_);
 
   HttpsUpgradesInterceptor(int frame_tree_node_id,
-                           bool http_interstitial_enabled);
+                           bool http_interstitial_enabled,
+                           content::NavigationUIData* navigation_ui_data_);
   ~HttpsUpgradesInterceptor() override;
 
   HttpsUpgradesInterceptor(const HttpsUpgradesInterceptor&) = delete;
@@ -127,12 +130,14 @@ class HttpsUpgradesInterceptor : public content::URLLoaderRequestInterceptor,
   bool http_interstitial_enabled_by_pref_ = false;
 
   // Parameters about whether the throttle should trigger the interstitial
-  // warning before navigating to the HTTP fallback URL.
-  // This is a unique ptr to ensure that all fields are initialized (otherwise
-  // this should be null).
+  // warning before navigating to the HTTP fallback URL. Can be null if the
+  // current load isn't eligible for an upgrade.
   std::unique_ptr<
       security_interstitials::https_only_mode::HttpInterstitialState>
       interstitial_state_;
+
+  // URLs seen by the interceptor, used to detect a redirect loop.
+  std::set<GURL> urls_seen_;
 
   // Receiver for the URLLoader interface.
   mojo::Receiver<network::mojom::URLLoader> receiver_{this};
@@ -140,6 +145,8 @@ class HttpsUpgradesInterceptor : public content::URLLoaderRequestInterceptor,
   // The owning client. Used for serving redirects.
   mojo::Remote<network::mojom::URLLoaderClient> client_;
 
+  // Owned by NavigationURLLoaderImpl, which should outlive the interceptor.
+  raw_ptr<content::NavigationUIData> navigation_ui_data_;
   SEQUENCE_CHECKER(sequence_checker_);
 
   base::WeakPtrFactory<HttpsUpgradesInterceptor> weak_factory_{this};

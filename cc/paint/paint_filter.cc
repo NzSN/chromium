@@ -24,7 +24,9 @@
 #include "third_party/skia/include/core/SkColorFilter.h"
 #include "third_party/skia/include/core/SkColorSpace.h"
 #include "third_party/skia/include/core/SkImage.h"
+#include "third_party/skia/include/core/SkMatrix.h"
 #include "third_party/skia/include/core/SkScalar.h"
+#include "third_party/skia/include/core/SkShader.h"
 #include "third_party/skia/include/core/SkString.h"
 #include "third_party/skia/include/core/SkTileMode.h"
 #include "third_party/skia/include/effects/SkImageFilters.h"
@@ -215,16 +217,15 @@ bool PaintFilter::EqualsForTesting(const PaintFilter& other) const {
   return true;
 }
 
-ColorFilterPaintFilter::ColorFilterPaintFilter(
-    sk_sp<SkColorFilter> color_filter,
-    sk_sp<PaintFilter> input,
-    const CropRect* crop_rect)
+ColorFilterPaintFilter::ColorFilterPaintFilter(sk_sp<ColorFilter> color_filter,
+                                               sk_sp<PaintFilter> input,
+                                               const CropRect* crop_rect)
     : PaintFilter(kType, crop_rect, HasDiscardableImages(input)),
       color_filter_(std::move(color_filter)),
       input_(std::move(input)) {
-  DCHECK(color_filter_);
   cached_sk_filter_ = SkImageFilters::ColorFilter(
-      color_filter_, GetSkFilter(input_.get()), crop_rect);
+      color_filter_ ? color_filter_->GetSkColorFilter() : nullptr,
+      GetSkFilter(input_.get()), crop_rect);
 }
 
 ColorFilterPaintFilter::~ColorFilterPaintFilter() = default;
@@ -232,8 +233,7 @@ ColorFilterPaintFilter::~ColorFilterPaintFilter() = default;
 size_t ColorFilterPaintFilter::SerializedSize() const {
   base::CheckedNumeric<size_t> total_size = 0u;
   total_size += BaseSerializedSize();
-  total_size += PaintOpWriter::SerializedSize(
-      static_cast<const SkFlattenable*>(color_filter_.get()));
+  total_size += PaintOpWriter::SerializedSize(color_filter_.get());
   total_size += PaintOpWriter::SerializedSize(input_.get());
   return total_size.ValueOrDefault(0u);
 }
@@ -246,11 +246,8 @@ sk_sp<PaintFilter> ColorFilterPaintFilter::SnapshotWithImagesInternal(
 
 bool ColorFilterPaintFilter::EqualsForTesting(
     const ColorFilterPaintFilter& other) const {
-  return base::ValuesEquivalent(
-             color_filter_, other.color_filter_,
-             [](const auto& a, const auto& b) {
-               return a.serialize()->equals(b.serialize().get());
-             }) &&
+  return AreValuesEqualForTesting(color_filter_,  // IN-TEST
+                                  other.color_filter_) &&
          AreValuesEqualForTesting(input_, other.input_);  // IN-TEST
 }
 
@@ -1003,14 +1000,12 @@ TurbulencePaintFilter::TurbulencePaintFilter(TurbulenceType turbulence_type,
   sk_sp<SkShader> shader;
   switch (turbulence_type_) {
     case TurbulenceType::kTurbulence:
-      shader = SkPerlinNoiseShader::MakeTurbulence(
-          base_frequency_x_, base_frequency_y_, num_octaves_, seed_,
-          &tile_size_);
+      shader = SkShaders::MakeTurbulence(base_frequency_x_, base_frequency_y_,
+                                         num_octaves_, seed_, &tile_size_);
       break;
     case TurbulenceType::kFractalNoise:
-      shader = SkPerlinNoiseShader::MakeFractalNoise(
-          base_frequency_x_, base_frequency_y_, num_octaves_, seed_,
-          &tile_size_);
+      shader = SkShaders::MakeFractalNoise(base_frequency_x_, base_frequency_y_,
+                                           num_octaves_, seed_, &tile_size_);
       break;
   }
 

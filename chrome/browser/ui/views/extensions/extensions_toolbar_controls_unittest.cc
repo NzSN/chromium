@@ -8,6 +8,7 @@
 #include "chrome/browser/extensions/extension_action_runner.h"
 #include "chrome/browser/extensions/extension_context_menu_model.h"
 #include "chrome/browser/extensions/site_permissions_helper.h"
+#include "chrome/browser/extensions/tab_helper.h"
 #include "chrome/browser/ui/views/extensions/extensions_request_access_button.h"
 #include "chrome/browser/ui/views/extensions/extensions_toolbar_button.h"
 #include "chrome/browser/ui/views/extensions/extensions_toolbar_container.h"
@@ -29,18 +30,31 @@ class ExtensionsToolbarControlsUnitTest : public ExtensionsToolbarUnitTest {
   const ExtensionsToolbarControlsUnitTest& operator=(
       const ExtensionsToolbarControlsUnitTest&) = delete;
 
+  // Navigates to `url`.
+  void NavigateAndCommit(const GURL& URL);
+
   ExtensionsRequestAccessButton* request_access_button();
+  ExtensionsToolbarButton* extensions_button();
 
   // Returns whether the request access button is visible or not.
   bool IsRequestAccessButtonVisible();
 
+  // ExtensionsToolbarUnitTest:
+  void SetUp() override;
+
  private:
   base::test::ScopedFeatureList scoped_feature_list_;
+  raw_ptr<content::WebContentsTester, DanglingUntriaged> web_contents_tester_;
 };
 
 ExtensionsToolbarControlsUnitTest::ExtensionsToolbarControlsUnitTest() {
   scoped_feature_list_.InitAndEnableFeature(
       extensions_features::kExtensionsMenuAccessControl);
+}
+
+void ExtensionsToolbarControlsUnitTest::NavigateAndCommit(const GURL& url) {
+  web_contents_tester_->NavigateAndCommit(url);
+  WaitForAnimation();
 }
 
 ExtensionsRequestAccessButton*
@@ -50,8 +64,77 @@ ExtensionsToolbarControlsUnitTest::request_access_button() {
       ->request_access_button_for_testing();
 }
 
+ExtensionsToolbarButton*
+ExtensionsToolbarControlsUnitTest::extensions_button() {
+  return extensions_container()->GetExtensionsButton();
+}
+
 bool ExtensionsToolbarControlsUnitTest::IsRequestAccessButtonVisible() {
   return request_access_button()->GetVisible();
+}
+
+void ExtensionsToolbarControlsUnitTest::SetUp() {
+  ExtensionsToolbarUnitTest::SetUp();
+  web_contents_tester_ = AddWebContentsAndGetTester();
+}
+
+TEST_F(ExtensionsToolbarControlsUnitTest,
+       ExtensionsButton_SitePermissionsUpdates) {
+  // Install an extension that requests host permissions.
+  auto extension =
+      InstallExtensionWithHostPermissions("Extension", {"<all_urls>"});
+
+  const GURL url("http://www.url.com");
+  auto url_origin = url::Origin::Create(url);
+  NavigateAndCommit(url);
+
+  auto* manager = extensions::PermissionsManager::Get(profile());
+  {
+    // Extensions button has "all extensions blocked" icon type when it's
+    // an user restricted site.
+    extensions::PermissionsManagerWaiter manager_waiter(manager);
+    manager->AddUserRestrictedSite(url_origin);
+    manager_waiter.WaitForUserPermissionsSettingsChange();
+    WaitForAnimation();
+    EXPECT_EQ(extensions_button()->GetStateForTesting(),
+              ExtensionsToolbarButton::State::kAllExtensionsBlocked);
+  }
+
+  {
+    // Extensions button has "any extension has access" icon type when it's not
+    // an user restricted site and 1+ extensions have
+    // site access granted. Note that by default extensions have granted access.
+    extensions::PermissionsManagerWaiter manager_waiter(manager);
+    manager->RemoveUserRestrictedSite(url_origin);
+    manager_waiter.WaitForUserPermissionsSettingsChange();
+    WaitForAnimation();
+    EXPECT_EQ(extensions_button()->GetStateForTesting(),
+              ExtensionsToolbarButton::State::kAnyExtensionHasAccess);
+  }
+
+  {
+    // Extension button has "default" icon type when it's not an user restricted
+    // site and no extensions have site access granted.
+    // To achieve this, we withhold host permissions in the only extension
+    // installed.
+    WithholdHostPermissions(extension.get());
+    WaitForAnimation();
+    EXPECT_EQ(extensions_button()->GetStateForTesting(),
+              ExtensionsToolbarButton::State::kDefault);
+  }
+}
+
+TEST_F(ExtensionsToolbarControlsUnitTest,
+       ExtensionsButton_ChromeRestrictedSite) {
+  InstallExtensionWithHostPermissions("Extension", {"<all_urls>"});
+
+  const GURL restricted_url("chrome://extensions");
+  NavigateAndCommit(restricted_url);
+
+  // Extensions button has "all extensions blocked" icon type for chrome
+  // restricted sites.
+  EXPECT_EQ(extensions_button()->GetStateForTesting(),
+            ExtensionsToolbarButton::State::kAllExtensionsBlocked);
 }
 
 TEST_F(ExtensionsToolbarControlsUnitTest,
@@ -303,6 +386,53 @@ TEST_F(ExtensionsToolbarControlsUnitTest,
 }
 
 TEST_F(ExtensionsToolbarControlsUnitTest,
+       RequestAccessButtonVisibility_ExtensionDismissedRequests) {
+  content::WebContentsTester* web_contents_tester =
+      AddWebContentsAndGetTester();
+
+  // Add two extensions that request access to all urls, and withhold their
+  // site access.
+  auto extension_a =
+      InstallExtensionWithHostPermissions("Extension A", {"<all_urls>"});
+  auto extension_b =
+      InstallExtensionWithHostPermissions("Extension B", {"<all_urls>"});
+  WithholdHostPermissions(extension_a.get());
+  WithholdHostPermissions(extension_b.get());
+
+  // By default, both extensions should be allowed in the request
+  // access button. However, request access button is not visible because we
+  // haven't navigated to a site yet.
+  extensions::SitePermissionsHelper permissions_helper(browser()->profile());
+  EXPECT_TRUE(
+      permissions_helper.ShowAccessRequestsInToolbar(extension_a->id()));
+  EXPECT_TRUE(
+      permissions_helper.ShowAccessRequestsInToolbar(extension_b->id()));
+  EXPECT_FALSE(IsRequestAccessButtonVisible());
+
+  // Navigate to an url that both extensions requests access to.
+  const GURL url("http://www.example.com");
+  web_contents_tester->NavigateAndCommit(url);
+  EXPECT_TRUE(IsRequestAccessButtonVisible());
+  EXPECT_EQ(
+      request_access_button()->GetText(),
+      l10n_util::GetStringFUTF16Int(IDS_EXTENSIONS_REQUEST_ACCESS_BUTTON, 2));
+
+  // Dismiss extension A's requests. Verify only extension B is visible in the
+  // button.
+  extensions::TabHelper* tab_helper = extensions::TabHelper::FromWebContents(
+      browser()->tab_strip_model()->GetActiveWebContents());
+  tab_helper->DismissExtensionRequests(extension_a->id());
+  EXPECT_TRUE(IsRequestAccessButtonVisible());
+  EXPECT_EQ(
+      request_access_button()->GetText(),
+      l10n_util::GetStringFUTF16Int(IDS_EXTENSIONS_REQUEST_ACCESS_BUTTON, 1));
+
+  // Dismiss extension B's requests. Verify button is not visible anymore.
+  tab_helper->DismissExtensionRequests(extension_b->id());
+  EXPECT_FALSE(IsRequestAccessButtonVisible());
+}
+
+TEST_F(ExtensionsToolbarControlsUnitTest,
        RequestAccessButton_OnPressedExecuteAction) {
   content::WebContentsTester* web_contents_tester =
       AddWebContentsAndGetTester();
@@ -328,8 +458,12 @@ TEST_F(ExtensionsToolbarControlsUnitTest,
   EXPECT_EQ(permissions->GetUserSiteAccess(*extension, url),
             extensions::PermissionsManager::UserSiteAccess::kOnClick);
 
-  ClickButton(request_access_button());
+  // Extension menu button has default state since extensions are not blocked,
+  // and there is no extension with access to the site.
+  EXPECT_EQ(extensions_button()->GetStateForTesting(),
+            ExtensionsToolbarButton::State::kDefault);
 
+  ClickButton(request_access_button());
   WaitForAnimation();
   LayoutContainerIfNecessary();
 
@@ -340,6 +474,11 @@ TEST_F(ExtensionsToolbarControlsUnitTest,
   EXPECT_EQ(user_action_tester.GetActionCount(kActivatedUserAction), 1);
   EXPECT_EQ(permissions->GetUserSiteAccess(*extension, url),
             extensions::PermissionsManager::UserSiteAccess::kOnClick);
+
+  // Verify extensions menu button has "any extension  has access" state, since
+  // the extension executed its action.
+  EXPECT_EQ(extensions_button()->GetStateForTesting(),
+            ExtensionsToolbarButton::State::kAnyExtensionHasAccess);
 }
 
 class ExtensionsToolbarControlsWithPermittedSitesUnitTest

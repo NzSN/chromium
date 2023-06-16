@@ -584,8 +584,7 @@ static void AdjustStyleForDisplay(ComputedStyleBuilder& builder,
   }
 
   // Blockify the child boxes of media elements. crbug.com/1379779.
-  if (RuntimeEnabledFeatures::LayoutMediaNoInlineChildrenEnabled() &&
-      IsAtMediaUAShadowBoundary(element)) {
+  if (IsAtMediaUAShadowBoundary(element)) {
     builder.SetDisplay(EquivalentBlockDisplay(builder.Display()));
   }
 }
@@ -769,7 +768,7 @@ void StyleAdjuster::AdjustForForcedColorsMode(ComputedStyleBuilder& builder) {
 
   builder.SetTextShadow(ComputedStyleInitialValues::InitialTextShadow());
   builder.SetBoxShadow(ComputedStyleInitialValues::InitialBoxShadow());
-  builder.SetColorScheme({"light", "dark"});
+  builder.SetColorScheme({AtomicString("light"), AtomicString("dark")});
   if (builder.ShouldForceColor(builder.AccentColor())) {
     builder.SetAccentColor(ComputedStyleInitialValues::InitialAccentColor());
   }
@@ -826,8 +825,7 @@ void StyleAdjuster::AdjustComputedStyle(StyleResolverState& state,
     }
 
     if (!RuntimeEnabledFeatures::CSSTopLayerForTransitionsEnabled()) {
-      if ((element && element->IsInTopLayer()) ||
-          builder.StyleType() == kPseudoIdBackdrop) {
+      if (element && element->IsInTopLayer()) {
         builder.SetOverlay(EOverlay::kAuto);
       }
     }
@@ -839,6 +837,7 @@ void StyleAdjuster::AdjustComputedStyle(StyleResolverState& state,
     // be left alone because the fullscreen.css doesn't apply any style to
     // them.
     if ((builder.Overlay() == EOverlay::kAuto && !is_document_element) ||
+        builder.StyleType() == kPseudoIdBackdrop ||
         builder.StyleType() == kPseudoIdViewTransition) {
       if (builder.GetPosition() == EPosition::kStatic ||
           builder.GetPosition() == EPosition::kRelative) {
@@ -916,6 +915,7 @@ void StyleAdjuster::AdjustComputedStyle(StyleResolverState& state,
   }
 
   if (builder.Overlay() == EOverlay::kAuto ||
+      builder.StyleType() == kPseudoIdBackdrop ||
       builder.StyleType() == kPseudoIdViewTransition) {
     builder.SetForcesStackingContext(true);
   }

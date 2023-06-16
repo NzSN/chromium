@@ -12,6 +12,9 @@
 // Feature flag to enable default browser blue dot promo.
 BASE_DECLARE_FEATURE(kDefaultBrowserBlueDotPromo);
 
+// Feature flag to enable the Payments Bottom Sheet.
+BASE_DECLARE_FEATURE(kIOSPaymentsBottomSheet);
+
 // Enum for blue dot promo user groups (control/experiment) and its param. The
 // reason why we need a custom control group is to disable other independent
 // default browser promos, which are already shipped.
@@ -40,9 +43,6 @@ BASE_DECLARE_FEATURE(kModernTabStrip);
 
 // Feature flag to enable revamped Incognito NTP page.
 BASE_DECLARE_FEATURE(kIncognitoNtpRevamp);
-
-// Feature flag that experiments with the default browser fullscreen promo UI.
-BASE_DECLARE_FEATURE(kDefaultBrowserFullscreenPromoExperiment);
 
 // Feature flag that allows external apps to show default browser settings.
 BASE_DECLARE_FEATURE(kDefaultBrowserIntentsShowSettings);
@@ -95,9 +95,6 @@ BASE_DECLARE_FEATURE(kIOSLocationBarUseNativeContextMenu);
 // Feature flag that swaps the omnibox textfield implementation.
 BASE_DECLARE_FEATURE(kIOSNewOmniboxImplementation);
 
-// Feature flag to enable using Lens to search for images.
-BASE_DECLARE_FEATURE(kUseLensToSearchForImage);
-
 // Feature flag to enable the Lens entrypoint in the home screen widget.
 BASE_DECLARE_FEATURE(kEnableLensInHomeScreenWidget);
 
@@ -125,9 +122,6 @@ BASE_DECLARE_FEATURE(kRemoveExcessNTPs);
 // Feature flag to enable shortened instruction to turn on Password AutoFill for
 // Chrome.
 BASE_DECLARE_FEATURE(kEnableShortenedPasswordAutoFillInstruction);
-
-// Feature flag to switch images to SFSymbols in the omnibox when enabled.
-BASE_DECLARE_FEATURE(kUseSFSymbolsInOmnibox);
 
 // Feature flag for the follow up of the SF Symbols.
 BASE_DECLARE_FEATURE(kSFSymbolsFollowUp);
@@ -187,6 +181,11 @@ bool IsIndicateSyncErrorInOverflowMenuEnabled();
 
 // Feature flag to move the steady-state (unfocused) omnibox to the bottom.
 BASE_DECLARE_FEATURE(kBottomOmniboxSteadyState);
+
+// Returns true if `kBottomOmniboxSteadyState` feature flag is enabled and the
+// current device is a phone. This checks that the flag is enabled, not that the
+// omnibox is currently at the bottom.
+bool IsBottomOmniboxSteadyStateEnabled();
 
 // Feature flag to put all clipboard access onto a background thread. Any
 // synchronous clipboard access will always return nil/false.

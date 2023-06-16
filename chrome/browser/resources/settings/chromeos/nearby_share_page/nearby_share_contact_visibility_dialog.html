@@ -1,15 +1,15 @@
 <style include="settings-shared">
   .title {
     color: var(--cr-primary-text-color);
-    font-family: 'Google Sans';
-    font-weight: normal;
     margin: 0;
     padding-block-end: 0;
     padding-block-start: 24px;
   }
 
-  :host-context(body.jelly-enabled) .title {
-    font: var(--cros-title-1-font);
+  /* TODO(b/281116317) Remove once Jelly is launched */
+  :host-context(body:not(.jelly-enabled)) .title {
+    font-family: 'Google Sans';
+    font-weight: normal;
   }
 
   h3.header {

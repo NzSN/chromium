@@ -37,14 +37,20 @@ void TestSegmentInfoDatabase::GetSegmentInfoForSegments(
 }
 
 void TestSegmentInfoDatabase::GetSegmentInfo(SegmentId segment_id,
+                                             ModelSource model_source,
                                              SegmentInfoCallback callback) {
+  std::move(callback).Run(GetCachedSegmentInfo(segment_id, model_source));
+}
+
+absl::optional<SegmentInfo> TestSegmentInfoDatabase::GetCachedSegmentInfo(
+    SegmentId segment_id,
+    ModelSource model_source) {
   auto result =
       base::ranges::find(segment_infos_, segment_id,
                          &std::pair<SegmentId, proto::SegmentInfo>::first);
 
-  std::move(callback).Run(result == segment_infos_.end()
-                              ? absl::nullopt
-                              : absl::make_optional(result->second));
+  return result == segment_infos_.end() ? absl::nullopt
+                                        : absl::make_optional(result->second);
 }
 
 void TestSegmentInfoDatabase::UpdateSegment(
@@ -68,6 +74,7 @@ void TestSegmentInfoDatabase::UpdateSegment(
 
 void TestSegmentInfoDatabase::SaveSegmentResult(
     SegmentId segment_id,
+    ModelSource model_source,
     absl::optional<proto::PredictionResult> result,
     SuccessCallback callback) {
   proto::SegmentInfo* info = FindOrCreateSegment(segment_id);
@@ -80,6 +87,7 @@ void TestSegmentInfoDatabase::SaveSegmentResult(
 }
 
 void TestSegmentInfoDatabase::SaveTrainingData(SegmentId segment_id,
+                                               ModelSource model_source,
                                                const proto::TrainingData& data,
                                                SuccessCallback callback) {
   proto::SegmentInfo* info = FindOrCreateSegment(segment_id);
@@ -88,6 +96,7 @@ void TestSegmentInfoDatabase::SaveTrainingData(SegmentId segment_id,
 }
 
 void TestSegmentInfoDatabase::GetTrainingData(SegmentId segment_id,
+                                              ModelSource model_source,
                                               TrainingRequestId request_id,
                                               bool delete_from_db,
                                               TrainingDataCallback callback) {
@@ -215,6 +224,7 @@ void TestSegmentInfoDatabase::SetBucketDuration(SegmentId segment_id,
   info->mutable_model_metadata()->set_time_unit(time_unit);
 }
 
+// TODO(ritikagup@) : Add ModelSource as param to this function.
 proto::SegmentInfo* TestSegmentInfoDatabase::FindOrCreateSegment(
     SegmentId segment_id) {
   proto::SegmentInfo* info = nullptr;

@@ -4,9 +4,11 @@
 
 #include "base/run_loop.h"
 #include "base/test/bind.h"
+#include "base/test/metrics/histogram_tester.h"
 #include "chrome/services/qrcode_generator/public/cpp/qrcode_generator_service.h"
 #include "chrome/services/qrcode_generator/public/mojom/qrcode_generator.mojom.h"
 #include "chrome/test/base/in_process_browser_test.h"
+#include "content/public/common/content_switches.h"
 #include "content/public/test/browser_test.h"
 #include "ui/base/test/skia_gold_pixel_diff.h"
 
@@ -28,6 +30,7 @@ class QrCodeGeneratorServicePixelTest : public PlatformBrowserTest {
     request->render_module_style = module_style;
     request->render_locator_style = locator_style;
 
+    base::HistogramTester histograms;
     mojom::GenerateQRCodeResponsePtr response;
     base::RunLoop run_loop;
     QRImageGenerator generator;
@@ -55,11 +58,15 @@ class QrCodeGeneratorServicePixelTest : public PlatformBrowserTest {
     ASSERT_EQ(response->bitmap.width() % response->data_size.width(), 0);
     ASSERT_EQ(response->bitmap.height() % response->data_size.height(), 0);
 
+    // Verify that the expected UMA metrics got logged.
+    // TODO(1246137): Cover BytesToQrPixels and QrPixelsToQrImage as well.
+    histograms.ExpectTotalCount("Sharing.QRCodeGeneration.Duration", 1);
+
 #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
     BUILDFLAG(IS_CHROMEOS_LACROS)
     // Verify image contents through go/chrome-engprod-skia-gold.
     if (base::CommandLine::ForCurrentProcess()->HasSwitch(
-            "browser-ui-tests-verify-pixels")) {
+            switches::kVerifyPixels)) {
       const ::testing::TestInfo* test_info =
           ::testing::UnitTest::GetInstance()->current_test_info();
       ui::test::SkiaGoldPixelDiff pixel_diff;

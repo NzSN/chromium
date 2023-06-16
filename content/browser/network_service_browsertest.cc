@@ -19,10 +19,13 @@
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
+#include "content/browser/network/network_service_util_internal.h"
+#include "content/browser/network_service_instance_impl.h"
 #include "content/browser/storage_partition_impl.h"
 #include "content/public/browser/browser_context.h"
 #include "content/public/browser/browser_thread.h"
 #include "content/public/browser/network_service_instance.h"
+#include "content/public/browser/network_service_util.h"
 #include "content/public/browser/url_data_source.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_contents_observer.h"
@@ -31,7 +34,6 @@
 #include "content/public/common/bindings_policy.h"
 #include "content/public/common/content_features.h"
 #include "content/public/common/content_switches.h"
-#include "content/public/common/network_service_util.h"
 #include "content/public/common/url_utils.h"
 #include "content/public/test/browser_test.h"
 #include "content/public/test/browser_test_utils.h"
@@ -401,8 +403,11 @@ IN_PROC_BROWSER_TEST_F(NetworkServiceConnectionTypeSyncedBrowserTest,
 class NetworkServiceOutOfProcessBrowserTest : public NetworkServiceBrowserTest {
  public:
   NetworkServiceOutOfProcessBrowserTest() {
-    scoped_feature_list_.InitAndDisableFeature(
-        features::kNetworkServiceInProcess);
+    ForceOutOfProcessNetworkServiceImpl();
+  }
+
+  void SetUpOnMainThread() override {
+    ASSERT_TRUE(IsOutOfProcessNetworkService());
   }
 
  private:
@@ -467,8 +472,7 @@ IN_PROC_BROWSER_TEST_F(NetworkServiceOutOfProcessBrowserTest,
   EXPECT_TRUE(
       NavigateToURL(shell(), embedded_test_server()->GetURL("/empty.html")));
 
-  ASSERT_TRUE(
-      content::ExecuteScript(shell()->web_contents(), "document.cookie"));
+  ASSERT_TRUE(content::ExecJs(shell()->web_contents(), "document.cookie"));
   // If the renderer is hung the test will hang.
 }
 
@@ -1667,6 +1671,46 @@ IN_PROC_BROWSER_TEST_F(NetworkServiceWithUDPSocketLimit,
               ConnectUDPSocketSync(network_context, &socket));
   }
 }
+
+#if BUILDFLAG(IS_ANDROID)
+class EmptyNetworkServiceTest : public ContentBrowserTest {
+ public:
+  EmptyNetworkServiceTest() {
+    scoped_feature_list_.InitWithFeaturesAndParameters(
+        {{features::kNetworkServiceInProcess, {}},
+         {network::features::kNetworkServiceEmptyOutOfProcess, {}}},
+        {});
+  }
+  EmptyNetworkServiceTest(const EmptyNetworkServiceTest&) = delete;
+  EmptyNetworkServiceTest& operator=(const EmptyNetworkServiceTest&) = delete;
+
+ private:
+  base::test::ScopedFeatureList scoped_feature_list_;
+};
+
+// TODO(https://crbug.com/1448414): Reenable this test.
+IN_PROC_BROWSER_TEST_F(EmptyNetworkServiceTest, DISABLED_Base) {
+  // This test is only for high-RAM device to create another process.
+  if (!IsInProcessNetworkService()) {
+    GTEST_SKIP();
+  }
+
+  // Check if EmptyNetworkService is available.
+  network::mojom::EmptyNetworkService* empty_network_service =
+      GetEmptyNetworkServiceForTesting();
+  DCHECK(empty_network_service);
+  const int32_t kExpected = 42;
+  int32_t value = 0;
+  base::RunLoop loop;
+  empty_network_service->Ping(kExpected,
+                              base::BindLambdaForTesting([&](int32_t val) {
+                                value = val;
+                                loop.Quit();
+                              }));
+  loop.Run();
+  EXPECT_EQ(kExpected, value);
+}
+#endif
 
 }  // namespace
 

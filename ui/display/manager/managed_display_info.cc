@@ -10,20 +10,18 @@
 #include <string>
 #include <vector>
 
-#include "base/command_line.h"
 #include "base/logging.h"
 #include "base/notreached.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece_forward.h"
 #include "base/strings/string_split.h"
-#include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "build/build_config.h"
 #include "build/chromeos_buildflags.h"
 #include "ui/display/display.h"
 #include "ui/display/display_features.h"
 #include "ui/display/display_switches.h"
-#include "ui/display/manager/display_manager_utilities.h"
+#include "ui/display/manager/util/display_manager_util.h"
 #include "ui/display/types/display_constants.h"
 #include "ui/display/util/display_util.h"
 #include "ui/gfx/color_space.h"
@@ -114,7 +112,7 @@ std::string PanelOrientationToString(PanelOrientation orientation) {
 
 }  // namespace
 
-ManagedDisplayMode::ManagedDisplayMode() {}
+ManagedDisplayMode::ManagedDisplayMode() = default;
 
 ManagedDisplayMode::ManagedDisplayMode(const gfx::Size& size) : size_(size) {}
 
@@ -410,7 +408,7 @@ ManagedDisplayInfo::ManagedDisplayInfo(int64_t id,
 ManagedDisplayInfo::ManagedDisplayInfo(const ManagedDisplayInfo& other) =
     default;
 
-ManagedDisplayInfo::~ManagedDisplayInfo() {}
+ManagedDisplayInfo::~ManagedDisplayInfo() = default;
 
 void ManagedDisplayInfo::SetRotation(Display::Rotation rotation,
                                      Display::RotationSource source) {
@@ -490,12 +488,7 @@ void ManagedDisplayInfo::Copy(const ManagedDisplayInfo& native_info) {
 }
 
 void ManagedDisplayInfo::SetBounds(const gfx::Rect& new_bounds_in_native) {
-#if BUILDFLAG(IS_CHROMEOS_ASH)
-  static bool reject_square = base::CommandLine::ForCurrentProcess()->HasSwitch(
-      switches::kRejectSquareDisplay);
-  if (reject_square)
-    DCHECK_NE(new_bounds_in_native.width(), new_bounds_in_native.height());
-#endif
+  DCHECK_NE(new_bounds_in_native.width(), new_bounds_in_native.height());
 
   bounds_in_native_ = new_bounds_in_native;
   size_in_pixel_ = new_bounds_in_native.size();

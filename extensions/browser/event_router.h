@@ -17,6 +17,7 @@
 #include "base/memory/weak_ptr.h"
 #include "base/observer_list.h"
 #include "base/scoped_observation.h"
+#include "base/strings/string_piece.h"
 #include "base/values.h"
 #include "components/keyed_service/core/keyed_service.h"
 #include "content/public/browser/render_process_host_observer.h"
@@ -124,7 +125,6 @@ class EventRouter : public KeyedService,
                                     const std::string& extension_id,
                                     events::HistogramValue histogram_value,
                                     const std::string& event_name,
-                                    int render_process_id,
                                     int worker_thread_id,
                                     int64_t service_worker_version_id,
                                     base::Value::List event_args,
@@ -360,6 +360,12 @@ class EventRouter : public KeyedService,
                            StorageAreaOnChangedOtherListener);
   FRIEND_TEST_ALL_PREFIXES(StorageApiUnittest,
                            StorageAreaOnChangedOnlyOneListener);
+  FRIEND_TEST_ALL_PREFIXES(WMDesksPrivateEventsUnitTest,
+                           DispatchEventOnDeskAdded);
+  FRIEND_TEST_ALL_PREFIXES(WMDesksPrivateEventsUnitTest,
+                           DispatchEventOnDeskRemoved);
+  FRIEND_TEST_ALL_PREFIXES(WMDesksPrivateEventsUnitTest,
+                           DispatchEventOnDeskSwitched);
 
   enum class RegisteredEventType {
     kLazy,
@@ -367,17 +373,17 @@ class EventRouter : public KeyedService,
   };
 
   // TODO(gdk): Document this.
-  static void DispatchExtensionMessage(
-      content::RenderProcessHost* rph,
-      int worker_thread_id,
-      content::BrowserContext* browser_context,
-      const std::string& extension_id,
-      int event_id,
-      const std::string& event_name,
-      base::Value::List event_args,
-      UserGestureState user_gesture,
-      extensions::mojom::EventFilteringInfoPtr info);
+  void DispatchExtensionMessage(content::RenderProcessHost* rph,
+                                int worker_thread_id,
+                                content::BrowserContext* browser_context,
+                                const std::string& extension_id,
+                                int event_id,
+                                const std::string& event_name,
+                                base::Value::List event_args,
+                                UserGestureState user_gesture,
+                                extensions::mojom::EventFilteringInfoPtr info);
 
+  void ObserveProcess(content::RenderProcessHost* process);
   content::RenderProcessHost* GetRenderProcessHostForCurrentReceiver();
 
   // Gets off-the-record browser context if
@@ -614,16 +620,16 @@ struct Event {
   // option to a constructor version for clients that need to disptach events to
   // related browser_contexts. See https://crbug.com/726022.
   Event(events::HistogramValue histogram_value,
-        const std::string& event_name,
+        base::StringPiece event_name,
         base::Value::List event_args);
 
   Event(events::HistogramValue histogram_value,
-        const std::string& event_name,
+        base::StringPiece event_name,
         base::Value::List event_args,
         content::BrowserContext* restrict_to_browser_context);
 
   Event(events::HistogramValue histogram_value,
-        const std::string& event_name,
+        base::StringPiece event_name,
         base::Value::List event_args,
         content::BrowserContext* restrict_to_browser_context,
         const GURL& event_url,

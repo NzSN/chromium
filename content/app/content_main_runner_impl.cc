@@ -77,6 +77,7 @@
 #include "content/public/app/content_main_delegate.h"
 #include "content/public/app/initialize_mojo_core.h"
 #include "content/public/browser/content_browser_client.h"
+#include "content/public/browser/network_service_util.h"
 #include "content/public/browser/tracing_delegate.h"
 #include "content/public/common/content_client.h"
 #include "content/public/common/content_constants.h"
@@ -85,13 +86,13 @@
 #include "content/public/common/content_paths.h"
 #include "content/public/common/content_switches.h"
 #include "content/public/common/main_function_params.h"
-#include "content/public/common/network_service_util.h"
 #include "content/public/common/zygote/zygote_buildflags.h"
 #include "content/public/gpu/content_gpu_client.h"
 #include "content/public/renderer/content_renderer_client.h"
 #include "content/public/utility/content_utility_client.h"
 #include "content/renderer/in_process_renderer_thread.h"
 #include "content/utility/in_process_utility_thread.h"
+#include "gin/thread_isolation.h"
 #include "gin/v8_initializer.h"
 #include "media/base/media.h"
 #include "media/media_buildflags.h"
@@ -998,6 +999,13 @@ int ContentMainRunnerImpl::Initialize(ContentMainParams params) {
 
   delegate_->PreSandboxStartup();
 
+#if BUILDFLAG(ENABLE_THREAD_ISOLATION)
+  // instantiate the ThreadIsolatedAllocator before we spawn threads
+  if (process_type == switches::kRendererProcess) {
+    gin::GetThreadIsolationData().InitializeBeforeThreadCreation();
+  }
+#endif  // BUILDFLAG(ENABLE_THREAD_ISOLATION)
+
 #if BUILDFLAG(IS_WIN)
   if (!sandbox::policy::Sandbox::Initialize(
           sandbox::policy::SandboxTypeFromCommandLine(command_line),
@@ -1234,7 +1242,7 @@ int ContentMainRunnerImpl::RunBrowser(MainFunctionParams main_params,
 #endif
 
     if (start_minimal_browser)
-      ForceInProcessNetworkService(true);
+      ForceInProcessNetworkService();
 
     discardable_shared_memory_manager_ =
         std::make_unique<discardable_memory::DiscardableSharedMemoryManager>();

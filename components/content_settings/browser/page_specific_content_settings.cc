@@ -27,6 +27,7 @@
 #include "components/content_settings/core/browser/content_settings_info.h"
 #include "components/content_settings/core/browser/content_settings_registry.h"
 #include "components/content_settings/core/browser/content_settings_utils.h"
+#include "components/content_settings/core/common/content_settings.h"
 #include "components/content_settings/core/common/content_settings_utils.h"
 #include "components/prefs/pref_service.h"
 #include "components/privacy_sandbox/canonical_topic.h"
@@ -45,6 +46,7 @@
 #include "content/public/browser/web_contents_observer.h"
 #include "content/public/browser/web_contents_user_data.h"
 #include "content/public/common/content_constants.h"
+#include "net/base/schemeful_site.h"
 #include "third_party/abseil-cpp/absl/types/optional.h"
 #include "third_party/blink/public/common/associated_interfaces/associated_interface_provider.h"
 #include "third_party/blink/public/common/storage_key/storage_key.h"
@@ -62,6 +64,10 @@ using LifecycleState = content::RenderFrameHost::LifecycleState;
 
 namespace content_settings {
 namespace {
+
+// Determines which taxonomy is used to generate sample topics for the Topics
+// API.
+constexpr int kTopicsAPISampleDataTaxonomy = 1;
 
 bool WillNavigationCreateNewPageSpecificContentSettingsOnCommit(
     content::NavigationHandle* navigation_handle) {
@@ -120,6 +126,7 @@ class WebContentsHandler
 
   // Notifies all registered |SiteDataObserver|s.
   void NotifySiteDataObservers(const AccessDetails& access_details);
+  void NotifyStatefulBounceObservers();
 
   // Queues update sent while the navigation is still in progress. The update
   // is run after the navigation completes (DidFinishNavigation).
@@ -165,6 +172,7 @@ class WebContentsHandler
       content::RenderFrameHost* frame,
       const GURL& scope,
       content::AllowServiceWorkerResult allowed) override;
+  void WebContentsDestroyed() override;
 
   std::unique_ptr<Delegate> delegate_;
 
@@ -225,10 +233,7 @@ WebContentsHandler::WebContentsHandler(content::WebContents* web_contents,
       web_contents->GetPrimaryPage(), delegate_.get());
 }
 
-WebContentsHandler::~WebContentsHandler() {
-  for (SiteDataObserver& observer : observer_list_)
-    observer.WebContentsDestroyed();
-}
+WebContentsHandler::~WebContentsHandler() = default;
 
 void WebContentsHandler::TransferNavigationContentSettingsToCommittedDocument(
     const InflightNavigationContentSettings& navigation_settings,
@@ -308,8 +313,8 @@ void WebContentsHandler::OnServiceWorkerAccessed(
     auto* inflight_navigation_settings =
         content::NavigationHandleUserData<InflightNavigationContentSettings>::
             GetOrCreateForNavigationHandle(*navigation);
-    inflight_navigation_settings->service_worker_accesses.emplace_back(
-        std::make_pair(scope, allowed));
+    inflight_navigation_settings->service_worker_accesses.emplace_back(scope,
+                                                                       allowed);
     return;
   }
   // All accesses during main frame navigations should enter the block above and
@@ -407,6 +412,12 @@ void WebContentsHandler::NotifySiteDataObservers(
     observer.OnSiteDataAccessed(access_details);
 }
 
+void WebContentsHandler::NotifyStatefulBounceObservers() {
+  for (SiteDataObserver& observer : observer_list_) {
+    observer.OnStatefulBounceDetected();
+  }
+}
+
 void WebContentsHandler::AddPendingCommitUpdate(
     content::GlobalRenderFrameHostId id,
     base::OnceClosure update) {
@@ -416,6 +427,12 @@ void WebContentsHandler::AddPendingCommitUpdate(
   DCHECK_EQ(rfh->GetLifecycleState(), LifecycleState::kPendingCommit);
 #endif
   pending_commit_updates_[id].push_back(std::move(update));
+}
+
+void WebContentsHandler::WebContentsDestroyed() {
+  for (SiteDataObserver& observer : observer_list_) {
+    observer.WebContentsDestroyed();
+  }
 }
 
 WEB_CONTENTS_USER_DATA_KEY_IMPL(WebContentsHandler);
@@ -453,6 +470,10 @@ PageSpecificContentSettings::SiteDataObserver::~SiteDataObserver() {
 }
 
 void PageSpecificContentSettings::SiteDataObserver::WebContentsDestroyed() {
+  auto* handler = WebContentsHandler::FromWebContents(web_contents_);
+  if (handler) {
+    handler->RemoveSiteDataObserver(this);
+  }
   web_contents_ = nullptr;
 }
 
@@ -634,6 +655,8 @@ bool PageSpecificContentSettings::IsContentBlocked(
       << "ContentSettingsNotificationsImageModel";
   DCHECK_NE(ContentSettingsType::AUTOMATIC_DOWNLOADS, content_type)
       << "Automatic downloads handled by DownloadRequestLimiter";
+  CHECK_NE(ContentSettingsType::STORAGE_ACCESS, content_type)
+      << "StorageAccess handled by GetTwoOriginRequests";
 
   if (content_type == ContentSettingsType::IMAGES ||
       content_type == ContentSettingsType::JAVASCRIPT ||
@@ -660,6 +683,8 @@ bool PageSpecificContentSettings::IsContentAllowed(
     ContentSettingsType content_type) const {
   DCHECK_NE(ContentSettingsType::AUTOMATIC_DOWNLOADS, content_type)
       << "Automatic downloads handled by DownloadRequestLimiter";
+  CHECK_NE(ContentSettingsType::STORAGE_ACCESS, content_type)
+      << "StorageAccess handled by GetTwoOriginRequests";
 
   // This method currently only returns meaningful values for the types listed
   // below.
@@ -677,6 +702,12 @@ bool PageSpecificContentSettings::IsContentAllowed(
   if (it != content_settings_status_.end())
     return it->second.allowed;
   return false;
+}
+
+std::map<net::SchemefulSite, /*is_allowed*/ bool>
+PageSpecificContentSettings::GetTwoSiteRequests(
+    ContentSettingsType content_type) {
+  return content_settings_two_site_requests_[content_type];
 }
 
 void PageSpecificContentSettings::OnContentBlocked(ContentSettingsType type) {
@@ -754,6 +785,15 @@ void PageSpecificContentSettings::OnContentAllowed(ContentSettingsType type) {
     MaybeUpdateLocationBar();
     MaybeUpdateParent(&PageSpecificContentSettings::OnContentAllowed, type);
   }
+}
+
+void PageSpecificContentSettings::OnTwoSitePermissionRequested(
+    ContentSettingsType type,
+    net::SchemefulSite requesting_site,
+    bool is_allowed) {
+  content_settings_two_site_requests_[type][requesting_site] = is_allowed;
+
+  MaybeUpdateLocationBar();
 }
 
 namespace {
@@ -1087,6 +1127,12 @@ void PageSpecificContentSettings::OnAudioBlocked() {
   OnContentBlocked(ContentSettingsType::SOUND);
 }
 
+void PageSpecificContentSettings::IncrementStatefulBounceCount() {
+  stateful_bounce_count_++;
+  WebContentsHandler::FromWebContents(GetWebContents())
+      ->NotifyStatefulBounceObservers();
+}
+
 void PageSpecificContentSettings::OnContentSettingChanged(
     const ContentSettingsPattern& primary_pattern,
     const ContentSettingsPattern& secondary_pattern,
@@ -1210,12 +1256,10 @@ PageSpecificContentSettings::GetAccessedTopics() const {
            .Get()) &&
       page().GetMainDocument().GetLastCommittedURL().host() == "example.com") {
     // TODO(crbug.com/1286276): Remove sample topic when API is ready.
-    return {privacy_sandbox::CanonicalTopic(
-                browsing_topics::Topic(3),
-                privacy_sandbox::CanonicalTopic::AVAILABLE_TAXONOMY),
-            privacy_sandbox::CanonicalTopic(
-                browsing_topics::Topic(4),
-                privacy_sandbox::CanonicalTopic::AVAILABLE_TAXONOMY)};
+    return {privacy_sandbox::CanonicalTopic(browsing_topics::Topic(3),
+                                            kTopicsAPISampleDataTaxonomy),
+            privacy_sandbox::CanonicalTopic(browsing_topics::Topic(4),
+                                            kTopicsAPISampleDataTaxonomy)};
   }
   return {accessed_topics_.begin(), accessed_topics_.end()};
 }

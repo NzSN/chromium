@@ -89,8 +89,7 @@ class CONTENT_EXPORT IdentityRequestDialogController {
 
   using DismissCallback =
       base::OnceCallback<void(DismissReason dismiss_reason)>;
-  using IdentityRegistryCallback =
-      base::OnceCallback<void(WebContents* web_contents)>;
+  using SigninToIdPCallback = base::OnceCallback<void()>;
 
   IdentityRequestDialogController() = default;
 
@@ -135,7 +134,7 @@ class CONTENT_EXPORT IdentityRequestDialogController {
       const std::string& idp_for_display,
       const IdentityProviderMetadata& idp_metadata,
       DismissCallback dismiss_callback,
-      IdentityRegistryCallback identity_registry_callback);
+      SigninToIdPCallback signin_callback);
 
   // Only to be called after a dialog is shown.
   virtual std::string GetTitle() const;
@@ -144,13 +143,12 @@ class CONTENT_EXPORT IdentityRequestDialogController {
   // Show dialog notifying user that IdP sign-in failed.
   virtual void ShowIdpSigninFailureDialog(base::OnceClosure dismiss_callback);
 
-  // Show a pop-up window that the IdP controls.
-  virtual void ShowPopUpWindow(const GURL& url,
-                               TokenCallback on_resolve,
-                               DismissCallback dismiss_callback);
+  // Show a modal dialog that loads content from the IdP.
+  virtual WebContents* ShowModalDialog(const GURL& url,
+                                       DismissCallback dismiss_callback);
 
-  // Closes the IDP sign-in modal dialog.
-  virtual void CloseIdpSigninModalDialog();
+  // Closes the modal dialog.
+  virtual void CloseModalDialog();
 
  protected:
   bool is_interception_enabled_{false};

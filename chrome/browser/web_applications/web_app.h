@@ -6,12 +6,14 @@
 #define CHROME_BROWSER_WEB_APPLICATIONS_WEB_APP_H_
 
 #include <iosfwd>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "base/containers/flat_set.h"
 #include "base/time/time.h"
 #include "base/values.h"
+#include "base/version.h"
 #include "build/chromeos_buildflags.h"
 #include "chrome/browser/web_applications/isolated_web_apps/isolated_web_app_location.h"
 #include "chrome/browser/web_applications/mojom/user_display_mode.mojom.h"
@@ -260,9 +262,7 @@ class WebApp {
 
   const GURL& manifest_url() const { return manifest_url_; }
 
-  const absl::optional<std::string>& manifest_id() const {
-    return manifest_id_;
-  }
+  ManifestId manifest_id() const;
 
   const absl::optional<LaunchHandler>& launch_handler() const {
     return launch_handler_;
@@ -333,7 +333,10 @@ class WebApp {
   // If present, signals that this app is an Isolated Web App, and contains
   // IWA-specific information like bundle location.
   struct IsolationData {
-    explicit IsolationData(IsolatedWebAppLocation location);
+    IsolationData(IsolatedWebAppLocation location, base::Version version);
+    IsolationData(IsolatedWebAppLocation location,
+                  base::Version version,
+                  const std::set<std::string>& controlled_frame_partitions);
     ~IsolationData();
     IsolationData(const IsolationData&);
     IsolationData& operator=(const IsolationData&);
@@ -345,6 +348,8 @@ class WebApp {
     base::Value AsDebugValue() const;
 
     IsolatedWebAppLocation location;
+    base::Version version;
+    std::set<std::string> controlled_frame_partitions;
   };
   const absl::optional<IsolationData>& isolation_data() const {
     return isolation_data_;
@@ -425,7 +430,7 @@ class WebApp {
   void SetSyncFallbackData(SyncFallbackData sync_fallback_data);
   void SetCaptureLinks(blink::mojom::CaptureLinks capture_links);
   void SetManifestUrl(const GURL& manifest_url);
-  void SetManifestId(const absl::optional<std::string>& manifest_id);
+  void SetManifestId(const ManifestId& manifest_id);
   void SetWindowControlsOverlayEnabled(bool enabled);
   void SetLaunchHandler(absl::optional<LaunchHandler> launch_handler);
   void SetParentAppId(const absl::optional<AppId>& parent_app_id);
@@ -453,7 +458,7 @@ class WebApp {
   // This adds a policy_id per management type (source) for the
   // ExternalConfigMap.
   void AddPolicyIdToManagementExternalConfigMap(WebAppManagement::Type type,
-                                                const std::string& policy_id);
+                                                std::string policy_id);
 
   // Encapsulate the addition of install_url and is_placeholder information
   // for cases where both need to be added.
@@ -461,7 +466,8 @@ class WebApp {
                                     GURL install_url,
                                     bool is_placeholder);
 
-  bool RemoveInstallUrlForSource(WebAppManagement::Type type, GURL install_url);
+  bool RemoveInstallUrlForSource(WebAppManagement::Type type,
+                                 const GURL& install_url);
 
   // Only used on Mac, determines if the toolbar should be permanently shown
   // when in fullscreen.
@@ -542,7 +548,7 @@ class WebApp {
       blink::mojom::CaptureLinks::kUndefined;
   ClientData client_data_;
   GURL manifest_url_;
-  absl::optional<std::string> manifest_id_;
+  ManifestId manifest_id_;
   // The state of the user's approval of the app's use of the File Handler API.
   ApiApprovalState file_handler_approval_state_ =
       ApiApprovalState::kRequiresPrompt;

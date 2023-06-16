@@ -26,6 +26,8 @@
 #include "cc/base/container_util.h"
 #include "components/viz/client/client_resource_provider.h"
 #include "components/viz/common/gpu/context_provider.h"
+#include "components/viz/common/resources/resource_format_utils.h"
+#include "components/viz/common/resources/shared_image_format_utils.h"
 #include "gpu/command_buffer/client/context_support.h"
 #include "gpu/command_buffer/client/gles2_interface.h"
 #include "gpu/command_buffer/common/capabilities.h"
@@ -80,11 +82,11 @@ void ResourcePool::GpuBacking::InitOverlayCandidateAndTextureTarget(
     bool use_gpu_memory_buffer_resources) {
   overlay_candidate =
       use_gpu_memory_buffer_resources && caps.supports_scanout_shared_images &&
-      IsGpuMemoryBufferFormatSupported(format.resource_format());
+      CanCreateGpuMemoryBufferForSinglePlaneSharedImageFormat(format);
   if (overlay_candidate) {
     texture_target = gpu::GetBufferTextureTarget(
-        gfx::BufferUsage::SCANOUT, BufferFormat(format.resource_format()),
-        caps);
+        gfx::BufferUsage::SCANOUT,
+        viz::SinglePlaneSharedImageFormatToBufferFormat(format), caps);
   } else {
     texture_target = GL_TEXTURE_2D;
   }
@@ -165,8 +167,7 @@ ResourcePool::PoolResource* ResourcePool::CreateResource(
     const gfx::Size& size,
     viz::SharedImageFormat format,
     const gfx::ColorSpace& color_space) {
-  DCHECK(viz::ResourceSizes::VerifySizeInBytes<size_t>(
-      size, format.resource_format()));
+  DCHECK(format.VerifySizeInBytes(size));
 
   auto pool_resource = std::make_unique<PoolResource>(
       this, next_resource_unique_id_++, size, format, color_space);
@@ -580,8 +581,7 @@ base::TimeTicks ResourcePool::GetUsageTimeForLRUResource() const {
 void ResourcePool::FlushEvictedResources() {
   flush_evicted_resources_deadline_ = base::TimeTicks::Max();
   if (context_provider_) {
-    // Flush any ContextGL work as well as any SharedImageInterface work.
-    context_provider_->ContextGL()->OrderingBarrierCHROMIUM();
+    // Flush any raster + shared image work.
     context_provider_->ContextSupport()->FlushPendingWork();
   }
 }

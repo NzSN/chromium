@@ -9,8 +9,8 @@
 #include "base/metrics/histogram_macros.h"
 #include "components/sync/base/stop_source.h"
 #include "components/sync/base/user_selectable_type.h"
-#include "components/sync/driver/sync_service.h"
-#include "components/sync/driver/sync_user_settings.h"
+#include "components/sync/service/sync_service.h"
+#include "components/sync/service/sync_user_settings.h"
 
 SyncSetupService::SyncSetupService(syncer::SyncService* sync_service)
     : sync_service_(sync_service) {
@@ -30,8 +30,7 @@ bool SyncSetupService::IsDataTypePreferred(
 
 void SyncSetupService::SetDataTypeEnabled(syncer::UserSelectableType datatype,
                                           bool enabled) {
-  if (!sync_blocker_)
-    sync_blocker_ = sync_service_->GetSetupInProgressHandle();
+  CHECK(sync_blocker_);
 
   syncer::SyncUserSettings* user_settings = sync_service_->GetUserSettings();
   syncer::UserSelectableTypeSet selected_types =
@@ -44,7 +43,7 @@ void SyncSetupService::SetDataTypeEnabled(syncer::UserSelectableType datatype,
 }
 
 bool SyncSetupService::UserActionIsRequiredToHaveTabSyncWork() {
-  if (!CanSyncFeatureStart() ||
+  if (!IsSyncFeatureEnabled() ||
       !IsDataTypePreferred(syncer::UserSelectableType::kTabs)) {
     return true;
   }
@@ -84,19 +83,13 @@ bool SyncSetupService::IsSyncEverythingEnabled() const {
 }
 
 void SyncSetupService::SetSyncEverythingEnabled(bool sync_all) {
-  if (!sync_blocker_)
-    sync_blocker_ = sync_service_->GetSetupInProgressHandle();
+  CHECK(sync_blocker_);
   sync_service_->GetUserSettings()->SetSelectedTypes(
       sync_all, sync_service_->GetUserSettings()->GetSelectedTypes());
 }
 
-bool SyncSetupService::IsSyncRequested() const {
-  return !sync_service_->GetDisableReasons().Has(
-      syncer::SyncService::DISABLE_REASON_USER_CHOICE);
-}
-
-bool SyncSetupService::CanSyncFeatureStart() const {
-  return sync_service_->CanSyncFeatureStart();
+bool SyncSetupService::IsSyncFeatureEnabled() const {
+  return sync_service_->IsSyncFeatureEnabled();
 }
 
 bool SyncSetupService::IsEncryptEverythingEnabled() const {
@@ -108,18 +101,19 @@ void SyncSetupService::PrepareForFirstSyncSetup() {
     sync_blocker_ = sync_service_->GetSetupInProgressHandle();
 }
 
-void SyncSetupService::SetFirstSetupComplete(
+void SyncSetupService::SetInitialSyncFeatureSetupComplete(
     syncer::SyncFirstSetupCompleteSource source) {
-  DCHECK(sync_blocker_);
+  CHECK(sync_blocker_);
   // Turn on the sync setup completed flag only if the user did not turn sync
   // off.
   if (sync_service_->CanSyncFeatureStart()) {
-    sync_service_->GetUserSettings()->SetFirstSetupComplete(source);
+    sync_service_->GetUserSettings()->SetInitialSyncFeatureSetupComplete(
+        source);
   }
 }
 
-bool SyncSetupService::IsFirstSetupComplete() const {
-  return sync_service_->GetUserSettings()->IsFirstSetupComplete();
+bool SyncSetupService::IsInitialSyncFeatureSetupComplete() const {
+  return sync_service_->GetUserSettings()->IsInitialSyncFeatureSetupComplete();
 }
 
 void SyncSetupService::CommitSyncChanges() {

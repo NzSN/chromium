@@ -71,7 +71,6 @@ class BlobRegistryWrapper;
 class BluetoothAllowedDevicesMap;
 class BroadcastChannelService;
 class BrowsingDataFilterBuilder;
-class BrowsingTopicsURLLoaderService;
 class KeepAliveURLLoaderService;
 class BucketManager;
 class CacheStorageControlWrapper;
@@ -89,13 +88,14 @@ class LockManager;
 class MediaLicenseManager;
 #endif  // BUILDFLAG(ENABLE_LIBRARY_CDMS)
 class PaymentAppContextImpl;
-class PrefetchURLLoaderService;
 class PrivateAggregationManager;
 class PushMessagingContext;
 class ResourceCacheManager;
 class QuotaContext;
+class SharedStorageHeaderObserver;
 class SharedStorageWorkletHostManager;
 class SharedWorkerServiceImpl;
+class SubresourceProxyingURLLoaderService;
 class NavigationOrDocumentHandle;
 
 class CONTENT_EXPORT StoragePartitionImpl
@@ -143,6 +143,9 @@ class CONTENT_EXPORT StoragePartitionImpl
   void OverrideSharedStorageWorkletHostManagerForTesting(
       std::unique_ptr<SharedStorageWorkletHostManager>
           shared_storage_worklet_host_manager);
+  void OverrideSharedStorageHeaderObserverForTesting(
+      std::unique_ptr<SharedStorageHeaderObserver>
+          shared_storage_header_observer);
   void OverrideAggregationServiceForTesting(
       std::unique_ptr<AggregationService> aggregation_service);
   void OverrideAttributionManagerForTesting(
@@ -252,8 +255,7 @@ class CONTENT_EXPORT StoragePartitionImpl
   BluetoothAllowedDevicesMap* GetBluetoothAllowedDevicesMap();
   BlobRegistryWrapper* GetBlobRegistry();
   storage::BlobUrlRegistry* GetBlobUrlRegistry();
-  PrefetchURLLoaderService* GetPrefetchURLLoaderService();
-  BrowsingTopicsURLLoaderService* GetBrowsingTopicsURLLoaderService();
+  SubresourceProxyingURLLoaderService* GetSubresourceProxyingURLLoaderService();
   KeepAliveURLLoaderService* GetKeepAliveURLLoaderService();
   CookieStoreManager* GetCookieStoreManager();
   FileSystemAccessManagerImpl* GetFileSystemAccessManager();
@@ -353,6 +355,14 @@ class CONTENT_EXPORT StoragePartitionImpl
   void OnDataUseUpdate(int32_t network_traffic_annotation_id_hash,
                        int64_t recv_bytes,
                        int64_t sent_bytes) override;
+  void OnSharedStorageHeaderReceived(
+      const url::Origin& request_origin,
+      std::vector<network::mojom::SharedStorageOperationPtr> operations,
+      OnSharedStorageHeaderReceivedCallback callback) override;
+
+  SharedStorageHeaderObserver* shared_storage_header_observer() {
+    return shared_storage_header_observer_.get();
+  }
 
   scoped_refptr<URLLoaderFactoryGetter> url_loader_factory_getter() {
     return url_loader_factory_getter_;
@@ -609,7 +619,7 @@ class CONTENT_EXPORT StoragePartitionImpl
   // Raw pointer that should always be valid. The BrowserContext owns the
   // StoragePartitionImplMap which then owns StoragePartitionImpl. When the
   // BrowserContext is destroyed, `this` will be destroyed too.
-  raw_ptr<BrowserContext> browser_context_;
+  raw_ptr<BrowserContext, DanglingUntriaged> browser_context_;
 
   const base::FilePath partition_path_;
 
@@ -647,9 +657,8 @@ class CONTENT_EXPORT StoragePartitionImpl
   std::unique_ptr<BluetoothAllowedDevicesMap> bluetooth_allowed_devices_map_;
   scoped_refptr<BlobRegistryWrapper> blob_registry_;
   std::unique_ptr<storage::BlobUrlRegistry> blob_url_registry_;
-  std::unique_ptr<PrefetchURLLoaderService> prefetch_url_loader_service_;
-  std::unique_ptr<BrowsingTopicsURLLoaderService>
-      browsing_topics_url_loader_service_;
+  std::unique_ptr<SubresourceProxyingURLLoaderService>
+      subresource_proxying_url_loader_service_;
   std::unique_ptr<KeepAliveURLLoaderService> keep_alive_url_loader_service_;
   std::unique_ptr<CookieStoreManager> cookie_store_manager_;
   std::unique_ptr<BucketManager> bucket_manager_;
@@ -679,6 +688,9 @@ class CONTENT_EXPORT StoragePartitionImpl
   // it.
   std::unique_ptr<SharedStorageWorkletHostManager>
       shared_storage_worklet_host_manager_;
+
+  // Owning pointer to the `SharedStorageHeaderObserver` for this partition.
+  std::unique_ptr<SharedStorageHeaderObserver> shared_storage_header_observer_;
 
   std::unique_ptr<PrivateAggregationManager> private_aggregation_manager_;
 

@@ -10,15 +10,15 @@
 #import "components/breadcrumbs/core/breadcrumb_manager_keyed_service.h"
 #import "ios/chrome/browser/crash_report/breadcrumbs/breadcrumb_manager_keyed_service_factory.h"
 #import "ios/chrome/browser/crash_report/breadcrumbs/breadcrumb_manager_tab_helper.h"
-#import "ios/chrome/browser/main/browser.h"
 #import "ios/chrome/browser/overlays/public/web_content_area/alert_overlay.h"
 #import "ios/chrome/browser/overlays/public/web_content_area/app_launcher_overlay.h"
 #import "ios/chrome/browser/overlays/public/web_content_area/http_auth_overlay.h"
 #import "ios/chrome/browser/overlays/public/web_content_area/java_script_alert_dialog_overlay.h"
 #import "ios/chrome/browser/overlays/public/web_content_area/java_script_confirm_dialog_overlay.h"
 #import "ios/chrome/browser/overlays/public/web_content_area/java_script_prompt_dialog_overlay.h"
+#import "ios/chrome/browser/shared/model/browser/browser.h"
 #import "ios/chrome/browser/shared/model/browser_state/chrome_browser_state.h"
-#import "ios/chrome/browser/web_state_list/web_state_list.h"
+#import "ios/chrome/browser/shared/model/web_state_list/web_state_list.h"
 
 #if !defined(__has_feature) || !__has_feature(objc_arc)
 #error "This file requires ARC support."
@@ -65,6 +65,24 @@ void BreadcrumbManagerBrowserAgent::PlatformLogEvent(const std::string& event) {
       ->AddEvent(event);
 }
 
+#pragma mark - WebStateListObserver
+
+void BreadcrumbManagerBrowserAgent::WebStateListChanged(
+    WebStateList* web_state_list,
+    const WebStateListChange& change,
+    const WebStateSelection& selection) {
+  switch (change.type()) {
+    case WebStateListChange::Type::kReplace: {
+      const WebStateListChangeReplace& replace_change =
+          change.As<WebStateListChangeReplace>();
+      LogTabReplaced(GetTabId(replace_change.replaced_web_state()),
+                     GetTabId(replace_change.inserted_web_state()),
+                     selection.index);
+      break;
+    }
+  }
+}
+
 void BreadcrumbManagerBrowserAgent::WebStateInsertedAt(
     WebStateList* web_state_list,
     web::WebState* web_state,
@@ -82,14 +100,6 @@ void BreadcrumbManagerBrowserAgent::WebStateMoved(WebStateList* web_state_list,
                                                   int from_index,
                                                   int to_index) {
   LogTabMoved(GetTabId(web_state), from_index, to_index);
-}
-
-void BreadcrumbManagerBrowserAgent::WebStateReplacedAt(
-    WebStateList* web_state_list,
-    web::WebState* old_web_state,
-    web::WebState* new_web_state,
-    int index) {
-  LogTabReplaced(GetTabId(old_web_state), GetTabId(new_web_state), index);
 }
 
 void BreadcrumbManagerBrowserAgent::WillCloseWebStateAt(

@@ -141,7 +141,7 @@ void IBANManager::SendIBANSuggestions(const std::vector<IBAN*>& ibans,
 }
 
 void IBANManager::OnSingleFieldSuggestionSelected(const std::u16string& value,
-                                                  int frontend_id) {
+                                                  PopupItemId popup_item_id) {
   uma_recorder_.OnIbanSuggestionSelected();
 }
 

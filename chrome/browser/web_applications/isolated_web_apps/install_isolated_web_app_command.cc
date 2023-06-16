@@ -4,6 +4,7 @@
 
 #include "chrome/browser/web_applications/isolated_web_apps/install_isolated_web_app_command.h"
 
+#include <array>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -25,12 +26,14 @@
 #include "base/values.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/web_applications/commands/web_app_command.h"
+#include "chrome/browser/web_applications/isolated_web_apps/error/unusable_swbn_file_error.h"
 #include "chrome/browser/web_applications/isolated_web_apps/isolated_web_app_dev_mode.h"
 #include "chrome/browser/web_applications/isolated_web_apps/isolated_web_app_location.h"
 #include "chrome/browser/web_applications/isolated_web_apps/isolated_web_app_response_reader.h"
 #include "chrome/browser/web_applications/isolated_web_apps/isolated_web_app_response_reader_factory.h"
 #include "chrome/browser/web_applications/isolated_web_apps/isolated_web_app_trust_checker.h"
 #include "chrome/browser/web_applications/isolated_web_apps/isolated_web_app_validator.h"
+#include "chrome/browser/web_applications/isolated_web_apps/isolated_web_app_version.h"
 #include "chrome/browser/web_applications/isolated_web_apps/pending_install_info.h"
 #include "chrome/browser/web_applications/locks/app_lock.h"
 #include "chrome/browser/web_applications/mojom/user_display_mode.mojom.h"
@@ -68,19 +71,12 @@ bool IsUrlLoadingResultSuccess(WebAppUrlLoader::Result result) {
   return result == WebAppUrlLoader::Result::kUrlLoaded;
 }
 
-absl::optional<std::string> UTF16ToUTF8(base::StringPiece16 src) {
-  std::string dest;
-  if (!base::UTF16ToUTF8(src.data(), src.length(), &dest)) {
-    return absl::nullopt;
-  }
-  return dest;
-}
-
 }  // namespace
 
 InstallIsolatedWebAppCommand::InstallIsolatedWebAppCommand(
     const IsolatedWebAppUrlInfo& url_info,
     const IsolatedWebAppLocation& location,
+    const absl::optional<base::Version>& expected_version,
     std::unique_ptr<content::WebContents> web_contents,
     std::unique_ptr<WebAppUrlLoader> url_loader,
     std::unique_ptr<ScopedKeepAlive> optional_keep_alive,
@@ -95,6 +91,7 @@ InstallIsolatedWebAppCommand::InstallIsolatedWebAppCommand(
           std::make_unique<AppLockDescription>(url_info.app_id())),
       url_info_(url_info),
       location_(location),
+      expected_version_(expected_version),
       response_reader_factory_(std::move(response_reader_factory)),
       web_contents_(std::move(web_contents)),
       url_loader_(std::move(url_loader)),
@@ -204,9 +201,8 @@ void InstallIsolatedWebAppCommand::CheckTrustAndSignaturesOfBundle(
       /*skip_signature_verification=*/false,
       base::BindOnce(
           [](base::expected<std::unique_ptr<IsolatedWebAppResponseReader>,
-                            IsolatedWebAppResponseReaderFactory::Error> reader)
-              -> base::expected<void,
-                                IsolatedWebAppResponseReaderFactory::Error> {
+                            UnusableSwbnFileError> reader)
+              -> base::expected<void, UnusableSwbnFileError> {
             if (!reader.has_value()) {
               return base::unexpected(std::move(reader.error()));
             }
@@ -218,10 +214,10 @@ void InstallIsolatedWebAppCommand::CheckTrustAndSignaturesOfBundle(
 }
 
 void InstallIsolatedWebAppCommand::OnTrustAndSignaturesChecked(
-    base::expected<void, IsolatedWebAppResponseReaderFactory::Error> result) {
-  if (!result.has_value()) {
+    base::expected<void, UnusableSwbnFileError> status) {
+  if (!status.has_value()) {
     ReportFailure(
-        IsolatedWebAppResponseReaderFactory::ErrorToString(result.error()));
+        IsolatedWebAppResponseReaderFactory::ErrorToString(status.error()));
     return;
   }
 
@@ -277,23 +273,51 @@ base::expected<WebAppInstallInfo, std::string>
 InstallIsolatedWebAppCommand::CreateInstallInfoFromManifest(
     const blink::mojom::Manifest& manifest,
     const GURL& manifest_url) {
-  WebAppInstallInfo info;
+  if (!manifest.id.is_valid()) {
+    return base::unexpected(
+        "Manifest `id` is not present or invalid. manifest_url: " +
+        manifest_url.possibly_invalid_spec());
+  }
+
+  WebAppInstallInfo info(manifest.id);
   UpdateWebAppInfoFromManifest(manifest, manifest_url, &info);
 
-  if (!manifest.id.has_value()) {
-    return base::unexpected("Manifest `id` is not present. manifest_url: " +
-                            manifest_url.possibly_invalid_spec());
-  }
-
-  // In other installations the best-effort encoding is fine, but for isolated
-  // apps we have the opportunity to report this error.
-  absl::optional<std::string> encoded_id = UTF16ToUTF8(*manifest.id);
-  if (!encoded_id.has_value()) {
+  if (!manifest.version.has_value()) {
     return base::unexpected(
-        "Failed to convert manifest `id` from UTF16 to UTF8.");
+        "Manifest `version` is not present. manifest_url: " +
+        manifest_url.possibly_invalid_spec());
+  }
+  std::string version_string;
+  if (!base::UTF16ToUTF8(manifest.version->data(), manifest.version->length(),
+                         &version_string)) {
+    return base::unexpected(
+        "Failed to convert manifest `version` from UTF16 to UTF8.");
   }
 
-  if (!encoded_id->empty()) {
+  base::expected<std::array<uint32_t, 3>, IwaVersionParseError>
+      version_components = ParseIwaVersionIntoComponents(version_string);
+  if (!version_components.has_value()) {
+    return base::unexpected(base::StrCat(
+        {"Failed to parse `version` from the manifest: It must be in the form "
+         "`x.y.z`, where `x`, `y`, and `z` are numbers without leading zeros. "
+         "Detailed error: ",
+         IwaVersionParseErrorToString(version_components.error()),
+         " Got: ", version_string}));
+  }
+  base::Version version(
+      std::vector(version_components->begin(), version_components->end()));
+  info.isolated_web_app_version = version;
+
+  if (expected_version_.has_value() && *expected_version_ != version) {
+    return base::unexpected(
+        "Expected version (" + expected_version_->GetString() +
+        ") does not match the version provided in the manifest (" +
+        version.GetString() + ")");
+  }
+
+  std::string encoded_id = manifest.id.path();
+
+  if (encoded_id != "/") {
     // Recommend to use "/" for manifest id and not empty manifest id because
     // the manifest parser does additional work on resolving manifest id taking
     // `start_url` into account. (See https://w3c.github.io/manifest/#id-member
@@ -304,7 +328,7 @@ InstallIsolatedWebAppCommand::CreateInstallInfoFromManifest(
     // to identify Isolated Web Apps by origin because there is always only 1
     // app per origin.
     return base::unexpected(
-        R"(Manifest `id` must be "/". Resolved manifest id: )" + *encoded_id);
+        R"(Manifest `id` must be "/". Resolved manifest id: )" + encoded_id);
   }
 
   url::Origin origin = url_info_.origin();
@@ -321,7 +345,6 @@ InstallIsolatedWebAppCommand::CreateInstallInfoFromManifest(
          manifest_url.possibly_invalid_spec()}));
   }
 
-  info.manifest_id = "";
   info.user_display_mode = mojom::UserDisplayMode::kStandalone;
 
   return info;
@@ -421,11 +444,6 @@ void InstallIsolatedWebAppCommand::OnGetIcons(
   PopulateOtherIcons(&install_info, icons_map);
 
   FinalizeInstall(install_info);
-}
-
-void InstallIsolatedWebAppCommand::OnSyncSourceRemoved() {
-  // TODO(kuragin): Test cancellation on sync source removed event.
-  ReportFailure("Sync source removed.");
 }
 
 void InstallIsolatedWebAppCommand::OnShutdown() {

@@ -78,21 +78,6 @@ bool GetIsPinnedToShelfByDefault() {
   return diagonal_len > kMinimumScreenSizeDiagonal;
 }
 
-// Used for getting default pin state for experiment.
-bool GetIsPinnedToShelfByFeatureParams() {
-  switch (media::kCrosGlobalMediaControlsPinParam.Get()) {
-    case media::kCrosGlobalMediaControlsPinOptions::kPin:
-      return true;
-    case media::kCrosGlobalMediaControlsPinOptions::kNotPin:
-      return false;
-    case media::kCrosGlobalMediaControlsPinOptions::kHeuristic:
-      return GetIsPinnedToShelfByDefault();
-  }
-
-  NOTREACHED();
-  return false;
-}
-
 // Enum that specifies the pin state of global media controls.
 enum PinState {
   kDefault = 0,
@@ -178,7 +163,7 @@ bool MediaTray::IsPinnedToShelf() {
     case PinState::kUnpinned:
       return false;
     case PinState::kDefault:
-      return GetIsPinnedToShelfByFeatureParams();
+      return GetIsPinnedToShelfByDefault();
   }
 
   NOTREACHED();
@@ -345,7 +330,8 @@ void MediaTray::ShowBubbleWithItem(const std::string& item_id) {
   DCHECK(MediaNotificationProvider::Get());
   SetNotificationColorTheme();
 
-  std::unique_ptr<TrayBubbleView> bubble_view = CreateTrayBubbleView();
+  std::unique_ptr<TrayBubbleView> bubble_view =
+      std::make_unique<TrayBubbleView>(CreateInitParamsForTrayBubble(this));
 
   auto* title_view = bubble_view->AddChildView(
       std::make_unique<GlobalMediaControlsTitleView>());
@@ -438,24 +424,6 @@ void MediaTray::AnchorUpdated() {
 
   bubble_->GetBubbleView()->SetAnchorRect(
       shelf()->GetStatusAreaWidget()->GetMediaTrayAnchorRect());
-}
-
-std::unique_ptr<TrayBubbleView> MediaTray::CreateTrayBubbleView() {
-  TrayBubbleView::InitParams init_params;
-  init_params.delegate = GetWeakPtr();
-  init_params.parent_window = GetBubbleWindowContainer();
-  init_params.anchor_view = nullptr;
-  init_params.anchor_mode = TrayBubbleView::AnchorMode::kRect;
-  init_params.anchor_rect = GetAnchorBoundsInScreen();
-  init_params.insets = GetTrayBubbleInsets();
-  init_params.shelf_alignment = shelf()->alignment();
-  init_params.preferred_width = kTrayMenuWidth;
-  init_params.close_on_deactivate = true;
-  init_params.translucent = true;
-  init_params.corner_radius = kTrayItemCornerRadius;
-  init_params.reroute_event_handler = true;
-
-  return std::make_unique<TrayBubbleView>(init_params);
 }
 
 }  // namespace ash

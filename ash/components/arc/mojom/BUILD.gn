@@ -22,6 +22,7 @@ mojom("mojom") {
     "bluetooth.mojom",
     "boot_phase_monitor.mojom",
     "camera.mojom",
+    "chrome_feature_flags.mojom",
     "clipboard.mojom",
     "compatibility_mode.mojom",
     "crash_collector.mojom",
@@ -46,7 +47,6 @@ mojom("mojom") {
     "nearby_share.mojom",
     "net.mojom",
     "obb_mounter.mojom",
-    "payment_app.mojom",
     "pip.mojom",
     "policy.mojom",
     "power.mojom",
@@ -342,10 +342,6 @@ mojom("media") {
         {
           mojom = "arc.mojom.VideoFrameStorageType"
           cpp = "::media::VideoEncodeAccelerator::Config::StorageType"
-        },
-        {
-          mojom = "arc.mojom.VideoEncodeAccelerator.Error"
-          cpp = "::media::VideoEncodeAccelerator::Error"
         },
         {
           mojom = "arc.mojom.VideoEncodeProfile"

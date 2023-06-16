@@ -24,6 +24,7 @@
 #include "components/autofill/core/browser/data_model/iban.h"
 #include "components/autofill/core/browser/field_types.h"
 #include "components/autofill/core/browser/randomized_encoder.h"
+#include "components/autofill/core/browser/ui/popup_item_ids.h"
 #include "components/autofill/core/browser/webdata/autofill_table.h"
 #include "components/autofill/core/common/autofill_clock.h"
 #include "components/autofill/core/common/autofill_constants.h"
@@ -220,8 +221,7 @@ void CreateTestFormField(const char* label,
                          FormFieldData* field) {
   CreateTestFormField(label, name, value, type, field);
   field->autocomplete_attribute = autocomplete;
-  field->parsed_autocomplete =
-      ParseAutocompleteAttribute(autocomplete, field->max_length);
+  field->parsed_autocomplete = ParseAutocompleteAttribute(autocomplete);
 }
 
 void CreateTestFormField(const char* label,
@@ -265,8 +265,7 @@ void CreateTestSelectField(const char* label,
                            FormFieldData* field) {
   CreateTestSelectField(label, name, value, values, contents, field);
   field->autocomplete_attribute = autocomplete;
-  field->parsed_autocomplete =
-      ParseAutocompleteAttribute(autocomplete, field->max_length);
+  field->parsed_autocomplete = ParseAutocompleteAttribute(autocomplete);
 }
 
 void CreateTestSelectField(const std::vector<const char*>& values,
@@ -455,8 +454,7 @@ inline void check_and_set(
 }
 
 AutofillProfile GetFullValidProfileForCanada() {
-  AutofillProfile profile(base::Uuid::GenerateRandomV4().AsLowercaseString(),
-                          kEmptyOrigin);
+  AutofillProfile profile;
   SetProfileInfo(&profile, "Alice", "", "Wonderland", "alice@wonderland.ca",
                  "Fiction", "666 Notre-Dame Ouest", "Apt 8", "Montreal", "QC",
                  "H3B 2T9", "CA", "15141112233");
@@ -464,8 +462,7 @@ AutofillProfile GetFullValidProfileForCanada() {
 }
 
 AutofillProfile GetFullProfile() {
-  AutofillProfile profile(base::Uuid::GenerateRandomV4().AsLowercaseString(),
-                          kEmptyOrigin);
+  AutofillProfile profile;
   SetProfileInfo(&profile, "John", "H.", "Doe", "johndoe@hades.com",
                  "Underworld", "666 Erebus St.", "Apt 8", "Elysium", "CA",
                  "91111", "US", "16502111111");
@@ -473,8 +470,7 @@ AutofillProfile GetFullProfile() {
 }
 
 AutofillProfile GetFullProfile2() {
-  AutofillProfile profile(base::Uuid::GenerateRandomV4().AsLowercaseString(),
-                          kEmptyOrigin);
+  AutofillProfile profile;
   SetProfileInfo(&profile, "Jane", "A.", "Smith", "jsmith@example.com", "ACME",
                  "123 Main Street", "Unit 1", "Greensdale", "MI", "48838", "US",
                  "13105557889");
@@ -482,8 +478,7 @@ AutofillProfile GetFullProfile2() {
 }
 
 AutofillProfile GetFullCanadianProfile() {
-  AutofillProfile profile(base::Uuid::GenerateRandomV4().AsLowercaseString(),
-                          kEmptyOrigin);
+  AutofillProfile profile;
   SetProfileInfo(&profile, "Wayne", "", "Gretzky", "wayne@hockey.com", "NHL",
                  "123 Hockey rd.", "Apt 8", "Moncton", "New Brunswick",
                  "E1A 0A6", "CA", "15068531212");
@@ -491,8 +486,7 @@ AutofillProfile GetFullCanadianProfile() {
 }
 
 AutofillProfile GetIncompleteProfile1() {
-  AutofillProfile profile(base::Uuid::GenerateRandomV4().AsLowercaseString(),
-                          kEmptyOrigin);
+  AutofillProfile profile;
   SetProfileInfo(&profile, "John", "H.", "Doe", "jsmith@example.com", "ACME",
                  "123 Main Street", "Unit 1", "Greensdale", "MI", "48838", "US",
                  "");
@@ -500,16 +494,9 @@ AutofillProfile GetIncompleteProfile1() {
 }
 
 AutofillProfile GetIncompleteProfile2() {
-  AutofillProfile profile(base::Uuid::GenerateRandomV4().AsLowercaseString(),
-                          kEmptyOrigin);
+  AutofillProfile profile;
   SetProfileInfo(&profile, "", "", "", "jsmith@example.com", "", "", "", "", "",
                  "", "", "");
-  return profile;
-}
-
-AutofillProfile GetVerifiedProfile() {
-  AutofillProfile profile(GetFullProfile());
-  profile.set_origin(kSettingsOrigin);
   return profile;
 }
 
@@ -1242,11 +1229,11 @@ void AddFieldPredictionsToForm(
   }
 }
 
-Suggestion CreateAutofillSuggestion(int frontend_id,
+Suggestion CreateAutofillSuggestion(PopupItemId popup_item_id,
                                     const std::u16string& main_text_value,
                                     const Suggestion::Payload& payload) {
   Suggestion suggestion;
-  suggestion.frontend_id = frontend_id;
+  suggestion.popup_item_id = popup_item_id;
   suggestion.main_text.value = main_text_value;
   suggestion.payload = payload;
   return suggestion;

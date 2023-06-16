@@ -148,6 +148,7 @@
 <translation id="3600792891314830896">જે સાઇટ સાઉન્ડ ચલાવતી હોય તેઓને મ્યૂટ કરો</translation>
 <translation id="3602290021589620013">પ્રીવ્યૂ કરો</translation>
 <translation id="3628308229821498208">સૂચવેલી શોધ</translation>
+<translation id="3707034683772193706">તમે મુલાકાત લો છો તે સાઇટ Chrome પર થોડીક માહિતી સાચવી શકે છે, મુખ્યત્વે એ ચકાસણી કરવા કે તમે બૉટ નથી</translation>
 <translation id="3721953990244350188">છોડી દો અને આગલી ઉપલબ્ધ ક્રિયા બતાવો</translation>
 <translation id="3744111561329211289">બૅકગ્રાઉન્ડ સિંક</translation>
 <translation id="3763247130972274048">10 સેકન્ડ છોડવા માટે ડાબે અથવા જમણે બે વાર ટૅપ કરો</translation>
@@ -188,7 +189,6 @@
 <translation id="4412992751769744546">તૃતીય-પક્ષ કૂકીઝને મંજૂરી આપો</translation>
 <translation id="4428065317363009941">રુચિ મુજબ જાહેરાત</translation>
 <translation id="4434045419905280838">પૉપ-અપ અને રીડાયરેક્ટ</translation>
-<translation id="4440642537584213025"><ph name="TARGET_DESCRIPTION" />ને મોટું કરો</translation>
 <translation id="4468959413250150279">કોઈ એક ચોક્કસ સાઇટ માટે અવાજ બંધ કરો.</translation>
 <translation id="4475912480633855319">{COOKIES,plural, =1{# કુકી}one{# કુકી}other{# કુકી}}</translation>
 <translation id="4478158430052450698">વિવિધ સાઇટ માટે "નાનું-મોટું કરો"ને કસ્ટમાઇઝ કરવાનું સરળ બનાવો</translation>
@@ -310,6 +310,7 @@
 <translation id="6612358246767739896">સુરક્ષિત કન્ટેન્ટ</translation>
 <translation id="662080504995468778">પૃષ્ઠ પર રહો</translation>
 <translation id="6643016212128521049">સાફ કરો</translation>
+<translation id="6653342741369270081">પૂર્ણ સ્ક્રીનથી બહાર નીકળવા માટે 'પાછળ' બટનને દબાવો</translation>
 <translation id="6689172468748959065">પ્રોફાઇલ ફોટો</translation>
 <translation id="6697925417670533197">ડાઉનલોડ કરવાનું સક્રિય કરો</translation>
 <translation id="6722828510648505498">ઓળખ સેવાઓના સાઇન ઇન કરવાના સંકેતો બ્લૉક કરો.</translation>
@@ -344,6 +345,7 @@
 <translation id="7302486331832100261">તમે સામાન્ય રીતે નોટિફિકેશનને બ્લૉક કરો છો. મંજૂરી આપવા માટે, વિગતો પર ટૅપ કરો.</translation>
 <translation id="7366415735885268578">એક સાઇટ ઉમેરો</translation>
 <translation id="7383715096023715447"><ph name="DOMAIN" /> માટેના સેટિંગ</translation>
+<translation id="7406113532070524618">આ સેટિંગ તમારી ઓળખ કર્યા વિના અથવા સાઇટને તમારો બ્રાઉઝિંગ ઇતિહાસ જોવાની મંજૂરી આપ્યા વિના કામ કરે છે, તેમ છતાં ચકાસણીના ભાગ તરીકે થોડીક માહિતી શેર કરી શકે છે</translation>
 <translation id="7423098979219808738">પ્રથમ પૂછો</translation>
 <translation id="7423538860840206698">ક્લિપબોર્ડ વાંચવાનું બ્લૉક કરેલ છે</translation>
 <translation id="7425915948813553151">સાઇટ માટે ઘેરી થીમ</translation>
@@ -369,6 +371,7 @@
 <translation id="7846076177841592234">પસંદગી રદ કરો</translation>
 <translation id="7882806643839505685">કોઈ એક ચોક્કસ સાઇટ માટે અવાજ ચલાવવાની મંજૂરી આપો.</translation>
 <translation id="789180354981963912">ત્રીજા પક્ષની કુકીને છૂપા મોડમાં બ્લૉક કરો:</translation>
+<translation id="7895868624847501462">આ ક્રિયા કુકી સહિતનો તમામ સ્થાનિક ડેટા સાફ કરશે અને <ph name="DOMAIN" /> તથા તેની હેઠળની બધી સાઇટ માટેની તમામ પરવાનગીઓ રીસેટ કરશે</translation>
 <translation id="7940722705963108451">મને યાદ કરાવો</translation>
 <translation id="7974024493641668069">{COUNT,plural, =1{<ph name="FPS_OWNER" />ના સાઇટના ગ્રૂપમાંની <ph name="FPS_MEMBERS_COUNT" /> સાઇટ, જે ગ્રૂપમાંની તમારી પ્રવૃત્તિ જોઈ શકે છે}one{<ph name="FPS_OWNER" />ના સાઇટના ગ્રૂપમાંની <ph name="FPS_MEMBERS_COUNT" /> સાઇટ, જે ગ્રૂપમાંની તમારી પ્રવૃત્તિ જોઈ શકે છે}other{<ph name="FPS_OWNER" />ના સાઇટના ગ્રૂપમાંની <ph name="FPS_MEMBERS_COUNT" /> સાઇટ, જે ગ્રૂપમાંની તમારી પ્રવૃત્તિ જોઈ શકે છે}}</translation>
 <translation id="7986741934819883144">સંપર્ક પસંદ કરો</translation>
@@ -394,6 +397,7 @@
 <translation id="8284326494547611709">કૅપ્શન્સ</translation>
 <translation id="8300705686683892304">ઍપ દ્વારા મેનેજ થતી</translation>
 <translation id="8324158725704657629">ફરીથી પૂછશો નહીં</translation>
+<translation id="8338445138528827481">આ ક્રિયા કુકી સહિતનો તમામ સ્થાનિક ડેટા સાફ કરશે અને <ph name="ORIGIN" /> માટેની બધી પરવાનગીઓને રીસેટ કરશે</translation>
 <translation id="8362795839483915693">તમે મુલાકાત લો છો તે સાઇટને તમે મોટી કે નાની કરી શકો છો</translation>
 <translation id="8372893542064058268">ચોક્કસ સાઇટ માટે બૅકગ્રાઉન્ડ સિંકની મંજૂરી આપો.</translation>
 <translation id="8376384591331888629">આ સાઇટ પરની ત્રીજા પક્ષની કુકી શામેલ છે</translation>
@@ -433,6 +437,7 @@
 <translation id="8816026460808729765">સાઇટને સેન્સરને ઍક્સેસ કરવાથી બ્લૉક કરો</translation>
 <translation id="8823559166155093873">કુકી બ્લૉક કરો</translation>
 <translation id="8847988622838149491">USB</translation>
+<translation id="8889294078294184559">જેમ જેમ તમે બ્રાઉઝ કરવાનું ચાલુ રાખો છો, તેમ તેમ વિવિધ વેબસાઇટ Chrome વડે એ ચેક કરી શકે છે કે તમે અસલી વપરાશકર્તા છો કે નહીં અને સાથે જ તમે મુલાકાત લીધી હોય એવી અગાઉની સાઇટ વડે આ બાબતની ચકાસણી પણ તે કરી શકે છે</translation>
 <translation id="8899807382908246773">ખલેલ પાડતી જાહેરાતો</translation>
 <translation id="8903921497873541725">ઝૂમ વધારો</translation>
 <translation id="8921772741368021346"><ph name="POSITION" /> / <ph name="DURATION" /></translation>

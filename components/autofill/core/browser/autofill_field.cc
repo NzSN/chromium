@@ -158,11 +158,11 @@ DenseSet<HtmlFieldType> BelievedHtmlTypes(ServerFieldType heuristic_prediction,
         features::kAutofillServerPrecedenceScopeOverAutocomplete.Get());
   }
   // If the field is credit-card related or the feature
-  // `kAutofillFillAndImportFromMoreFields` is enabled, we always override
-  // unrecognized autocomplete attributes.
+  // `kAutofillPredictionsForAutocompleteUnrecognized` is enabled, we always
+  // override unrecognized autocomplete attributes.
   if (is_credit_card_prediction ||
       base::FeatureList::IsEnabled(
-          features::kAutofillFillAndImportFromMoreFields)) {
+          features::kAutofillPredictionsForAutocompleteUnrecognized)) {
     believed_html_types.erase(HtmlFieldType::kUnrecognized);
   }
   return believed_html_types;
@@ -436,12 +436,9 @@ bool AutofillField::HasExpirationDateType() const {
   return base::Contains(kExpirationDateTypes, Type().GetStorableType());
 }
 
-bool AutofillField::HasPredictionDespiteUnrecognizedAutocompleteAttribute()
-    const {
+bool AutofillField::ShouldSuppressSuggestionsAndFillingByDefault() const {
   return html_type_ == HtmlFieldType::kUnrecognized &&
-         !IsCreditCardPrediction() &&
-         base::FeatureList::IsEnabled(
-             features::kAutofillFillAndImportFromMoreFields);
+         !server_type_prediction_is_override() && !IsCreditCardPrediction();
 }
 
 void AutofillField::SetPasswordRequirements(PasswordRequirementsSpec spec) {
@@ -485,7 +482,11 @@ void AutofillField::AppendLogEventIfNotRepeated(
 }
 
 FormControlType AutofillField::FormControlType() const {
-  if (form_control_type == "text") {
+  // Keep in sync with https://html.spec.whatwg.org/#attr-input-type.
+  if (form_control_type == "text" || form_control_type == "search" ||
+      form_control_type == "tel" || form_control_type == "url" ||
+      form_control_type == "email" || form_control_type == "password" ||
+      form_control_type == "number") {
     return FormControlType::kText;
   } else if (form_control_type == "textarea") {
     return FormControlType::kTextarea;

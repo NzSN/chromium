@@ -6,10 +6,11 @@
 #define ASH_USER_EDUCATION_WELCOME_TOUR_WELCOME_TOUR_CONTROLLER_H_
 
 #include <map>
+#include <memory>
 
 #include "ash/ash_export.h"
 #include "ash/public/cpp/session/session_observer.h"
-#include "ash/user_education/tutorial_controller.h"
+#include "ash/user_education/user_education_feature_controller.h"
 #include "base/memory/weak_ptr.h"
 #include "base/observer_list.h"
 #include "base/scoped_observation.h"
@@ -19,11 +20,12 @@ namespace ash {
 
 class SessionController;
 class WelcomeTourControllerObserver;
+class WelcomeTourScrim;
 
 // Controller responsible for Welcome Tour feature tutorials. Note that the
 // `WelcomeTourController` is owned by the `UserEducationController` and exists
 // if and only if the Welcome Tour feature is enabled.
-class ASH_EXPORT WelcomeTourController : public TutorialController,
+class ASH_EXPORT WelcomeTourController : public UserEducationFeatureController,
                                          public SessionObserver {
  public:
   WelcomeTourController();
@@ -43,7 +45,7 @@ class ASH_EXPORT WelcomeTourController : public TutorialController,
   ui::ElementContext GetInitialElementContext() const;
 
  private:
-  // TutorialController:
+  // UserEducationFeatureController:
   std::map<TutorialId, user_education::TutorialDescription>
   GetTutorialDescriptions() override;
 
@@ -59,6 +61,11 @@ class ASH_EXPORT WelcomeTourController : public TutorialController,
   // regardless of whether the tour was completed or aborted.
   void OnWelcomeTourStarted();
   void OnWelcomeTourEnded();
+
+  // Used to apply a scrim to the help bubble container on all root windows
+  // while the Welcome Tour is in progress. Exists only while the Welcome Tour
+  // is in progress.
+  std::unique_ptr<WelcomeTourScrim> scrim_;
 
   // The collection of observers to be notified of events.
   base::ObserverList<WelcomeTourControllerObserver> observer_list_;

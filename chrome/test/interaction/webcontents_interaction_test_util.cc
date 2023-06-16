@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 
+#include "base/callback_list.h"
 #include "base/functional/callback_helpers.h"
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
@@ -89,10 +90,8 @@ void ExecuteScript(content::RenderFrameHost* host, const std::string& script) {
   }
 }
 
-// Our replacement for content::EvalJs() that uses the same underlying logic as
-// ExecuteScriptAndExtract*(), because EvalJs() is not compatible with Content
-// Security Policy of many internal pages we want to test :(
-// TODO(dfried): migrate when this is not a problem.
+// TODO(dfried): migrate to EvalJs, now that it supports Content Security
+// Policy.
 content::EvalJsResult EvalJsLocal(
     const content::ToRenderFrameHost& execution_target,
     const std::string& function) {
@@ -371,6 +370,9 @@ class WebContentsInteractionTestUtil::WebViewData : public views::ViewObserver {
   // object are performed.
   void Init() {
     scoped_observation_.Observe(web_view_);
+    web_contents_attached_subscription_ =
+        web_view_->AddWebContentsAttachedCallback(base::BindRepeating(
+            &WebViewData::OnWebContentsAttached, base::Unretained(this)));
     ui::ElementIdentifier id =
         web_view_->GetProperty(views::kElementIdentifierKey);
     if (!id) {
@@ -473,6 +475,18 @@ class WebContentsInteractionTestUtil::WebViewData : public views::ViewObserver {
       QueueMinimumSizeEvent();
   }
 
+  void OnWebContentsAttached(views::WebView* observed_view) {
+    CHECK_EQ(web_view_.get(), observed_view);
+    content::WebContents* const to_observe =
+        visible_ ? observed_view->web_contents() : nullptr;
+    if (owner_->web_contents() == to_observe) {
+      return;
+    }
+    owner_->Observe(to_observe);
+    owner_->DiscardCurrentElement();
+    owner_->MaybeCreateElement();
+  }
+
   void QueueMinimumSizeEvent() {
     if (!owner_->current_element_)
       return;
@@ -502,6 +516,7 @@ class WebContentsInteractionTestUtil::WebViewData : public views::ViewObserver {
   std::unique_ptr<MinimumSizeData> minimum_size_data_;
   base::ScopedObservation<views::View, views::ViewObserver> scoped_observation_{
       this};
+  base::CallbackListSubscription web_contents_attached_subscription_;
   base::WeakPtrFactory<WebViewData> weak_factory_{this};
 };
 
@@ -638,9 +653,23 @@ void WebContentsInteractionTestUtil::LoadPage(const GURL& url) {
     CHECK(web_contents()->GetController().LoadURLWithParams(params));
   } else {
     // Regular web pages can be navigated directly.
-    const bool result =
-        content::BeginNavigateToURLFromRenderer(web_contents(), url);
-    CHECK(result);
+    //
+    // In an ideal world, this should use `BeginNavigateToURLFromRenderer()`,
+    // which verifies that the navigation successfully starts. However,
+    // `BeginNavigateToURLFromRenderer()` itself uses a RunLoop to listen for
+    // the navigation starting.
+    //
+    // For reasons that are not well understood, this is problematic when used
+    // in conjunction with the interaction sequence test utils, which often
+    // run the entire test inside a top-level RunLoop; the now nested RunLoop
+    // inside `BeginNavigateToURLFromRenderer()` never receives the
+    // `DidStartNavigation()` callback, and the test just ends up hanging.
+    //
+    // Use Execute() as a workaround this hang. Note that unlike the
+    // similarly-named `content::ExecJs()`, this helper does not actually
+    // validate or wait for the script to execute; hopefully, errors from
+    // navigation failures will be obvious enough in subsequent steps.
+    ExecuteJsLocal(web_contents(), content::JsReplace("location = $1", url));
   }
 }
 

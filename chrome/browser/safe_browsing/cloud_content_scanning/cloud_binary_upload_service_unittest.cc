@@ -290,7 +290,7 @@ class CloudBinaryUploadServiceTest : public testing::Test {
   content::BrowserTaskEnvironment task_environment_;
   TestingProfile profile_;
   std::unique_ptr<CloudBinaryUploadService> service_;
-  raw_ptr<MockBinaryFCMService> fcm_service_;
+  raw_ptr<MockBinaryFCMService, DanglingUntriaged> fcm_service_;
   FakeMultipartUploadRequestFactory fake_factory_;
   base::RepeatingClosure request_done_closure_;
   int fcm_connection_failures_ = 0;
@@ -359,6 +359,25 @@ TEST_F(CloudBinaryUploadServiceTest,
   content::RunAllTasksUntilIdle();
 
   EXPECT_EQ(scanning_result, BinaryUploadService::Result::FAILED_TO_GET_TOKEN);
+}
+
+TEST_F(CloudBinaryUploadServiceTest, PasteSucceedsWhenMissingInstanceID) {
+  BinaryUploadService::Result scanning_result;
+  enterprise_connectors::ContentAnalysisResponse scanning_response;
+
+  std::unique_ptr<MockRequest> request =
+      MakeRequest(&scanning_result, &scanning_response, /*is_app*/ false);
+  request->set_analysis_connector(
+      enterprise_connectors::AnalysisConnector::BULK_DATA_ENTRY);
+
+  // Paste requests never requests an instance ID, so they should get normal
+  // responses despite the FCM service being mocked to return an invalid one.
+  ExpectInstanceID(BinaryFCMService::kInvalidId, 0);
+
+  UploadForDeepScanning(std::move(request));
+  content::RunAllTasksUntilIdle();
+
+  EXPECT_EQ(scanning_result, BinaryUploadService::Result::SUCCESS);
 }
 
 TEST_F(CloudBinaryUploadServiceTest, FailsWhenUploadFails) {

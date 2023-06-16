@@ -8,7 +8,7 @@
 #include "ash/strings/grit/ash_strings.h"
 #include "ash/system/audio/audio_effects_controller.h"
 #include "ash/system/status_area_widget_test_helper.h"
-#include "ash/system/toast/toast_manager_impl.h"
+#include "ash/system/toast/anchored_nudge_manager_impl.h"
 #include "ash/system/video_conference/bubble/bubble_view_ids.h"
 #include "ash/system/video_conference/bubble/return_to_app_panel.h"
 #include "ash/system/video_conference/video_conference_tray.h"
@@ -17,6 +17,7 @@
 #include "base/memory/raw_ptr.h"
 #include "base/run_loop.h"
 #include "base/test/bind.h"
+#include "base/test/gtest_tags.h"
 #include "base/test/scoped_feature_list.h"
 #include "base/test/test_timeouts.h"
 #include "chrome/browser/browser_process.h"
@@ -26,11 +27,13 @@
 #include "chrome/browser/ui/browser.h"
 #include "chrome/browser/ui/views/frame/browser_view.h"
 #include "chrome/common/chrome_switches.h"
+#include "chrome/test/base/testing_profile.h"
 #include "chrome/test/base/ui_test_utils.h"
 #include "chromeos/ash/components/audio/cras_audio_handler.h"
 #include "components/content_settings/core/browser/host_content_settings_map.h"
 #include "components/content_settings/core/common/content_settings.h"
 #include "components/content_settings/core/common/content_settings_types.h"
+#include "components/user_manager/user_names.h"
 #include "content/public/browser/navigation_entry.h"
 #include "content/public/browser/visibility.h"
 #include "content/public/browser/web_contents.h"
@@ -44,8 +47,24 @@
 
 namespace ash::video_conference {
 
-constexpr char kVideoConferenceTrayUseWhileDisabledToastId[] =
-    "video_conference_tray_toast_ids.use_while_disable";
+namespace {
+
+bool IsNudgeShown(const std::string& id) {
+  return Shell::Get()->anchored_nudge_manager()->IsNudgeShown(id);
+}
+
+const std::u16string& GetNudgeText(const std::string& id) {
+  return Shell::Get()->anchored_nudge_manager()->GetNudgeTextForTest(id);
+}
+
+views::View* GetNudgeAnchorView(const std::string& id) {
+  return Shell::Get()->anchored_nudge_manager()->GetNudgeAnchorViewForTest(id);
+}
+
+}  // namespace
+
+constexpr char kVideoConferenceTrayUseWhileDisabledNudgeId[] =
+    "video_conference_tray_nudge_ids.use_while_disabled";
 const char16_t kTitle1[] = u"Title1";
 const char16_t kTitle2[] = u"Title2";
 
@@ -91,9 +110,10 @@ void ClickButton(views::Button* button) {
   views::test::ButtonTestApi(button).NotifyClick(event);
 }
 
-// Parameter stands for whether in incognito mode.
-class VideoConferenceIntegrationTest : public testing::WithParamInterface<bool>,
-                                       public WebRtcTestBase {
+// Parameter stands for whether in incognito mode; and whether in guest mode.
+class VideoConferenceIntegrationTest
+    : public testing::WithParamInterface<std::tuple<bool, bool>>,
+      public WebRtcTestBase {
  public:
   VideoConferenceIntegrationTest() {
     // kOnDeviceSpeechRecognition is to support live caption.
@@ -111,7 +131,7 @@ class VideoConferenceIntegrationTest : public testing::WithParamInterface<bool>,
     ASSERT_TRUE(embedded_test_server()->Start());
 
     // Create an incognito browser when parameter is true.
-    if (GetParam()) {
+    if (std::get<0>(GetParam())) {
       browser_ = Browser::Create(Browser::CreateParams(
           browser()->profile()->GetPrimaryOTRProfile(/*create_if_needed=*/true),
           true));
@@ -128,8 +148,6 @@ class VideoConferenceIntegrationTest : public testing::WithParamInterface<bool>,
     camera_bt_ = GetVcTray()->camera_icon();
     mic_bt_ = GetVcTray()->audio_icon();
     share_bt_ = GetVcTray()->screen_share_icon();
-
-    toast_manager_ = Shell::Get()->toast_manager();
   }
 
   // Navigate to the url in a new tab.
@@ -199,6 +217,16 @@ class VideoConferenceIntegrationTest : public testing::WithParamInterface<bool>,
         ::ash::switches::kCameraEffectsSupportedByHardware);
     // Used for bypassing tab capturing selection.
     command_line->AppendSwitch(::switches::kThisTabCaptureAutoAccept);
+
+    // If in guest mode.
+    if (std::get<1>(GetParam())) {
+      command_line->AppendSwitch(ash::switches::kGuestSession);
+      command_line->AppendSwitchASCII(ash::switches::kLoginUser,
+                                      user_manager::kGuestUserName);
+      command_line->AppendSwitchASCII(ash::switches::kLoginProfile,
+                                      TestingProfile::kTestUserProfileDir);
+      command_line->AppendSwitch(::switches::kIncognito);
+    }
   }
 
   // Returns all `ReturnToAppButton`s into a vector for easier check.
@@ -222,9 +250,6 @@ class VideoConferenceIntegrationTest : public testing::WithParamInterface<bool>,
     }
 
     return nullptr;
-  }
-  const std::u16string GetCurrentToastText() {
-    return toast_manager_->GetCurrentOverlayForTesting()->GetText();
   }
 
   // Helper function that triggers the VcTray with
@@ -270,15 +295,17 @@ class VideoConferenceIntegrationTest : public testing::WithParamInterface<bool>,
   raw_ptr<VideoConferenceTrayButton, ExperimentalAsh> mic_bt_ = nullptr;
   raw_ptr<VideoConferenceTrayButton, ExperimentalAsh> share_bt_ = nullptr;
 
-  raw_ptr<ToastManagerImpl, ExperimentalAsh> toast_manager_ = nullptr;
   raw_ptr<Browser, ExperimentalAsh> browser_ = nullptr;
 
   base::test::ScopedFeatureList scoped_feature_list_;
 };
 
-INSTANTIATE_TEST_SUITE_P(All,
-                         VideoConferenceIntegrationTest,
-                         ::testing::Values(true, false));
+INSTANTIATE_TEST_SUITE_P(
+    All,
+    VideoConferenceIntegrationTest,
+    ::testing::Values(std::make_tuple<bool, bool>(false, false),
+                      std::make_tuple<bool, bool>(true, false),
+                      std::make_tuple<bool, bool>(false, true)));
 
 IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest,
                        CaptureVideoShowsVcTray) {
@@ -402,6 +429,9 @@ IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest,
 
 IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest,
                        MicWithoutPermissionShouldNotShow) {
+  base::AddFeatureIdTagToTestResult(
+      "screenplay-92ebd14e-9017-4734-ae47-e9dc6afc6e87");
+
   // Open a tab.
   content::WebContents* web_contents =
       NavigateTo("/video_conference_demo.html");
@@ -424,6 +454,9 @@ IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest,
 
 IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest,
                        CameraWithoutPermissionShouldNotShow) {
+  base::AddFeatureIdTagToTestResult(
+      "screenplay-2d9bddf4-8d96-4304-a605-1140f9a0b45e");
+
   // Open a tab.
   content::WebContents* web_contents =
       NavigateTo("/video_conference_demo.html");
@@ -468,6 +501,9 @@ IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest,
 
 IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest,
                        ClickOnTheMicOrCameraIconsShouldMute) {
+  base::AddFeatureIdTagToTestResult(
+      "screenplay-cc18f9a3-e46f-4192-b505-876975c5ef4b");
+
   // Trigger the VcTray with microphone.
   TriggeringTray(/*use_camera=*/false,
                  /*use_microphone=*/true,
@@ -598,11 +634,18 @@ IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest, OneTabReturnToApp) {
 }
 
 IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest, UseWhileDisabled) {
+  base::AddFeatureIdTagToTestResult(
+      "screenplay-f583c1ff-db6f-460e-b1f2-ddec173359a6");
+  base::AddFeatureIdTagToTestResult(
+      "screenplay-3042cdd9-978d-432c-8488-77684b09a9e4");
+
   // Trigger the VcTray with microphone.
   content::WebContents* web_contents =
       TriggeringTray(/*use_camera=*/false,
                      /*use_microphone=*/true,
                      /*use_screen_sharing=*/false);
+
+  auto* nudge_id = kVideoConferenceTrayUseWhileDisabledNudgeId;
 
   // Stop microphone and wait for is_capturing to populate.
   StopMicrophone(web_contents);
@@ -614,20 +657,19 @@ IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest, UseWhileDisabled) {
 
   // Start accessing microphone should trigger UseWhileDisabled.
   StartMicrophone(web_contents);
-  WAIT_FOR_CONDITION(
-      toast_manager_->IsRunning(kVideoConferenceTrayUseWhileDisabledToastId));
+  WAIT_FOR_CONDITION(IsNudgeShown(nudge_id));
 
-  // Check the toast message is as expected.
+  // Check the nudge message and anchor view is as expected.
   EXPECT_EQ(
-      GetCurrentToastText(),
+      GetNudgeText(nudge_id),
       l10n_util::GetStringFUTF16(
           IDS_ASH_VIDEO_CONFERENCE_TOAST_USE_WHILE_SOFTWARE_DISABLED, kTitle1,
           l10n_util::GetStringUTF16(IDS_ASH_VIDEO_CONFERENCE_MICROPHONE_NAME)));
+  EXPECT_EQ(GetNudgeAnchorView(nudge_id), GetVcTray()->audio_icon());
 
-  // Remove current toast for the next step.
-  toast_manager_->Cancel(kVideoConferenceTrayUseWhileDisabledToastId);
-  WAIT_FOR_CONDITION(
-      !toast_manager_->IsRunning(kVideoConferenceTrayUseWhileDisabledToastId));
+  // Remove current nudge for the next step.
+  Shell::Get()->anchored_nudge_manager()->Cancel(nudge_id);
+  WAIT_FOR_CONDITION(!IsNudgeShown(nudge_id));
 
   // Clicking on the camera icon should mute it.
   ClickButton(camera_bt_);
@@ -635,15 +677,15 @@ IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest, UseWhileDisabled) {
 
   // Start accessing camera should trigger UseWhileDisabled.
   StartCamera(web_contents);
-  WAIT_FOR_CONDITION(
-      toast_manager_->IsRunning(kVideoConferenceTrayUseWhileDisabledToastId));
+  WAIT_FOR_CONDITION(IsNudgeShown(nudge_id));
 
-  // Check the toast message is as expected.
+  // Check the nudge message and anchor view is as expected.
   EXPECT_EQ(
-      GetCurrentToastText(),
+      GetNudgeText(nudge_id),
       l10n_util::GetStringFUTF16(
           IDS_ASH_VIDEO_CONFERENCE_TOAST_USE_WHILE_SOFTWARE_DISABLED, kTitle1,
           l10n_util::GetStringUTF16(IDS_ASH_VIDEO_CONFERENCE_CAMERA_NAME)));
+  EXPECT_EQ(GetNudgeAnchorView(nudge_id), GetVcTray()->camera_icon());
 }
 
 IN_PROC_BROWSER_TEST_P(VideoConferenceIntegrationTest,

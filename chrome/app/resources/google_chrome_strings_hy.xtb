@@ -31,6 +31,7 @@
 <translation id="1516530951338665275">Զուգակցումը շարունակելու համար Google Chrome-ին հասանելի դարձրեք Bluetooth-ը։ <ph name="IDS_BLUETOOTH_DEVICE_CHOOSER_AUTHORIZE_BLUETOOTH_LINK" /></translation>
 <translation id="1547295885616600893">ChromeOS-ը ստեղծվել է <ph name="BEGIN_LINK_CROS_OSS" />բաց կոդով ծրագրակազմի<ph name="END_LINK_CROS_OSS" /> հիման վրա։</translation>
 <translation id="1553358976309200471">Թարմացնել Chrome-ը</translation>
+<translation id="1555506416658437797">փոփոխել վճարման եղանակները։</translation>
 <translation id="1583073672411044740"><ph name="EXISTING_USER" />-ն արդեն մուտք է գործել Chrome-ի այս պրոֆիլը։ <ph name="USER_EMAIL_ADDRESS" /> օգտատիրոջ համար կստեղծվի Chrome-ի նոր պրոֆիլ։</translation>
 <translation id="1587223624401073077">Google Chrome-ն օգտագործում է ձեր տեսախցիկը:</translation>
 <translation id="1587325591171447154"><ph name="FILE_NAME" /> ֆայլը վտանգավոր է, և Chrome-ն արգելափակել է այն։</translation>
@@ -80,10 +81,12 @@
 <translation id="234869673307233423">Chrome-ը չի կարող ստուգել ձեր գաղտնաբառերը։ Փորձեք ավելի ուշ։</translation>
 <translation id="235650106824528204">Աշխատանքային պրոֆիլի ադմինիստրատորը կարող է ջնջել Chrome-ի բոլոր տվյալները, որոնք ստեղծվում են այս պրոֆիլի օգտագործման ընթացքում (օրինակ՝ էջանիշներ, պատմություն, գաղտնաբառեր և այլ կարգավորումներ)։ <ph name="LEARN_MORE" /></translation>
 <translation id="2359808026110333948">Շարունակել</translation>
+<translation id="2399868464369312507">Google Chrome-ը փորձում է փոփոխել վճարման եղանակները։</translation>
 <translation id="2401189691232800402">ChromeOS համակարգ</translation>
 <translation id="2467438592969358367">Google Chrome-ն ուզում է արտահանել ձեր գաղտնաբառերը: Թույլատրելու համար մուտքագրեք Windows-ի ձեր գաղտնաբառը:</translation>
 <translation id="2485422356828889247">Ապատեղադրել</translation>
 <translation id="2534507159460261402">Google Pay (պատճենվել է Chrome-ում)</translation>
+<translation id="2556847002339236023">Ձեր կազմակերպությունը փակում է Chrome-ը, երբ այն չի օգտագործվում <ph name="TIMEOUT_DURATION" />։ Այցելությունների պատմությունը ջնջվել է։ Այս տվյալները կարող են ներառել պատմությունը, ինքնալրացված տվյալները և ներբեռնումները։</translation>
 <translation id="2559253115192232574">Ավելի ուշ կայքը, որն այցելում եք, կարող է Chrome-ից ձեր հետաքրքրությունները տեսնելու թույլտվություն խնդրել՝ ձեզ ցուցադրվող գովազդն անհատականացնելու նպատակով։ Chrome-ը կարող է հասանելի դարձնել ձեր մինչև 3 հետաքրքրությունների մասին տեղեկությունները։</translation>
 <translation id="2563121210305478421">Վերագործարկե՞լ Chrome-ը</translation>
 <translation id="2574930892358684005"><ph name="EXISTING_USER" /> օգտատերն արդեն մուտք է գործել Chrome-ի այս պրոֆիլը։ Ձեր դիտարկումների պատմությունն առանձին պահելու համար կարող եք Chrome-ի առանձին պրոֆիլ ստեղծել։</translation>
@@ -115,6 +118,7 @@
 <translation id="2929907241665500097">Անհայտ սխալի պատճառով չհաջողվեց թարմացնել Chrome-ը։ <ph name="BEGIN_LINK" />Շտկել Chrome-ի թարմացման հետ կապված խնդիրները<ph name="END_LINK" /></translation>
 <translation id="2969728957078202736"><ph name="PAGE_TITLE" />– Ցանցի մուտք – Chrome</translation>
 <translation id="3019382870990049182">Վերագործարկել՝ &amp;ChromeOS Flex-ը թարմացնելու համար</translation>
+<translation id="3033660625209020231">{NUM_DEVICES,plural, =0{Google Chrome-ի ընդլայնումներին հասանելի էին HID սարքեր}=1{Google Chrome-ի ընդլայնումներին հասանելի են HID սարքեր}one{Google Chrome-ի ընդլայնումներին հասանելի է # HID սարք}other{Google Chrome-ի ընդլայնումներին հասանելի է # HID սարք}}</translation>
 <translation id="303514781271618814">Chrome-ը ներկայացնում է նոր գործառույթներ, որոնք կայքերին թույլ են տալիս տրամադրել դիտարկման միևնույն հնարավորությունները՝ ձեր մասին ավելի քիչ տվյալներ օգտագործելով։</translation>
 <translation id="3037838751736561277">Google Chrome-ն աշխատում է ֆոնային ռեժիմում:</translation>
 <translation id="3038232873781883849">Սպասում ենք տեղադրմանը…</translation>
@@ -220,6 +224,7 @@
 <translation id="4970880042055371251">ChromeOS-ի տարբերակը</translation>
 <translation id="4970947549776831107">Chrome-ն արգելափակել է այս ֆայլը, քանի որ ֆայլի այս տեսակը վտանգավոր է։</translation>
 <translation id="4990567037958725628">Google Chrome Canary</translation>
+<translation id="5005958605836556244">{NUM_DEVICES,plural, =0{Google Chrome-ի ընդլայնմանը հասանելի էին HID սարքեր}=1{Google Chrome-ի ընդլայնմանը հասանելի է 1 HID սարք}one{Google Chrome-ի ընդլայնմանը հասանելի է # HID սարք}other{Google Chrome-ի ընդլայնմանը հասանելի է # HID սարք}}</translation>
 <translation id="5064155331105009416">{COUNT,plural, =1{Ձեր ադմինիստրատորն ավտոմատ անջատում է Chrome-ը, երբ այն 1 րոպե չի օգտագործվում։ Դիտարկման տվյալները ջնջվում են։ Դիտարկման տվյալները կարող են ներառել պատմությունը, ինքնալրացված տվյալները և ներբեռնումները։}one{Ձեր ադմինիստրատորն ավտոմատ անջատում է Chrome-ը, երբ այն # րոպե չի օգտագործվում։ Դիտարկման տվյալները ջնջվում են։ Դիտարկման տվյալները կարող են ներառել պատմությունը, ինքնալրացված տվյալները և ներբեռնումները։}other{Ձեր ադմինիստրատորն ավտոմատ անջատում է Chrome-ը, երբ այն # րոպե չի օգտագործվում։ Դիտարկման տվյալները ջնջվում են։ Դիտարկման տվյալները կարող են ներառել պատմությունը, ինքնալրացված տվյալները և ներբեռնումները։}}</translation>
 <translation id="5098668839038261629">Երբ այս կարգավորումը միացված է, դուք նաև դուրս կգրվեք Chrome-ից</translation>
 <translation id="5132929315877954718">Հավելվածների, խաղերի, ընդլայնումների և թեմաների լայն ընտրանի Google Chrome-ի համար:</translation>
@@ -253,6 +258,7 @@ Google Chrome-ը չի կարողանում վերականգնել ձեր կար�
 <translation id="5756509061973259733">Այս հաշվի հետ կապված Chrome-ի պրոֆիլ արդեն գոյություն ունի այս սարքում</translation>
 <translation id="5795887333006832406"><ph name="PAGE_TITLE" /> – Google Chrome Canary</translation>
 <translation id="5804318322022881572">Չհաջողվեց գործարկել Chrome-ը։ Նորից փորձեք։</translation>
+<translation id="585620188971323280">փոխել վճարման եղանակների լրացման կարգավորումները։</translation>
 <translation id="5895138241574237353">Վերագործարկել</translation>
 <translation id="5903106910045431592"><ph name="PAGE_TITLE" /> – Ցանցի մուտք</translation>
 <translation id="5924017743176219022">Միացում համացանցին…</translation>
@@ -270,6 +276,7 @@ Google Chrome-ը չի կարողանում վերականգնել ձեր կար�
 <translation id="6113794647360055231">Chrome-ը բարելավվել է</translation>
 <translation id="6145313976051292476">Բացել PDF ֆայլեր Chrome-ում</translation>
 <translation id="6155960517327665396">Հիշողության տնտեսման շնորհիվ Chrome-ն ավելի արագ է դարձել</translation>
+<translation id="6157638032135951407">Ձեր կազմակերպությունը ջնջում է Chrome-ի տվյալները, երբ այն չի օգտագործվում <ph name="TIMEOUT_DURATION" />։ Այս տվյալները կարող են ներառել պատմությունը, ինքնալրացված տվյալները և ներբեռնումները։</translation>
 <translation id="6169866489629082767"><ph name="PAGE_TITLE" /> - Google Chrome</translation>
 <translation id="6173637689840186878"><ph name="PAGE_TITLE" /> – Google Chrome բետա</translation>
 <translation id="6235018212288296708">Թույլատրել Google Chrome-ում մուտքային հոսքի փոխանցումը mDNS հաղորդակարգով:</translation>
@@ -285,6 +292,7 @@ Google Chrome-ը չի կարողանում վերականգնել ձեր կար�
 <translation id="6418662306461808273">Անցնե՞լ Chrome-ի առկա պրոֆիլ</translation>
 <translation id="648319183876919572">Բարելավված Ապահով դիտարկումն օգնում է պաշտպանվել վտանգավոր կայքերից և ներբեռնումներից</translation>
 <translation id="6493527311031785448">Google Chrome-ը փորձում է <ph name="AUTHENTICATION_PURPOSE" /></translation>
+<translation id="6497147134301593682">Chrome-ն ավտոմատ փակվել է</translation>
 <translation id="6506909944137591434">Ձեր շրջակայքի եռաչափ քարտեզը ստեղծելու համար Chrome-ին անհրաժեշտ է տեսախցիկն օգտագործելու թույլտվություն</translation>
 <translation id="6515495397637126556"><ph name="PAGE_TITLE" /> – Google Chrome Dev</translation>
 <translation id="659498884637196217">Այս սարքի Google Գաղտնաբառերի կառավարիչում</translation>
@@ -321,6 +329,7 @@ Google Chrome-ը չի կարողանում վերականգնել ձեր կար�
 <translation id="7155997830309522122">Եթե այո, ապա փոխեք ձեր պահված գաղտնաբառը Chrome-ում, որպեսզի այն համապատասխանի ձեր նոր գաղտնաբառին։</translation>
 <translation id="7161904924553537242">Բարի գալուստ Google Chrome</translation>
 <translation id="7177959540995930968">Ավելին այս գործառույթների մասին կարող եք իմանալ Chrome-ի կարգավորումներում։</translation>
+<translation id="7193885263065350793">Ձեր կազմակերպությունը փակում է Chrome-ը, երբ այն չի օգտագործվում <ph name="TIMEOUT_DURATION" />։</translation>
 <translation id="7242029209006116544">Դուք մուտք եք գործում վերահսկվող հաշիվ՝ թույլ տալով ադմինիստրատորին կառավարել ձեր Google Chrome պրոֆիլը: Ձեր Chrome-ի տվյալները, ինչպես օրինակ՝ հավելվածները, էջանիշները, պատմությունը, գաղտնաբառերը և մյուս կարգավորումները, մշտապես կկցվեն <ph name="USER_NAME" /> հաշվին: Դուք կկարողանաք ջնջել այս տվյալները Google Dashboard-ի միջոցով, սակայն չեք կարողանա համակցել դրանք այլ հաշվի հետ: Որպես տարբերակ կարող եք ստեղծել նոր պրոֆիլ՝ Chrome-ի առկա տվյալներն առանձին պահելու համար: <ph name="LEARN_MORE" /></translation>
 <translation id="7295052994004373688">Այս լեզուն օգտագործվում է որպես Google Chrome-ի միջերեսի լեզու</translation>
 <translation id="7296210096911315575">Կարևոր տեղեկություններ օգտագործման և անվտանգության մասին</translation>
@@ -382,11 +391,13 @@ Google Chrome-ը չի կարողանում վերականգնել ձեր կար�
 <translation id="8418845734693287262">ChromeOS-ին չհաջողվեց համաժամացնել տվյալները, քանի որ ձեր հաշվի մուտքի տվյալները հնացած են։</translation>
 <translation id="8433638294851456451">Հեռախոսահամարն այստեղից ձեր Android հեռախոսին ուղարկելու համար երկու սարքերի Chrome դիտարկիչներում մտեք հաշիվ։</translation>
 <translation id="8451192282033883849">Ձեր հաշիվը կառավարվում է <ph name="MANAGER_NAME" /> տիրույթի կողմից։ Ձեր ադմինիստրատորը կարող է տեսնել և խմբագրել Chrome դիտարկիչի այս պրոֆիլը և դրա տվյալները, օրինակ՝ էջանիշները, պատմությունը և գաղտնաբառերը։</translation>
+<translation id="8496177819998570653">Google գ&amp;աղտնաբառերի կառավարիչ</translation>
 <translation id="8498858610309223613">Google Chrome-ի անվտանգությունն ապահովող հատուկ թարմացումը տեղադրվել է: Վերագործարկեք Chrome-ը, և ձեր ներդիրները կվերականգնվեն:</translation>
 <translation id="8504220326736535258">Chrome-ն արգելափակել է այս ֆայլը, քանի որ այն վնասագիր է պարունակում</translation>
 <translation id="8516431725144212809">Ձեր հետաքրքրությունները (ըստ Chrome-ի)</translation>
 <translation id="8521348052903287641">Թույլատրել Google Chrome Dev-ում մուտքային հոսքի փոխանցումը mDNS հաղորդակարգով:</translation>
 <translation id="8540666473246803645">Google Chrome</translation>
+<translation id="8544217240017914508">Google Chrome-ը փորձում է փոխել վճարման եղանակների լրացման կարգավորումները։</translation>
 <translation id="8550334526674375523">Այս աշխատանքային պրոֆիլն ամբողջովին առանձնացված է ձեր անձնական պրոֆիլից։</translation>
 <translation id="8556340503434111824">Google Chrome-ի նոր տարբերակը մատչելի է և այն շատ ավելի արագ է:</translation>
 <translation id="8571790202382503603">Chromе պրոֆիլների միջոցով դուք կարող եք օգտագործել դիտարկիչն առանձին այլ օգտատերերից։ Այդպես ավելի հեշտ է տարանջատել գործնական և անձնական նպատակներով օգտագործումը։</translation>

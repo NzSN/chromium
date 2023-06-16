@@ -60,7 +60,6 @@ bool AddCommandLineArgsFromConfig(const base::Value::Dict& config,
       cc::switches::kEnableGpuBenchmarking,
       embedder_support::kOriginTrialPublicKey,
       embedder_support::kOriginTrialDisabledFeatures,
-      embedder_support::kOriginTrialDisabledTokens,
       switches::kDisableFeatures,
       switches::kDisableGpuWatchdog,
       switches::kDisableQuic,
@@ -147,19 +146,23 @@ bool UpdateCommandLineFromConfigFile(const base::Value::Dict& config,
       command_line->HasSwitch(switches::kPlayreadyKeySystem);
   const bool widevine_enabled =
       command_line->HasSwitch(switches::kEnableWidevine);
-  const bool force_protected_video_buffers =
-      config.FindBool("force-protected-video-buffers").value_or(false);
-  const bool enable_protected_graphics =
-      playready_enabled || widevine_enabled || force_protected_video_buffers;
+  // TODO(fxbug.dev/126639): Add `|| force_protected_video_buffers` once fixed.
+  const bool enable_protected_graphics = playready_enabled || widevine_enabled;
 
   if (enable_protected_graphics) {
     command_line->AppendSwitch(switches::kEnableVulkanProtectedMemory);
     command_line->AppendSwitch(switches::kEnableProtectedVideoBuffers);
+
+    const bool force_protected_video_buffers =
+        config.FindBool("force-protected-video-buffers").value_or(false);
+    if (force_protected_video_buffers) {
+      command_line->AppendSwitch(switches::kForceProtectedVideoOutputBuffers);
+    }
   }
 
-  if (force_protected_video_buffers) {
-    command_line->AppendSwitch(switches::kForceProtectedVideoOutputBuffers);
-  }
+  // TODO(crbug.com/1449048): Remove this switch once fixed.
+  command_line->AppendSwitchASCII(switches::kEnableHardwareOverlays,
+                                  "underlay");
 
   return true;
 }

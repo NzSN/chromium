@@ -503,6 +503,9 @@ void BrowserServiceLacros::OpenUrlImpl(Profile* profile,
     case OpenUrlParams::WindowOpenDisposition::kNewWindow:
       navigate_params.disposition = WindowOpenDisposition::NEW_WINDOW;
       break;
+    case OpenUrlParams::WindowOpenDisposition::kOffTheRecord:
+      navigate_params.disposition = WindowOpenDisposition::OFF_THE_RECORD;
+      break;
     case OpenUrlParams::WindowOpenDisposition::kSwitchToTab:
       navigate_params.disposition = WindowOpenDisposition::SWITCH_TO_TAB;
       navigate_params.path_behavior =
@@ -695,8 +698,9 @@ void BrowserServiceLacros::LaunchOrNewTabWithProfile(
     return;
   }
 
-  Browser* browser =
-      chrome::FindTabbedBrowser(profile, /*match_original_profiles=*/false);
+  Browser* browser = chrome::FindTabbedBrowser(
+      profile, /*match_original_profiles=*/false, display::kInvalidDisplayId,
+      /*ignore_closing_browsers=*/true);
   if (browser != nullptr) {
     chrome::NewTab(browser);
     browser->SetFocusToLocationBar();

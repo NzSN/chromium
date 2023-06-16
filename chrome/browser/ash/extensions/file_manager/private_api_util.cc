@@ -18,6 +18,8 @@
 #include "base/task/single_thread_task_runner.h"
 #include "chrome/browser/ash/drive/drive_integration_service.h"
 #include "chrome/browser/ash/drive/file_system_util.h"
+#include "chrome/browser/ash/extensions/file_manager/event_router.h"
+#include "chrome/browser/ash/extensions/file_manager/event_router_factory.h"
 #include "chrome/browser/ash/file_manager/app_id.h"
 #include "chrome/browser/ash/file_manager/fileapi_util.h"
 #include "chrome/browser/ash/file_manager/filesystem_api_util.h"
@@ -34,9 +36,11 @@
 #include "chrome/common/extensions/api/file_manager_private.h"
 #include "chromeos/ash/components/drivefs/drivefs_pin_manager.h"
 #include "chromeos/ash/components/drivefs/drivefs_util.h"
+#include "chromeos/ash/components/drivefs/mojom/drivefs.mojom.h"
 #include "chromeos/ash/components/drivefs/sync_status_tracker.h"
 #include "components/drive/drive_api_util.h"
 #include "components/drive/file_errors.h"
+#include "components/drive/file_system_core_util.h"
 #include "content/public/browser/browser_thread.h"
 #include "content/public/browser/child_process_security_policy.h"
 #include "mojo/public/cpp/bindings/callback_helpers.h"
@@ -47,8 +51,7 @@
 
 namespace file_manager_private = extensions::api::file_manager_private;
 
-namespace file_manager {
-namespace util {
+namespace file_manager::util {
 namespace {
 
 // The struct is used for GetSelectedFileInfo().
@@ -274,6 +277,32 @@ extensions::api::file_manager_private::BulkPinStage DrivefsPinStageToJs(
   return extensions::api::file_manager_private::BULK_PIN_STAGE_NONE;
 }
 
+bool IsPinManagerAvailableAndSyncingForProfile(Profile* profile) {
+  if (!profile) {
+    return false;
+  }
+  drive::DriveIntegrationService* integration_service =
+      drive::DriveIntegrationServiceFactory::FindForProfile(profile);
+  if (!integration_service || !integration_service->IsMounted() ||
+      !integration_service->GetPinManager()) {
+    return false;
+  }
+  auto* const pin_manager = integration_service->GetPinManager();
+  if (pin_manager->GetProgress().stage !=
+      drivefs::pin_manager_types::mojom::Stage::kSyncing) {
+    return false;
+  }
+  return true;
+}
+
+bool IsDirectoryUnderMyDrive(drivefs::mojom::FileMetadataPtr& metadata,
+                             const base::FilePath& relative_path) {
+  return metadata->type == drivefs::mojom::FileMetadata::Type::kDirectory &&
+         base::FilePath("/")
+             .Append(drive::util::kDriveMyDriveRootDirName)
+             .IsParent(relative_path);
+}
+
 }  // namespace
 
 // Creates an instance and starts the process.
@@ -321,9 +350,8 @@ void SingleEntryPropertiesGetterForDriveFs::StartProcess() {
     CompleteGetEntryProperties(drive::FILE_ERROR_SERVICE_UNAVAILABLE);
     return;
   }
-  base::FilePath path;
   if (!integration_service->GetRelativeDrivePath(file_system_url_.path(),
-                                                 &path)) {
+                                                 &relative_path_)) {
     CompleteGetEntryProperties(drive::FILE_ERROR_INVALID_OPERATION);
     return;
   }
@@ -334,9 +362,13 @@ void SingleEntryPropertiesGetterForDriveFs::StartProcess() {
     return;
   }
 
-  if (base::FeatureList::IsEnabled(ash::features::kFilesInlineSyncStatus)) {
+  file_manager::EventRouter* event_router =
+      file_manager::EventRouterFactory::GetForProfile(running_profile_);
+  if (ash::features::IsInlineSyncStatusEnabled() && event_router) {
     drivefs::SyncState sync_state =
-        integration_service->GetSyncStateForPath(file_system_url_.path());
+        ash::features::IsInlineSyncStatusProgressEventsEnabled()
+            ? event_router->GetDriveSyncStateForPath(file_system_url_.path())
+            : integration_service->GetSyncStateForPath(file_system_url_.path());
     properties_->progress = sync_state.progress;
     switch (sync_state.status) {
       case drivefs::SyncStatus::kQueued:
@@ -371,7 +403,7 @@ void SingleEntryPropertiesGetterForDriveFs::StartProcess() {
   }
 
   drivefs_interface->GetMetadata(
-      path,
+      relative_path_,
       mojo::WrapCallbackWithDefaultInvokeIfNotRun(
           base::BindOnce(&SingleEntryPropertiesGetterForDriveFs::OnGetFileInfo,
                          weak_ptr_factory_.GetWeakPtr()),
@@ -392,11 +424,28 @@ void SingleEntryPropertiesGetterForDriveFs::OnGetFileInfo(
   properties_->present = metadata->available_offline;
   properties_->dirty = metadata->dirty;
   properties_->hosted = drivefs::IsHosted(metadata->type);
+
   properties_->available_offline =
       metadata->available_offline || *properties_->hosted;
   properties_->available_when_metered =
       metadata->available_offline || *properties_->hosted;
   properties_->pinned = metadata->pinned;
+
+  // When the bulk pinning feature is enabled, folders can't be pinned
+  // automatically to provide a way to intercept items being added to these
+  // folders. However items in the folders will be pinned, so to ensure the UI
+  // shows these folders as available offline, return these items as pinned and
+  // available offline. This should not include shortcuts and only cover
+  // directories that are parented at "My drive" (e.g. no Shared drives).
+  if (drive::util::IsDriveFsBulkPinningEnabled(running_profile_) &&
+      IsPinManagerAvailableAndSyncingForProfile(running_profile_) &&
+      IsDirectoryUnderMyDrive(metadata, relative_path_) &&
+      !metadata->shortcut_details) {
+    properties_->pinned = true;
+    properties_->available_offline = true;
+    properties_->available_when_metered = true;
+  }
+
   properties_->shared = metadata->shared;
   properties_->starred = metadata->starred;
 
@@ -452,10 +501,9 @@ void SingleEntryPropertiesGetterForDriveFs::OnGetFileInfo(
   }
 
   if (metadata->shortcut_details) {
-    // Only surface shortcut parameter if the shortcut is accessible.
     properties_->shortcut =
-        (metadata->shortcut_details->target_lookup_status ==
-         drivefs::mojom::ShortcutDetails::LookupStatus::kOk);
+        (metadata->shortcut_details->target_lookup_status !=
+         drivefs::mojom::ShortcutDetails::LookupStatus::kUnknown);
   } else {
     properties_->shortcut = false;
   }
@@ -768,5 +816,4 @@ extensions::api::file_manager_private::BulkPinProgress BulkPinProgressToJs(
   return result;
 }
 
-}  // namespace util
-}  // namespace file_manager
+}  // namespace file_manager::util

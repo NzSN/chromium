@@ -32,6 +32,7 @@
 #include "ash/style/dark_light_mode_controller_impl.h"
 #include "ash/system/scheduled_feature/scheduled_feature.h"
 #include "ash/wallpaper/wallpaper_blur_manager.h"
+#include "ash/wallpaper/wallpaper_constants.h"
 #include "ash/wallpaper/wallpaper_drag_drop_delegate.h"
 #include "ash/wallpaper/wallpaper_image_downloader.h"
 #include "ash/wallpaper/wallpaper_metrics_manager.h"
@@ -55,6 +56,7 @@
 #include "base/files/file_util.h"
 #include "base/functional/bind.h"
 #include "base/logging.h"
+#include "base/memory/scoped_refptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/no_destructor.h"
 #include "base/rand_util.h"
@@ -114,6 +116,9 @@ constexpr base::TimeDelta kWallpaperLoadAnimationDuration =
 
 // The color of the wallpaper if no other wallpaper images are available.
 constexpr SkColor kDefaultWallpaperColor = SK_ColorGRAY;
+
+// The color of the Oobe wallpaper if no other wallpaper images are available.
+constexpr SkColor kOobeWallpaperColor = SK_ColorWHITE;
 
 // The paths of wallpaper directories.
 base::FilePath& GlobalUserDataDir() {
@@ -412,6 +417,19 @@ user_manager::UserType GetUserType(const AccountId& id) {
   return user_session->user_info.type;
 }
 
+scoped_refptr<base::RefCountedMemory> ReadFile(
+    const base::FilePath& file_path) {
+  if (file_path.empty()) {
+    return nullptr;
+  }
+
+  std::string data;
+  if (!base::ReadFileToString(file_path, &data)) {
+    return nullptr;
+  }
+  return base::MakeRefCounted<base::RefCountedString>(std::move(data));
+}
+
 // Gets |account_id|'s custom wallpaper at |wallpaper_path|. Falls back to the
 // original custom wallpaper. Verifies that the returned path exists. If a valid
 // path cannot be found, returns an empty FilePath. Must run on wallpaper
@@ -688,15 +706,18 @@ void WallpaperControllerImpl::UpdateWallpaperBlurForLockState(bool blur) {
   }
 
   bool changed = is_wallpaper_blurred_for_lock_state_ != blur;
+  float blur_sigma =
+      blur ? wallpaper_constants::kLockLoginBlur : wallpaper_constants::kClear;
+  if (IsOobeWallpaper()) {
+    blur_sigma = wallpaper_constants::kOobeBlur;
+  }
   // is_wallpaper_blurrred_for_lock_state_ may already be updated in
   // InstallDesktopController. Always try to update, then invoke observer
   // if something changed.
   for (auto* root_window_controller : Shell::GetAllRootWindowControllers()) {
     changed |=
         root_window_controller->wallpaper_widget_controller()->SetWallpaperBlur(
-            blur ? wallpaper_constants::kLockLoginBlur
-                 : wallpaper_constants::kClear,
-            kLockAnimationBlurAnimationDuration);
+            blur_sigma, kLockAnimationBlurAnimationDuration);
   }
 
   is_wallpaper_blurred_for_lock_state_ = blur;
@@ -727,7 +748,6 @@ void WallpaperControllerImpl::RestoreWallpaperBlurForLockState(float blur) {
 
 bool WallpaperControllerImpl::ShouldApplyShield() const {
   bool needs_shield = false;
-
   if (Shell::Get()->overview_controller()->InOverviewSession()) {
     needs_shield = !chromeos::features::IsJellyrollEnabled();
   } else if (Shell::Get()->session_controller()->IsUserSessionBlocked()) {
@@ -934,6 +954,8 @@ void WallpaperControllerImpl::SetOnlineWallpaper(
   DCHECK(Shell::Get()->session_controller()->IsActiveUserSessionStarted());
   DVLOG(1) << __func__ << " params=" << params;
   if (!CanSetUserWallpaper(params.account_id)) {
+    wallpaper_metrics_manager_->LogWallpaperResult(
+        WallpaperType::kOnline, SetWallpaperResult::kPermissionDenied);
     std::move(callback).Run(/*success=*/false);
     return;
   }
@@ -1069,6 +1091,20 @@ bool WallpaperControllerImpl::GetDailyGooglePhotosWallpaperIdCache(
     DailyGooglePhotosIdCache& ids_out) const {
   return pref_manager_->GetDailyGooglePhotosWallpaperIdCache(account_id,
                                                              ids_out);
+}
+
+void WallpaperControllerImpl::SetTimeOfDayWallpaper(
+    const AccountId& account_id,
+    SetWallpaperCallback callback) {
+  OnlineWallpaperVariantInfoFetcher::FetchParamsCallback on_fetch =
+      base::BindOnce(&WallpaperControllerImpl::OnWallpaperVariantsFetched,
+                     set_wallpaper_weak_factory_.GetWeakPtr(),
+                     WallpaperType::kOnline,
+                     /*start_daily_refresh_timer=*/false, std::move(callback));
+  variant_info_fetcher_->FetchTimeOfDayWallpaper(
+      account_id, wallpaper_constants::kDefaultTimeOfDayWallpaperUnitId,
+      Shell::Get()->dark_light_mode_controller()->current_checkpoint(),
+      std::move(on_fetch));
 }
 
 void WallpaperControllerImpl::SetDefaultWallpaper(
@@ -1312,6 +1348,12 @@ void WallpaperControllerImpl::ShowUserWallpaper(
   }
 
   if (info.type == WallpaperType::kDefault) {
+    session_manager::SessionState session_state =
+        Shell::Get()->session_controller()->GetSessionState();
+    if (session_state == session_manager::SessionState::OOBE) {
+      ShowOobeWallpaper();
+      return;
+    }
     wallpaper_cache_map_.erase(account_id);
     SetDefaultWallpaperImpl(user_type, /*show_wallpaper=*/true,
                             base::DoNothing());
@@ -1363,6 +1405,13 @@ void WallpaperControllerImpl::ShowSigninWallpaper() {
   current_user_ = EmptyAccountId();
   if (ShouldSetDevicePolicyWallpaper()) {
     SetDevicePolicyWallpaper();
+    return;
+  }
+
+  session_manager::SessionState session_state =
+      Shell::Get()->session_controller()->GetSessionState();
+  if (session_state == session_manager::SessionState::OOBE) {
+    ShowOobeWallpaper();
     return;
   }
 
@@ -1473,15 +1522,20 @@ gfx::ImageSkia WallpaperControllerImpl::GetWallpaperImage() {
   return GetWallpaper();
 }
 
-scoped_refptr<base::RefCountedMemory>
-WallpaperControllerImpl::GetPreviewImage() {
+void WallpaperControllerImpl::LoadPreviewImage(
+    LoadPreviewImageCallback callback) {
   if (!current_wallpaper_) {
-    return nullptr;
+    std::move(callback).Run(nullptr);
+    return;
   }
+
   auto image = current_wallpaper_->image();
   image.MakeThreadSafe();
   if (!IsOnlineWallpaper(current_wallpaper_->wallpaper_info().type)) {
-    return EncodeAndResizeImage(image);
+    sequenced_task_runner_->PostTaskAndReplyWithResult(
+        FROM_HERE, base::BindOnce(&EncodeAndResizeImage, image),
+        std::move(callback));
+    return;
   }
 
   auto variants = current_wallpaper_->wallpaper_info().variants;
@@ -1491,18 +1545,19 @@ WallpaperControllerImpl::GetPreviewImage() {
   // No image with |backdrop::Image::IMAGE_TYPE_PREVIEW_MODE|, fallback to
   // |resized|.
   if (it == variants.end()) {
-    return EncodeAndResizeImage(image);
+    sequenced_task_runner_->PostTaskAndReplyWithResult(
+        FROM_HERE, base::BindOnce(&EncodeAndResizeImage, image),
+        std::move(callback));
+    return;
   }
-  const auto preview_variant = *it;
-  const auto url_to_file_path_map =
-      GetOnlineWallpaperVariantPaths({preview_variant});
-  const base::FilePath& preview_file_path =
-      url_to_file_path_map.at(preview_variant.raw_url.spec());
-  DCHECK(!preview_file_path.empty());
 
-  std::string data;
-  base::ReadFileToString(preview_file_path, &data);
-  return base::MakeRefCounted<base::RefCountedString>(std::move(data));
+  const auto& preview_variant = *it;
+  sequenced_task_runner_->PostTaskAndReplyWithResult(
+      FROM_HERE,
+      base::BindOnce(&GetExistingOnlineWallpaperPath,
+                     preview_variant.raw_url.spec())
+          .Then(base::BindOnce(&ReadFile)),
+      std::move(callback));
 }
 
 bool WallpaperControllerImpl::IsWallpaperBlurredForLockState() const {
@@ -1651,6 +1706,11 @@ void WallpaperControllerImpl::OnSessionStateChanged(
   if (IsDevicePolicyWallpaper() && !ShouldSetDevicePolicyWallpaper())
     ReloadWallpaper(/*clear_cache=*/false);
 
+  // Replace the oobe wallpaper with a user wallpaper if necessary.
+  if (IsOobeWallpaper()) {
+    ReloadWallpaper(/*clear_cache=*/false);
+  }
+
   CalculateWallpaperColors();
 
   is_session_active_ = state == session_manager::SessionState::ACTIVE;
@@ -1703,6 +1763,7 @@ void WallpaperControllerImpl::OnCheckpointChanged(
     case WallpaperType::kOneShot:
     case WallpaperType::kOnceGooglePhotos:
     case WallpaperType::kDailyGooglePhotos:
+    case WallpaperType::kOobe:
     case WallpaperType::kCount:
       return;
   }
@@ -1757,10 +1818,28 @@ void WallpaperControllerImpl::OnActiveUserPrefServiceChanged(
 
     WallpaperInfo local_info;
     WallpaperInfo synced_info;
+    bool has_synced_info =
+        pref_manager_->GetSyncedWallpaperInfo(account_id, &synced_info);
+    bool has_local_info =
+        pref_manager_->GetLocalWallpaperInfo(account_id, &local_info);
+    session_manager::SessionState session_state =
+        Shell::Get()->session_controller()->GetSessionState();
+    if (session_state == session_manager::SessionState::OOBE &&
+        !has_synced_info && has_local_info &&
+        local_info.type == WallpaperType::kDefault &&
+        features::IsTimeOfDayWallpaperEnabled()) {
+      // Sets the time of day wallpaper as the default wallpaper on active user
+      // pref changed during OOBE flow.
+      SetTimeOfDayWallpaper(
+          account_id,
+          base::BindOnce(
+              &WallpaperControllerImpl::OnTimeOfDayWallpaperSetAfterOobe,
+              weak_factory_.GetWeakPtr()));
+      return;
+    }
 
     // Migrate wallpaper info to syncable prefs.
-    if (!pref_manager_->GetSyncedWallpaperInfo(account_id, &synced_info) &&
-        pref_manager_->GetLocalWallpaperInfo(account_id, &local_info) &&
+    if (!has_synced_info && has_local_info &&
         WallpaperPrefManager::ShouldSyncOut(local_info)) {
       if (local_info.type == WallpaperType::kCustomized) {
         base::FilePath source = GetCustomWallpaperDir(kOriginalWallpaperSubDir)
@@ -1834,9 +1913,13 @@ void WallpaperControllerImpl::UpdateWallpaperForRootWindow(
     const int container_id = GetWallpaperContainerId();
     wallpaper_widget_controller->Reparent(container_id);
 
-    blur = is_wallpaper_blurred_for_lock_state
-               ? wallpaper_constants::kLockLoginBlur
-               : wallpaper_constants::kClear;
+    if (IsOobeWallpaper()) {
+      blur = wallpaper_constants::kOobeBlur;
+    } else {
+      blur = is_wallpaper_blurred_for_lock_state
+                 ? wallpaper_constants::kLockLoginBlur
+                 : wallpaper_constants::kClear;
+    }
   }
 
   wallpaper_widget_controller->wallpaper_view()->ClearCachedImage();
@@ -1989,7 +2072,7 @@ void WallpaperControllerImpl::SetOnlineWallpaperFromPath(
     const base::FilePath& file_path) {
   bool file_exists = !file_path.empty();
   if (!file_exists) {
-    std::move(callback).Run(false);
+    std::move(callback).Run(/*success=*/false);
     return;
   }
 
@@ -2005,7 +2088,7 @@ void WallpaperControllerImpl::SetOnlineWallpaperFromVariantPaths(
     const OnlineWallpaperParams& params,
     const base::flat_map<std::string, base::FilePath>& url_to_file_path_map) {
   if (url_to_file_path_map.empty()) {
-    std::move(callback).Run(false);
+    std::move(callback).Run(/*success=*/false);
     return;
   }
 
@@ -2036,7 +2119,7 @@ void WallpaperControllerImpl::OnWallpaperVariantsFetched(
   }
 
   // Report that setting the wallpaper failed.
-  std::move(callback).Run(false);
+  std::move(callback).Run(/*success=*/false);
 
   // Daily wallpaper should schedule retry.
   if (type == WallpaperType::kDaily)
@@ -2049,11 +2132,17 @@ void WallpaperControllerImpl::OnOnlineWallpaperDecoded(
     SetWallpaperCallback callback,
     const gfx::ImageSkia& image) {
   bool success = !image.isNull();
-  if (callback)
+  if (callback) {
     std::move(callback).Run(success);
+  }
   if (!success) {
+    wallpaper_metrics_manager_->LogWallpaperResult(
+        WallpaperType::kOnline, SetWallpaperResult::kDecodingError);
     LOG(ERROR) << "Failed to decode online wallpaper.";
     return;
+  } else {
+    wallpaper_metrics_manager_->LogWallpaperResult(
+        WallpaperType::kOnline, SetWallpaperResult::kSuccess);
   }
 
   if (save_file) {
@@ -2097,6 +2186,53 @@ void WallpaperControllerImpl::SetOnlineWallpaperImpl(
 
   wallpaper_cache_map_[params.account_id] =
       CustomWallpaperElement(base::FilePath(), image);
+}
+
+void WallpaperControllerImpl::ShowOobeWallpaper() {
+  if (ash::features::IsOobeSimonEnabled()) {
+    const base::FilePath simon_file_path = base::FilePath(
+        FILE_PATH_LITERAL("/usr/share/chromeos-assets/animated_splash_screen/"
+                          "oobe_wallpaper.jpg"));
+    if (!cached_oobe_wallpaper_.image.isNull() &&
+        cached_oobe_wallpaper_.file_path == simon_file_path) {
+      OnOobeWallpaperDecoded(simon_file_path, cached_oobe_wallpaper_.image);
+    } else {
+      ReadAndDecodeWallpaper(
+          base::BindOnce(&WallpaperControllerImpl::OnOobeWallpaperDecoded,
+                         weak_factory_.GetWeakPtr(), simon_file_path),
+          simon_file_path);
+    }
+  } else {
+    OnOobeWallpaperDecoded(base::FilePath(),
+                           CreateSolidColorWallpaper(kOobeWallpaperColor));
+  }
+}
+
+void WallpaperControllerImpl::OnOobeWallpaperDecoded(
+    const base::FilePath& path,
+    const gfx::ImageSkia& image) {
+  // TODO (b/268463435) also check for path.empty when solid wallpaper is
+  // removed from ShowOobeWallpaper
+  if (image.isNull()) {
+    LOG(ERROR) << "Failed to decode OOBE wallpaper.";
+    cached_oobe_wallpaper_.image =
+        CreateSolidColorWallpaper(kOobeWallpaperColor);
+    cached_oobe_wallpaper_.file_path.clear();
+  } else {
+    cached_oobe_wallpaper_.image = image;
+    cached_oobe_wallpaper_.file_path = path;
+  }
+
+  WallpaperInfo info(cached_oobe_wallpaper_.file_path.value(),
+                     WALLPAPER_LAYOUT_CENTER_CROPPED, WallpaperType::kOobe,
+                     base::Time::Now());
+  ShowWallpaperImage(cached_oobe_wallpaper_.image, info,
+                     /*preview_mode=*/false, /*is_override=*/false);
+}
+
+bool WallpaperControllerImpl::IsOobeWallpaper() const {
+  return current_wallpaper_ &&
+         current_wallpaper_->wallpaper_info().type == WallpaperType::kOobe;
 }
 
 void WallpaperControllerImpl::OnGooglePhotosPhotoFetched(
@@ -2764,6 +2900,7 @@ void WallpaperControllerImpl::HandleWallpaperInfoSyncedIn(
     case WallpaperType::kThirdParty:
     case WallpaperType::kDevice:
     case WallpaperType::kOneShot:
+    case WallpaperType::kOobe:
     case WallpaperType::kCount:
       DCHECK(false) << "Synced in an unsyncable wallpaper type";
       break;
@@ -2775,7 +2912,7 @@ void WallpaperControllerImpl::OnAttemptSetOnlineWallpaper(
     SetWallpaperCallback callback,
     bool success) {
   if (success) {
-    std::move(callback).Run(true);
+    std::move(callback).Run(/*success=*/true);
     return;
   }
 
@@ -2851,12 +2988,18 @@ void WallpaperControllerImpl::OnAllOnlineWallpaperVariantsDownloaded(
   gfx::ImageSkia variant_to_use = online_wallpaper_variant_to_use_;
   online_wallpaper_variant_to_use_ = gfx::ImageSkia();
   if (!success) {
+    wallpaper_metrics_manager_->LogWallpaperResult(
+        WallpaperType::kOnline, SetWallpaperResult::kNetworkError);
     std::move(callback).Run(success);
     return;
   }
 
   OnOnlineWallpaperDecoded(params, /*save_file=*/false, std::move(callback),
                            variant_to_use);
+}
+
+void WallpaperControllerImpl::OnTimeOfDayWallpaperSetAfterOobe(bool success) {
+  wallpaper_metrics_manager_->LogSettingTimeOfDayWallpaperAfterOobe(success);
 }
 
 void WallpaperControllerImpl::SetDailyRefreshCollectionId(
@@ -3045,6 +3188,7 @@ void WallpaperControllerImpl::OnUpdateWallpaperTimerExpired() {
     case WallpaperType::kThirdParty:
     case WallpaperType::kDevice:
     case WallpaperType::kOneShot:
+    case WallpaperType::kOobe:
     case WallpaperType::kCount:
       LOG(ERROR) << "Timer to update wallpaper expired, but the current "
                  << "wallpaper type doesn't support/require updating.";
@@ -3213,20 +3357,12 @@ void WallpaperControllerImpl::HandleSettingOnlineWallpaperFromWallpaperInfo(
     const AccountId& account_id,
     const WallpaperInfo& info) {
   DCHECK(IsOnlineWallpaper(info.type));
-  if (!info.asset_id.has_value()) {
-    // If a user has not changed their wallpaper since the addition of asset_id,
-    // we can have a WallpaperInfo without an asset_id from synced data.
-    // In this case, skip it. We don't have enough information to retrieve the
-    // wallpaper.
-    LOG(WARNING) << "Synced old online wallpaper info";
-    return;
-  }
 
   // Set |start_daily_refresh_timer| to false as this does not set a new
   // wallpaper, but updates the variant of the same wallpaper.
   OnlineWallpaperVariantInfoFetcher::FetchParamsCallback callback =
       base::BindOnce(&WallpaperControllerImpl::OnWallpaperVariantsFetched,
-                     weak_factory_.GetWeakPtr(), info.type,
+                     set_wallpaper_weak_factory_.GetWeakPtr(), info.type,
                      /*start_daily_refresh_timer=*/false, base::DoNothing());
 
   variant_info_fetcher_->FetchOnlineWallpaper(

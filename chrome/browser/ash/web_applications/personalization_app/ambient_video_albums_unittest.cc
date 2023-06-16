@@ -26,16 +26,12 @@ using ::testing::UnorderedElementsAre;
 TEST(AmbientVideoAlbumsTest, AppendAmbientVideoAlbums) {
   std::vector<mojom::AmbientModeAlbumPtr> albums;
   AppendAmbientVideoAlbums(AmbientVideo::kNewMexico, albums);
-  EXPECT_THAT(
-      albums,
-      UnorderedElementsAre(
-          Pointee(FieldsAre(kCloudsAlbumId, false, "Dawn to dark - Cloud Flow",
-                            "Chromebook Plus exclusive", _,
-                            AmbientModeTopicSource::kVideo, _)),
-          Pointee(FieldsAre(kNewMexicoAlbumId, true,
-                            "Dawn to dark - Earth Flow",
-                            "Chromebook Plus exclusive", _,
-                            AmbientModeTopicSource::kVideo, _))));
+  EXPECT_THAT(albums,
+              UnorderedElementsAre(
+                  Pointee(FieldsAre(kCloudsAlbumId, false, "Cloud Flow", _, _,
+                                    AmbientModeTopicSource::kVideo, _)),
+                  Pointee(FieldsAre(kNewMexicoAlbumId, true, "Earth Flow", _, _,
+                                    AmbientModeTopicSource::kVideo, _))));
 
   albums.clear();
   AppendAmbientVideoAlbums(AmbientVideo::kClouds, albums);

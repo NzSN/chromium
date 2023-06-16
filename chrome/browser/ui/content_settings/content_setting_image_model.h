@@ -49,6 +49,7 @@ class ContentSettingImageModel {
     SENSORS = 16,
     NOTIFICATIONS_QUIET_PROMPT = 17,
     CLIPBOARD_READ_WRITE = 18,
+    STORAGE_ACCESS = 19,
 
     NUM_IMAGE_TYPES
   };
@@ -56,7 +57,7 @@ class ContentSettingImageModel {
   ContentSettingImageModel(const ContentSettingImageModel&) = delete;
   ContentSettingImageModel& operator=(const ContentSettingImageModel&) = delete;
 
-  virtual ~ContentSettingImageModel() {}
+  virtual ~ContentSettingImageModel() = default;
 
   // Generates a vector of all image models to be used within one window.
   static std::vector<std::unique_ptr<ContentSettingImageModel>>

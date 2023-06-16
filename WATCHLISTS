@@ -154,6 +154,9 @@
     'arc_auth': {
       'filepath': 'chrome/browser/ash/arc/auth'
     },
+    'arc_fileapi': {
+      'filepath': 'chrome/browser/ash/arc/fileapi'
+    },
     'arc_ime': {
       'filepath': 'chrome/browser/ash/arc/input_method_manager/'\
                   '|components/arc/ime/'
@@ -1219,6 +1222,17 @@
     },
     'incident_reporting': {
       'filepath': 'chrome/browser/safe_browsing/incident_reporting',
+    },
+    'incognito': {
+      'filepath':  'chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabIncognitoManager.java'\
+                   '|chrome/android/java/src/org/chromium/chrome/browser/customtabs/IncognitoCustomTabIntentDataProvider.java'\
+                   '|chrome/android/java/src/org/chromium/chrome/browser/incognito'\
+                   '|chrome/android/junit/src/org/chromium/chrome/browser/incognito'\
+                   '|chrome/android/javatests/src/org/chromium/chrome/browser/incognito'\
+                   '|chrome/browser/incognito'\
+                   '|chrome/browser/prefs/incognito_mode_prefs.cc'\
+                   '|chrome/browser/prefs/pref_service_incognito_allowlist.cc'\
+                   '|chrome/browser/profiles/incognito_mode_policy_handler.cc'\
     },
     'indexed_db': {
       'filepath': 'content/browser/indexed_db|'\
@@ -2315,6 +2329,8 @@
     'arc': ['hidehiko+watch@chromium.org',
             'arc-reviews+chromium@google.com'],
     'arc_auth': ['khmel+watch@chromium.org'],
+    'arc_fileapi': ['alanding+watch@chromium.org',
+                    'djacobo+watch@chromium.org'],
     'arc_ime': ['yhanada+watch@chromium.org'],
     'arc_kiosk': ['poromov+watch@chromium.org'],
     'arc_mojom': ['hashimoto+watch@chromium.org'],
@@ -2379,7 +2395,7 @@
     'blink_animation': ['alexis.menard@intel.com',
                         'gerchiko@microsoft.com',
                         'blink-reviews-animation@chromium.org'],
-    'blink_audio': ['hongchan@chromium.org', 'mjwilson@chromium.org', 'alvinji@chromium.org'],
+    'blink_audio': ['hongchan@chromium.org', 'mjwilson@chromium.org', 'alvinji@chromium.org', 'sinafirooz@chromium.org'],
     'blink_battery_status': ['raphael.kubo.da.costa@intel.com'],
     'blink_bindings': ['blink-reviews-bindings@chromium.org', 'haraken@chromium.org'],
     'blink_bindings_serialization': ['jbroman+watch@chromium.org'],
@@ -2560,7 +2576,8 @@
     'chromeos_geolocation': ['alemate+watch@chromium.org'],
     'chromeos_lkgm': ['achuith+watch@chromium.org'],
     'chromeos_login': ['alemate+watch@chromium.org',
-                       'tbarzic+watch@chromium.org'],
+                       'tbarzic+watch@chromium.org',
+		       'rrsilva+watch@chromium.org'],
     'chromeos_media_app': ['cros-essential-apps-dev-watch@chromium.org'],
     'chromeos_net': ['andrewdear+watch-network@google.com',
                      'azeemarshad+watch-network@chromium.org',
@@ -2577,7 +2594,8 @@
     'chromeos_tast_control': ['chromeos-engprod+watch@google.com',
                               'chrome-os-gardeners+watch@google.com'],
     'chromeos_timezone': ['alemate+watch@chromium.org'],
-    'chromeos_webui': ['alemate+watch@chromium.org'],
+    'chromeos_webui': ['alemate+watch@chromium.org',
+                       'rrsilva+watch@chromium.org'],
     'chromeos_wifi_sync': ['ajayramamurthy+watch@google.com',
                            'jonmann+watch@chromium.org',
                            'stevenjb+watch@chromium.org'],
@@ -2747,6 +2765,7 @@
                      'kristipark+watch@chromium.org',
                      'tgupta+watch@chromium.org'],
     'incident_reporting': ['grt+watch@chromium.org'],
+    'incognito': ['roagarwal+watch@chromium.org'],
     'indexed_db': ['jsbell+idb@chromium.org',
                    'dmurph+watching-idb@chromium.org',
                    'enne+idb@chromium.org'],

@@ -21,7 +21,16 @@ namespace ash {
 
 namespace {
 
+// The activation code for the GSM Association SM-DS server.
+constexpr char kSmdsGsma[] = "1$lpa.ds.gsma.com$";
+// The activation code for the Stork SM-DS server.
+constexpr char kSmdsStork[] = "1$prod.smds.rsp.goog$";
+// The activation code for the Android staging SM-DS server.
+constexpr char kSmdsAndroidStaging[] = "1$lpa.live.esimdiscovery.dev$";
+
 const char kNonShillCellularNetworkPathPrefix[] = "/non-shill-cellular/";
+
+}  // namespace
 
 base::flat_set<dbus::ObjectPath> GetProfilePathsFromEuicc(
     HermesEuiccClient::Properties* euicc_properties) {
@@ -99,7 +108,7 @@ const base::flat_map<int32_t, std::string> GetESimSlotToEidMap() {
   return esim_slot_to_eid;
 }
 
-}  // namespace
+namespace cellular_utils {
 
 std::vector<CellularESimProfile> GenerateProfilesFromHermes() {
   std::vector<CellularESimProfile> profiles;
@@ -176,4 +185,19 @@ absl::optional<dbus::ObjectPath> GetCurrentEuiccPath() {
   return use_second_euicc ? euicc_paths[1] : euicc_paths[0];
 }
 
+std::vector<std::string> GetSmdsActivationCodes() {
+  std::vector<std::string> activation_codes;
+  if (features::ShouldUseStorkSmds()) {
+    activation_codes.push_back(kSmdsStork);
+  }
+  if (features::ShouldUseAndroidStagingSmds()) {
+    activation_codes.push_back(kSmdsAndroidStaging);
+  }
+  if (activation_codes.empty()) {
+    activation_codes.push_back(kSmdsGsma);
+  }
+  return activation_codes;
+}
+
+}  // namespace cellular_utils
 }  // namespace ash

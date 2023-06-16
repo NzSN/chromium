@@ -26,8 +26,8 @@
 
 namespace {
 
-using ShowVirtualKeyboard =
-    password_manager::PasswordManagerDriver::ShowVirtualKeyboard;
+using ToShowVirtualKeyboard =
+    password_manager::PasswordManagerDriver::ToShowVirtualKeyboard;
 using autofill::mojom::SubmissionReadinessState;
 using password_manager::PasswordManagerDriver;
 using password_manager::UiCredential;
@@ -66,21 +66,25 @@ TouchToFillControllerAutofillDelegate::TouchToFillControllerAutofillDelegate(
     password_manager::PasswordManagerClient* password_client,
     scoped_refptr<device_reauth::DeviceAuthenticator> authenticator,
     base::WeakPtr<password_manager::PasswordManagerDriver> driver,
-    autofill::mojom::SubmissionReadinessState submission_readiness)
+    autofill::mojom::SubmissionReadinessState submission_readiness,
+    ShowHybridOption should_show_hybrid_option)
     : password_client_(password_client),
       authenticator_(std::move(authenticator)),
       driver_(std::move(driver)),
-      submission_readiness_(submission_readiness) {}
+      submission_readiness_(submission_readiness),
+      should_show_hybrid_option_(should_show_hybrid_option) {}
 
 TouchToFillControllerAutofillDelegate::TouchToFillControllerAutofillDelegate(
     ChromePasswordManagerClient* password_client,
     scoped_refptr<device_reauth::DeviceAuthenticator> authenticator,
     base::WeakPtr<password_manager::PasswordManagerDriver> driver,
-    autofill::mojom::SubmissionReadinessState submission_readiness)
+    autofill::mojom::SubmissionReadinessState submission_readiness,
+    ShowHybridOption should_show_hybrid_option)
     : password_client_(password_client),
       authenticator_(std::move(authenticator)),
       driver_(driver),
       submission_readiness_(submission_readiness),
+      should_show_hybrid_option_(should_show_hybrid_option),
       source_id_(password_client->web_contents()
                      ->GetPrimaryMainFrame()
                      ->GetPageUkmSourceId()) {}
@@ -177,6 +181,21 @@ void TouchToFillControllerAutofillDelegate::OnManagePasswordsSelected(
   std::move(action_complete).Run();
 }
 
+void TouchToFillControllerAutofillDelegate::OnHybridSignInSelected(
+    base::OnceClosure action_complete) {
+  if (!driver_) {
+    return;
+  }
+
+  password_client_->GetWebAuthnCredentialsDelegateForDriver(driver_.get())
+      ->ShowAndroidHybridSignIn();
+
+  CleanUpDriverAndReportOutcome(TouchToFillOutcome::kHybridSignInSelected,
+                                /*show_virtual_keyboard=*/false);
+
+  std::move(action_complete).Run();
+}
+
 void TouchToFillControllerAutofillDelegate::OnDismiss(
     base::OnceClosure action_complete) {
   if (!driver_)
@@ -196,6 +215,10 @@ const GURL& TouchToFillControllerAutofillDelegate::GetFrameUrl() {
 
 bool TouchToFillControllerAutofillDelegate::ShouldTriggerSubmission() {
   return trigger_submission_;
+}
+
+bool TouchToFillControllerAutofillDelegate::ShouldShowHybridOption() {
+  return should_show_hybrid_option_.value();
 }
 
 gfx::NativeView TouchToFillControllerAutofillDelegate::GetNativeView() {
@@ -229,8 +252,9 @@ void TouchToFillControllerAutofillDelegate::FillCredential(
   DCHECK(driver_);
 
   password_manager::metrics_util::LogFilledCredentialIsFromAndroidApp(
-      credential.is_affiliation_based_match().value());
-  driver_->TouchToFillClosed(ShowVirtualKeyboard(false));
+      credential.match_type() ==
+      password_manager_util::GetLoginMatchType::kAffiliated);
+  driver_->KeyboardReplacingSurfaceClosed(ToShowVirtualKeyboard(false));
 
   driver_->FillSuggestion(credential.username(), credential.password());
 
@@ -255,6 +279,7 @@ void TouchToFillControllerAutofillDelegate::CleanUpDriverAndReportOutcome(
     TouchToFillOutcome outcome,
     bool show_virtual_keyboard) {
   std::exchange(driver_, nullptr)
-      ->TouchToFillClosed(ShowVirtualKeyboard(show_virtual_keyboard));
+      ->KeyboardReplacingSurfaceClosed(
+          ToShowVirtualKeyboard(show_virtual_keyboard));
   base::UmaHistogramEnumeration("PasswordManager.TouchToFill.Outcome", outcome);
 }

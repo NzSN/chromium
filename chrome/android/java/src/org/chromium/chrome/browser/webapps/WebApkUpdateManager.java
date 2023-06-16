@@ -209,8 +209,7 @@ public class WebApkUpdateManager implements WebApkUpdateDataFetcher.Observer, De
             destroyFetcher();
         }
 
-        if (ChromeFeatureList.isEnabled(ChromeFeatureList.WEB_APK_UNIQUE_ID)
-                && TextUtils.isEmpty(mInfo.manifestId())) {
+        if (TextUtils.isEmpty(mInfo.manifestId())) {
             RecordHistogram.recordBooleanHistogram(
                     "WebApk.Update.UpdateEmptyUniqueId.NeedsUpgrade", needsUpgrade);
         }
@@ -278,7 +277,8 @@ public class WebApkUpdateManager implements WebApkUpdateDataFetcher.Observer, De
     }
 
     protected boolean nameUpdateDialogEnabled() {
-        return ChromeFeatureList.isEnabled(ChromeFeatureList.PWA_UPDATE_DIALOG_FOR_NAME);
+        // TODO(finnur): Remove this function when future of the icon flag is clear.
+        return true;
     }
 
     private boolean allowIconUpdateForShellVersion(int shellVersion) {
@@ -375,7 +375,6 @@ public class WebApkUpdateManager implements WebApkUpdateDataFetcher.Observer, De
     }
 
     private void recordWebApkUpdateUniqueIdHistogram(WebappInfo oldInfo, WebappInfo fetchedInfo) {
-        if (!ChromeFeatureList.isEnabled(ChromeFeatureList.WEB_APK_UNIQUE_ID)) return;
         if (fetchedInfo == null) return;
 
         String baseName = "WebApk.Update.UniqueId"

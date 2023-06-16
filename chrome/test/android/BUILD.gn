@@ -72,6 +72,15 @@ chrome_public_test_apk_tmpl("chrome_java_test_pagecontroller_tests") {
   ]
 }
 
+generate_jni_registration("baseline_profile_test_apk_dummy_jni_registration") {
+  testonly = true
+  java_targets = [ ":baseline_profile_test_apk" ]
+
+  # By not providing any native targets, this becomes a dummy-only registration,
+  # just used to satisfy R8.
+  add_stubs_for_missing_jni = true
+}
+
 android_test_apk("baseline_profile_test_apk") {
   apk_name = "ChromeStartupBenchmark"
   android_manifest =
@@ -98,6 +107,7 @@ android_test_apk("baseline_profile_test_apk") {
     "//third_party/junit",
     "//third_party/kotlin_stdlib:kotlin_stdlib_java",
   ]
+  srcjar_deps = [ ":baseline_profile_test_apk_dummy_jni_registration" ]
 }
 
 instrumentation_test_runner("chrome_public_apk_baseline_profile_generator") {
@@ -293,7 +303,6 @@ android_library("chrome_java_integration_test_support") {
     "//chrome/android:browser_java_test_support",
     "//chrome/android:chrome_app_java_resources",
     "//chrome/android:chrome_java",
-    "//chrome/browser/android/browserservices/constants:java",
     "//chrome/browser/android/browserservices/intents:java",
     "//chrome/browser/first_run/android:java",
     "//chrome/browser/flags:java",
@@ -354,6 +363,7 @@ android_library("chrome_java_integration_test_support") {
     "//third_party/androidx:androidx_core_core_java",
     "//third_party/androidx:androidx_fragment_fragment_java",
     "//third_party/androidx:androidx_recyclerview_recyclerview_java",
+    "//third_party/androidx:androidx_test_core_java",
     "//third_party/androidx:androidx_test_monitor_java",
     "//third_party/androidx:androidx_test_runner_java",
     "//third_party/androidx:androidx_test_uiautomator_uiautomator_java",
@@ -444,6 +454,7 @@ android_library("chrome_java_test_support_common") {
     "//third_party/androidx:androidx_core_core_java",
     "//third_party/androidx:androidx_fragment_fragment_java",
     "//third_party/androidx:androidx_recyclerview_recyclerview_java",
+    "//third_party/androidx:androidx_test_core_java",
     "//third_party/androidx:androidx_test_monitor_java",
     "//third_party/blink/public/mojom:mojom_platform_java",
     "//third_party/hamcrest:hamcrest_java",

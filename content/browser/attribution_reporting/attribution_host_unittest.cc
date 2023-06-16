@@ -69,7 +69,6 @@ using ::testing::Optional;
 using ::testing::Return;
 
 using ::attribution_reporting::mojom::RegistrationType;
-using ::blink::mojom::AttributionNavigationType;
 
 const char kConversionUrl[] = "https://b.com";
 
@@ -112,6 +111,22 @@ class AttributionHostTest : public RenderViewHostTestHarness {
 
   AttributionHost* attribution_host() {
     return AttributionHost::FromWebContents(web_contents());
+  }
+
+  void SetFencedFrameConfigPermissions(RenderFrameHost* fenced_frame) {
+    // Permissions in a fenced frame are tied to its urn:uuid-bound properties
+    // object. Because no navigation actually takes place in these tests, the
+    // code path that sets the permissions in the properties is never actually
+    // exercised. Instead, we need to manually inject the permissions into the
+    // properties object to ensure that the fenced frame loads with the needed
+    // permissions policy set.
+    FrameTreeNode* fenced_frame_node =
+        static_cast<RenderFrameHostImpl*>(fenced_frame)->frame_tree_node();
+    absl::optional<FencedFrameProperties> new_props =
+        fenced_frame_node->GetFencedFrameProperties();
+    new_props->effective_enabled_permissions.push_back(
+        blink::mojom::PermissionsPolicyFeature::kAttributionReporting);
+    fenced_frame_node->set_fenced_frame_properties(new_props);
   }
 
   void ClearAttributionManager() {
@@ -164,13 +179,11 @@ TEST_F(AttributionHostTest, NavigationWithNoImpression_Ignored) {
 
 TEST_F(AttributionHostTest, ValidAttributionSrc_ForwardedToManager) {
   blink::Impression impression;
-  impression.nav_type = AttributionNavigationType::kWindowOpen;
 
   EXPECT_CALL(*mock_data_host_manager(),
               NotifyNavigationRegistrationStarted(
                   impression.attribution_src_token,
                   *SuitableOrigin::Deserialize("https://secure_impression.com"),
-                  impression.nav_type,
                   /*is_within_fenced_frame=*/false, main_rfh()->GetGlobalId(),
                   /*navigation_id=*/_));
 
@@ -184,7 +197,6 @@ TEST_F(AttributionHostTest, ValidAttributionSrc_ForwardedToManager) {
 
 TEST_F(AttributionHostTest, ValidSourceRegistrations_ForwardedToManager) {
   blink::Impression impression;
-  impression.nav_type = AttributionNavigationType::kWindowOpen;
 
   auto redirect_headers = base::MakeRefCounted<net::HttpResponseHeaders>("");
   auto headers = base::MakeRefCounted<net::HttpResponseHeaders>("");
@@ -202,33 +214,29 @@ TEST_F(AttributionHostTest, ValidSourceRegistrations_ForwardedToManager) {
   const SuitableOrigin d_origin = *SuitableOrigin::Create(d_url);
 
   GlobalRenderFrameHostId frame_id = main_rfh()->GetGlobalId();
-  EXPECT_CALL(
-      *mock_data_host_manager(),
-      NotifyNavigationRegistrationStarted(
-          impression.attribution_src_token, source_origin, impression.nav_type,
-          /*is_within_fenced_frame=*/false, frame_id,
-          /*navigation_id=*/_));
-  EXPECT_CALL(
-      *mock_data_host_manager(),
-      NotifyNavigationRegistrationData(
-          impression.attribution_src_token, redirect_headers.get(),
-          /*reporting_origin=*/b_origin, source_origin, _, impression.nav_type,
-          /*is_within_fenced_frame=*/false, frame_id, _,
-          /*is_final_response=*/false));
-  EXPECT_CALL(
-      *mock_data_host_manager(),
-      NotifyNavigationRegistrationData(
-          impression.attribution_src_token, redirect_headers.get(),
-          /*reporting_origin=*/c_origin, source_origin, _, impression.nav_type,
-          /*is_within_fenced_frame=*/false, frame_id, _,
-          /*is_final_response=*/false));
-  EXPECT_CALL(
-      *mock_data_host_manager(),
-      NotifyNavigationRegistrationData(
-          impression.attribution_src_token, headers.get(),
-          /*reporting_origin=*/d_origin, source_origin, _, impression.nav_type,
-          /*is_within_fenced_frame=*/false, frame_id, _,
-          /*is_final_response=*/true));
+  EXPECT_CALL(*mock_data_host_manager(),
+              NotifyNavigationRegistrationStarted(
+                  impression.attribution_src_token, source_origin,
+                  /*is_within_fenced_frame=*/false, frame_id,
+                  /*navigation_id=*/_));
+  EXPECT_CALL(*mock_data_host_manager(),
+              NotifyNavigationRegistrationData(
+                  impression.attribution_src_token, redirect_headers.get(),
+                  /*reporting_origin=*/b_origin, source_origin, _,
+                  /*is_within_fenced_frame=*/false, frame_id, _, _,
+                  /*is_final_response=*/false));
+  EXPECT_CALL(*mock_data_host_manager(),
+              NotifyNavigationRegistrationData(
+                  impression.attribution_src_token, redirect_headers.get(),
+                  /*reporting_origin=*/c_origin, source_origin, _,
+                  /*is_within_fenced_frame=*/false, frame_id, _, _,
+                  /*is_final_response=*/false));
+  EXPECT_CALL(*mock_data_host_manager(),
+              NotifyNavigationRegistrationData(
+                  impression.attribution_src_token, headers.get(),
+                  /*reporting_origin=*/d_origin, source_origin, _,
+                  /*is_within_fenced_frame=*/false, frame_id, _, _,
+                  /*is_final_response=*/true));
 
   contents()->NavigateAndCommit(GURL("https://secure_impression.com"));
 
@@ -616,6 +624,7 @@ TEST_F(AttributionHostTest, NotifyFencedFrameReportingBeaconStarted) {
     static_cast<RenderFrameHostImpl*>(fenced_frame)
         ->frame_tree_node()
         ->SetFencedFramePropertiesOpaqueAdsModeForTesting();
+    SetFencedFrameConfigPermissions(fenced_frame);
     fenced_frame = NavigationSimulatorImpl::NavigateAndCommitFromDocument(
         GURL("https://fencedframe.example"), fenced_frame);
 
@@ -637,6 +646,7 @@ TEST_F(AttributionHostTest, FencedFrameReportingBeacon_FeaturePolicyChecked) {
   static_cast<RenderFrameHostImpl*>(fenced_frame)
       ->frame_tree_node()
       ->SetFencedFramePropertiesOpaqueAdsModeForTesting();
+  SetFencedFrameConfigPermissions(fenced_frame);
 
   static constexpr char kAllowedOriginUrl[] = "https://a.test";
 
@@ -659,9 +669,8 @@ TEST_F(AttributionHostTest, FencedFrameReportingBeacon_FeaturePolicyChecked) {
         {blink::ParsedPermissionsPolicyDeclaration(
             blink::mojom::PermissionsPolicyFeature::kAttributionReporting,
             /*allowed_origins=*/
-            {blink::OriginWithPossibleWildcards(
-                url::Origin::Create(GURL(kAllowedOriginUrl)),
-                /*has_subdomain_wildcard=*/false)},
+            {*blink::OriginWithPossibleWildcards::FromOrigin(
+                url::Origin::Create(GURL(kAllowedOriginUrl)))},
             /*self_if_matches=*/absl::nullopt,
             /*matches_all_origins=*/false, /*matches_opaque_src=*/false)});
     simulator->Commit();
@@ -675,7 +684,6 @@ TEST_F(AttributionHostTest, FencedFrameReportingBeacon_FeaturePolicyChecked) {
 
 TEST_F(AttributionHostTest, ImpressionNavigation_FeaturePolicyChecked) {
   blink::Impression impression;
-  impression.nav_type = AttributionNavigationType::kWindowOpen;
 
   static constexpr char kAllowedOriginUrl[] = "https://a.test";
 

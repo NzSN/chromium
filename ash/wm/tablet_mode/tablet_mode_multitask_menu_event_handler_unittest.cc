@@ -22,6 +22,7 @@
 #include "base/test/metrics/histogram_tester.h"
 #include "base/test/scoped_feature_list.h"
 #include "base/time/time.h"
+#include "chromeos/ui/frame/multitask_menu/multitask_button.h"
 #include "chromeos/ui/frame/multitask_menu/multitask_menu_metrics.h"
 #include "chromeos/ui/frame/multitask_menu/multitask_menu_view.h"
 #include "chromeos/ui/frame/multitask_menu/split_button_view.h"
@@ -29,6 +30,7 @@
 #include "ui/aura/test/test_window_delegate.h"
 #include "ui/compositor/layer_animator.h"
 #include "ui/compositor/scoped_animation_duration_scale_mode.h"
+#include "ui/compositor/test/layer_animation_stopped_waiter.h"
 #include "ui/compositor/test/test_utils.h"
 #include "ui/display/display_switches.h"
 #include "ui/wm/core/window_util.h"
@@ -374,6 +376,27 @@ TEST_F(TabletModeMultitaskMenuEventHandlerTest, CloseMultitaskMenuOnTap) {
   EXPECT_FALSE(GetMultitaskMenu());
 }
 
+// Tests that pressing a button before the show animation ends closes the menu
+// (http://b/279355302).
+TEST_F(TabletModeMultitaskMenuEventHandlerTest,
+       CloseMultitaskMenuOnButtonPress) {
+  ui::ScopedAnimationDurationScaleMode test_duration_mode(
+      ui::ScopedAnimationDurationScaleMode::NON_ZERO_DURATION);
+
+  // Swipe down the menu partially to start an animation.
+  auto window = CreateAppWindow();
+  GenerateScroll(window->bounds().CenterPoint().x(), 0,
+                 /*end_y=*/60);
+  GestureTapOn(
+      GetMultitaskMenuView(GetMultitaskMenu())->float_button_for_testing());
+
+  // Wait for the TabletModeMultitaskMenuView layer to fade out.
+  ui::LayerAnimationStoppedWaiter().Wait(
+      GetMultitaskMenu()->widget()->GetContentsView()->layer());
+
+  ASSERT_FALSE(GetMultitaskMenu());
+}
+
 TEST_F(TabletModeMultitaskMenuEventHandlerTest, CloseOnDoubleTapDivider) {
   auto window1 = CreateTestWindow(gfx::Rect(800, 600));
   auto window2 = CreateTestWindow(gfx::Rect(800, 600));
@@ -625,6 +648,34 @@ TEST_F(TabletModeMultitaskMenuEventHandlerTest, CueTransformOnShowMenu) {
   EXPECT_FALSE(multitask_cue->cue_layer());
 }
 
+// Tests that the cue appears on the correct window when the multitask menu is
+// activated on different windows in split view.
+TEST_F(TabletModeMultitaskMenuEventHandlerTest, CueCorrectWindowInSplitView) {
+  auto window1 = CreateAppWindow();
+  PressPartialPrimary(*window1);
+  auto window2 = CreateAppWindow();
+  PressPartialSecondary(*window2);
+
+  auto* split_view_controller =
+      SplitViewController::Get(Shell::GetPrimaryRootWindow());
+  ASSERT_TRUE(split_view_controller->IsWindowInSplitView(window1.get()));
+  ASSERT_TRUE(split_view_controller->IsWindowInSplitView(window2.get()));
+
+  // Show the menu and cue on the first window.
+  ShowMultitaskMenu(*window1);
+  auto* multitask_cue = GetMultitaskMenuEventHandler()->multitask_cue();
+  ASSERT_TRUE(multitask_cue);
+  EXPECT_TRUE(multitask_cue->cue_layer());
+  EXPECT_EQ(window1.get(), multitask_cue->window_);
+
+  // Show the menu and cue on the second window.
+  ShowMultitaskMenu(*window2);
+  multitask_cue = GetMultitaskMenuEventHandler()->multitask_cue();
+  ASSERT_TRUE(multitask_cue);
+  EXPECT_TRUE(multitask_cue->cue_layer());
+  EXPECT_EQ(window2.get(), multitask_cue->window_);
+}
+
 // Tests that the bottom window can open the multitask menu in portrait mode. In
 // portrait primary view, the bottom window is on the right.
 // ----------------------
@@ -724,7 +775,7 @@ TEST_F(TabletModeMultitaskMenuEventHandlerTest, HidesWhenMinimized) {
   ShowMultitaskMenu(*window);
 
   Shell::Get()->accelerator_controller()->PerformActionIfEnabled(
-      WINDOW_MINIMIZE, {});
+      AcceleratorAction::kWindowMinimize, {});
   ASSERT_TRUE(WindowState::Get(window.get())->IsMinimized());
   EXPECT_FALSE(GetMultitaskMenu());
 }

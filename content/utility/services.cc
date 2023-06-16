@@ -94,6 +94,11 @@ extern sandbox::TargetServices* g_utility_target_services;
 #endif  // (BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS_ASH)) &&
         // (BUILDFLAG(USE_VAAPI) || BUILDFLAG(USE_V4L2_CODEC))
 
+#if BUILDFLAG(IS_ANDROID)
+#include "services/network/empty_network_service.h"
+#include "services/network/public/cpp/features.h"
+#endif
+
 #if BUILDFLAG(ENABLE_ACCESSIBILITY_SERVICE)
 #if BUILDFLAG(SUPPORTS_OS_ACCESSIBILITY_SERVICE)
 #include "services/accessibility/os_accessibility_service.h"  // nogncheck
@@ -105,6 +110,7 @@ extern sandbox::TargetServices* g_utility_target_services;
 #endif  // BUILDFLAG(ENABLE_ACCESSIBILITY_SERVICE)
 
 #if BUILDFLAG(IS_LINUX)
+#include "media/capture/capture_switches.h"
 #include "services/viz/public/cpp/gpu/gpu.h"
 #endif  // BUILDFLAG(IS_LINUX)
 
@@ -305,12 +311,15 @@ auto RunVideoCapture(
   auto service = std::make_unique<UtilityThreadVideoCaptureServiceImpl>(
       std::move(receiver), base::SingleThreadTaskRunner::GetCurrentDefault());
 #if BUILDFLAG(IS_LINUX)
-  mojo::PendingRemote<viz::mojom::Gpu> remote_gpu;
-  content::UtilityThread::Get()->BindHostReceiver(
-      remote_gpu.InitWithNewPipeAndPassReceiver());
-  std::unique_ptr<viz::Gpu> viz_gpu = viz::Gpu::Create(
-      std::move(remote_gpu), content::UtilityThread::Get()->GetIOTaskRunner());
-  service->SetVizGpu(std::move(viz_gpu));
+  if (switches::IsVideoCaptureUseGpuMemoryBufferEnabled()) {
+    mojo::PendingRemote<viz::mojom::Gpu> remote_gpu;
+    content::UtilityThread::Get()->BindHostReceiver(
+        remote_gpu.InitWithNewPipeAndPassReceiver());
+    std::unique_ptr<viz::Gpu> viz_gpu =
+        viz::Gpu::Create(std::move(remote_gpu),
+                         content::UtilityThread::Get()->GetIOTaskRunner());
+    service->SetVizGpu(std::move(viz_gpu));
+  }
 #endif  // BUILDFLAG(IS_LINUX)
   return service;
 }
@@ -366,6 +375,15 @@ void RegisterIOThreadServices(mojo::ServiceFactory& services) {
   // The network service runs on the IO thread because it needs a message
   // loop of type IO that can get notified when pipes have data.
   services.Add(RunNetworkService);
+#if BUILDFLAG(IS_ANDROID)
+  // TODO(https://crbug.com/1448414): Implement IsInProcessNetworkService.
+  const bool is_in_process_network_service = false;
+  if (is_in_process_network_service &&
+      base::FeatureList::IsEnabled(
+          network::features::kNetworkServiceEmptyOutOfProcess)) {
+    network::RegisterEmptyNetworkService(services);
+  }
+#endif
 
   // Add new IO-thread services above this line.
   GetContentClient()->utility()->RegisterIOThreadServices(services);

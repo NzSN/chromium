@@ -43,7 +43,7 @@
 #include "chrome/browser/ash/file_system_provider/provider_interface.h"
 #include "chrome/browser/ash/file_system_provider/service.h"
 #include "chrome/browser/ash/login/test/logged_in_user_mixin.h"
-#include "chrome/browser/ash/policy/dlp/dlp_files_controller.h"
+#include "chrome/browser/ash/policy/dlp/dlp_files_controller_ash.h"
 #include "chrome/browser/ash/system_web_apps/system_web_app_manager.h"
 #include "chrome/browser/chromeos/policy/dlp/dlp_rules_manager.h"
 #include "chrome/browser/chromeos/policy/dlp/dlp_rules_manager_factory.h"
@@ -729,8 +729,8 @@ IN_PROC_BROWSER_TEST_P(FileTasksPolicyBrowserTest, TasksMarkedAsBlocked) {
 
   ON_CALL(*rules_manager_, IsFilesPolicyEnabled)
       .WillByDefault(testing::Return(true));
-  std::unique_ptr<policy::DlpFilesController> files_controller_ =
-      std::make_unique<policy::DlpFilesController>(*rules_manager_);
+  std::unique_ptr<policy::DlpFilesControllerAsh> files_controller_ =
+      std::make_unique<policy::DlpFilesControllerAsh>(*rules_manager_);
   ON_CALL(*rules_manager_, GetDlpFilesController)
       .WillByDefault(testing::Return(files_controller_.get()));
 
@@ -752,21 +752,14 @@ IN_PROC_BROWSER_TEST_P(FileTasksPolicyBrowserTest, TasksMarkedAsBlocked) {
 }
 
 // |InProcessBrowserTest| which allows a fake user to login. Login a non-managed
-// or Google user to ensure |IsEligibleAndEnabledUploadOfficeToCloud| returns
-// the result of |IsUploadOfficeToCloudEnabled|.
+// to ensure |IsEligibleAndEnabledUploadOfficeToCloud| returns the result of
+// |IsUploadOfficeToCloudEnabled|.
 class TestAccountBrowserTest : public MixinBasedInProcessBrowserTest {
  public:
-  TestAccountBrowserTest(TestAccountType test_account_type,
-                         bool is_google_account) {
-    ash::LoggedInUserMixin::LogInType log_in_type;
-    absl::optional<AccountId> account_id;
-    if (is_google_account) {
-      log_in_type = ash::LoggedInUserMixin::LogInType::kRegular;
-      account_id = AccountId::FromUserEmailGaiaId("user@google.com", "12345");
-    } else {
-      log_in_type = LogInTypeFor(test_account_type);
-      account_id = AccountIdFor(test_account_type);
-    }
+  explicit TestAccountBrowserTest(TestAccountType test_account_type) {
+    ash::LoggedInUserMixin::LogInType log_in_type =
+        LogInTypeFor(test_account_type);
+    absl::optional<AccountId> account_id = AccountIdFor(test_account_type);
 
     logged_in_user_mixin_ = std::make_unique<ash::LoggedInUserMixin>(
         &mixin_host_, log_in_type, embedded_test_server(), this,
@@ -808,8 +801,7 @@ class TestAccountBrowserTest : public MixinBasedInProcessBrowserTest {
 
 class NonManagedAccount : public TestAccountBrowserTest {
  public:
-  NonManagedAccount()
-      : TestAccountBrowserTest(kNonManaged, /*is_google_account=*/false) {
+  NonManagedAccount() : TestAccountBrowserTest(kNonManaged) {
     feature_list_.InitAndEnableFeature(
         chromeos::features::kUploadOfficeToCloud);
   }
@@ -835,7 +827,8 @@ class NonManagedAccount : public TestAccountBrowserTest {
 // non-managed user is logged in and |kUploadOfficeToCloud| is enabled.
 IN_PROC_BROWSER_TEST_F(NonManagedAccount,
                        IsEligibleAndEnabledUploadOfficeToCloud) {
-  ASSERT_TRUE(ash::cloud_upload::IsEligibleAndEnabledUploadOfficeToCloud());
+  ASSERT_TRUE(ash::cloud_upload::IsEligibleAndEnabledUploadOfficeToCloud(
+      browser()->profile()));
 }
 
 // Test that the office PWA file handler is hidden from the available file
@@ -882,8 +875,7 @@ IN_PROC_BROWSER_TEST_F(NonManagedAccount, OfficePwaHandlerHidden) {
 
 class EnterpriseAccount : public TestAccountBrowserTest {
  public:
-  EnterpriseAccount()
-      : TestAccountBrowserTest(kEnterprise, /*is_google_account=*/false) {
+  EnterpriseAccount() : TestAccountBrowserTest(kEnterprise) {
     feature_list_.InitAndEnableFeature(
         chromeos::features::kUploadOfficeToCloud);
   }
@@ -896,12 +888,13 @@ class EnterpriseAccount : public TestAccountBrowserTest {
 // enterprise user is logged in and |kUploadOfficeToCloud| is enabled.
 IN_PROC_BROWSER_TEST_F(EnterpriseAccount,
                        IsEligibleAndEnabledUploadOfficeToCloud) {
-  ASSERT_FALSE(ash::cloud_upload::IsEligibleAndEnabledUploadOfficeToCloud());
+  ASSERT_FALSE(ash::cloud_upload::IsEligibleAndEnabledUploadOfficeToCloud(
+      browser()->profile()));
 }
 
 class ChildAccount : public TestAccountBrowserTest {
  public:
-  ChildAccount() : TestAccountBrowserTest(kChild, /*is_google_account=*/false) {
+  ChildAccount() : TestAccountBrowserTest(kChild) {
     feature_list_.InitAndEnableFeature(
         chromeos::features::kUploadOfficeToCloud);
   }
@@ -913,39 +906,21 @@ class ChildAccount : public TestAccountBrowserTest {
 // Tests that a |IsEligibleAndEnabledUploadOfficeToCloud| returns false when a
 // child user is logged in and |kUploadOfficeToCloud| is enabled.
 IN_PROC_BROWSER_TEST_F(ChildAccount, IsEligibleAndEnabledUploadOfficeToCloud) {
-  ASSERT_FALSE(ash::cloud_upload::IsEligibleAndEnabledUploadOfficeToCloud());
-}
-
-class GoogleAccount : public TestAccountBrowserTest {
- public:
-  GoogleAccount()
-      : TestAccountBrowserTest(kTestAccountTypeNotSet,
-                               /*is_google_account=*/true) {
-    feature_list_.InitAndEnableFeature(
-        chromeos::features::kUploadOfficeToCloud);
-  }
-
- private:
-  base::test::ScopedFeatureList feature_list_;
-};
-
-// Tests that a |IsEligibleAndEnabledUploadOfficeToCloud| returns true when a
-// google user is logged in and |kUploadOfficeToCloud| is enabled.
-IN_PROC_BROWSER_TEST_F(GoogleAccount, IsEligibleAndEnabledUploadOfficeToCloud) {
-  ASSERT_TRUE(ash::cloud_upload::IsEligibleAndEnabledUploadOfficeToCloud());
+  ASSERT_FALSE(ash::cloud_upload::IsEligibleAndEnabledUploadOfficeToCloud(
+      browser()->profile()));
 }
 
 class NonManagedAccountNoFlag : public TestAccountBrowserTest {
  public:
-  NonManagedAccountNoFlag()
-      : TestAccountBrowserTest(kNonManaged, /*is_google_account=*/false) {}
+  NonManagedAccountNoFlag() : TestAccountBrowserTest(kNonManaged) {}
 };
 
 // Tests that a |IsEligibleAndEnabledUploadOfficeToCloud| returns false when a
 // non-managed user is logged in but |kUploadOfficeToCloud| is disabled.
 IN_PROC_BROWSER_TEST_F(NonManagedAccountNoFlag,
                        IsEligibleAndEnabledUploadOfficeToCloud) {
-  ASSERT_FALSE(ash::cloud_upload::IsEligibleAndEnabledUploadOfficeToCloud());
+  ASSERT_FALSE(ash::cloud_upload::IsEligibleAndEnabledUploadOfficeToCloud(
+      browser()->profile()));
 }
 
 // TODO(cassycc): move this class to a more appropriate spot.
@@ -1017,8 +992,7 @@ class FakeSimpleDriveFsHelper : public drive::FakeDriveFsHelper {
 // a user fails to open an office file from Drive.
 class DriveTest : public TestAccountBrowserTest {
  public:
-  DriveTest()
-      : TestAccountBrowserTest(kNonManaged, /*is_google_account=*/false) {
+  DriveTest() : TestAccountBrowserTest(kNonManaged) {
     feature_list_.InitAndEnableFeature(
         chromeos::features::kUploadOfficeToCloud);
     EXPECT_TRUE(temp_dir_.CreateUniqueTempDir());
@@ -1135,7 +1109,7 @@ IN_PROC_BROWSER_TEST_F(DriveTest, OfficeFallbackTryAgain) {
 
   // Disable the setup flow for office files because we want the office
   // fallback dialog to run instead.
-  SetOfficeSetupComplete(profile(), true);
+  SetWordFileHandlerToFilesSWA(profile(), kActionIdWebDriveOfficeWord);
 
   const TaskDescriptor web_drive_office_task = CreateWebDriveOfficeTask();
   std::vector<storage::FileSystemURL> file_urls{drive_test_file_url_};
@@ -1423,8 +1397,7 @@ class FakeWebAppPublisher : public apps::AppPublisher {
 // user fails to open an office file from ODFS.
 class OneDriveTest : public TestAccountBrowserTest {
  public:
-  OneDriveTest()
-      : TestAccountBrowserTest(kNonManaged, /*is_google_account=*/false) {
+  OneDriveTest() : TestAccountBrowserTest(kNonManaged) {
     feature_list_.InitAndEnableFeature(
         chromeos::features::kUploadOfficeToCloud);
     test_file_name_ = "text.docx";
@@ -1549,7 +1522,7 @@ IN_PROC_BROWSER_TEST_F(OneDriveTest, OfficeFallbackTryAgain) {
 
   // Disable the setup flow for office files because we want the office
   // fallback dialog to run instead.
-  SetOfficeSetupComplete(profile(), true);
+  SetWordFileHandlerToFilesSWA(profile(), kActionIdWebDriveOfficeWord);
 
   const TaskDescriptor open_in_office_task = CreateOpenInOfficeTask();
   std::vector<storage::FileSystemURL> file_urls{odfs_test_file_url_};
@@ -1597,7 +1570,7 @@ IN_PROC_BROWSER_TEST_F(OneDriveTest, OfficeFallbackCancel) {
 
   // Disable the setup flow for office files because we want the office
   // fallback dialog to run instead.
-  SetOfficeSetupComplete(profile(), true);
+  SetWordFileHandlerToFilesSWA(profile(), kActionIdWebDriveOfficeWord);
 
   const TaskDescriptor open_in_office_task = CreateOpenInOfficeTask();
   std::vector<storage::FileSystemURL> file_urls{odfs_test_file_url_};

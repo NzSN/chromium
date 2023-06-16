@@ -47,7 +47,6 @@ class MockHidSystemTrayIcon : public HidSystemTrayIcon {
  public:
   MOCK_METHOD(void, StageProfile, (Profile*), (override));
   MOCK_METHOD(void, UnstageProfile, (Profile*, bool), (override));
-  MOCK_METHOD(bool, ContainProfile, (Profile*), (override));
   MOCK_METHOD(void, ProfileAdded, (Profile*), (override));
   MOCK_METHOD(void, ProfileRemoved, (Profile*), (override));
   MOCK_METHOD(void, NotifyConnectionCountUpdated, (Profile*), (override));
@@ -298,8 +297,8 @@ class HidConnectionTrackerTest : public BrowserWithTestWindowTest {
 #endif  // BUILDFLAG(ENABLE_EXTENSIONS)
 
  private:
-  raw_ptr<HidConnectionTracker> hid_connection_tracker_;
-  raw_ptr<MockHidSystemTrayIcon> hid_system_tray_icon_;
+  raw_ptr<HidConnectionTracker, DanglingUntriaged> hid_connection_tracker_;
+  raw_ptr<MockHidSystemTrayIcon, DanglingUntriaged> hid_system_tray_icon_;
 };
 
 #if BUILDFLAG(ENABLE_EXTENSIONS)

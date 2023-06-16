@@ -177,27 +177,10 @@ void OsTelemetryGetInternetConnectivityInfoFunction::OnResult(
   }
   auto& network_info = ptr->network_result->get_network_health();
 
-  cx_telem::InternetConnectivityInfo result;
-  for (auto& network : network_info->networks) {
-    absl::optional<std::string> mac_address;
-    if (extension()->permissions_data()->HasAPIPermission(
-            extensions::mojom::APIPermissionID::
-                kChromeOSTelemetryNetworkInformation)) {
-      mac_address = std::move(network->mac_address);
-    }
-
-    auto converted_network =
-        converters::ConvertPtr<cx_telem::NetworkInfo>(std::move(network));
-
-    if (mac_address && !mac_address->empty()) {
-      converted_network.mac_address = std::move(mac_address);
-    }
-
-    // Don't include networks with an undefined type.
-    if (converted_network.type != cx_telem::NetworkType::kNone) {
-      result.networks.push_back(std::move(converted_network));
-    }
-  }
+  const bool has_permission = extension()->permissions_data()->HasAPIPermission(
+      extensions::mojom::APIPermissionID::kChromeOSTelemetryNetworkInformation);
+  auto result = converters::ConvertPtr<cx_telem::InternetConnectivityInfo>(
+      std::move(network_info), has_permission);
 
   Respond(ArgumentList(
       cx_telem::GetInternetConnectivityInfo::Results::Create(result)));
@@ -434,18 +417,10 @@ void OsTelemetryGetVpdInfoFunction::OnResult(
     return;
   }
 
-  cx_telem::VpdInfo result;
-
-  const auto& vpd_info = ptr->vpd_result->get_vpd_info();
-  result.activate_date = vpd_info->first_power_date;
-  result.model_name = vpd_info->model_name;
-  result.sku_number = vpd_info->sku_number;
-
-  // Protect accessing the serial number by a permission.
-  if (extension()->permissions_data()->HasAPIPermission(
-          extensions::mojom::APIPermissionID::kChromeOSTelemetrySerialNumber)) {
-    result.serial_number = vpd_info->serial_number;
-  }
+  const bool has_permission = extension()->permissions_data()->HasAPIPermission(
+      extensions::mojom::APIPermissionID::kChromeOSTelemetrySerialNumber);
+  auto result = converters::ConvertPtr<cx_telem::VpdInfo>(
+      std::move(ptr->vpd_result->get_vpd_info()), has_permission);
 
   Respond(ArgumentList(cx_telem::GetVpdInfo::Results::Create(result)));
 }

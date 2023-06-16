@@ -139,10 +139,12 @@ void WaylandScreen::OnOutputAddedOrUpdated(
 
 void WaylandScreen::OnOutputRemoved(WaylandOutput::Id output_id) {
   DCHECK(display_id_map_.contains(output_id));
-  if (display_id_map_.find(output_id) == display_id_map_.end())
+  auto iter = display_id_map_.find(output_id);
+  if (iter == display_id_map_.end()) {
     return;
-
-  int64_t display_id = display_id_map_[output_id];
+  }
+  int64_t display_id = iter->second;
+  display_id_map_.erase(iter);
 
   if (display_id == GetPrimaryDisplay().id()) {
     // First, set a new primary display as required by the |display_list_|. It's
@@ -185,6 +187,8 @@ void WaylandScreen::AddOrUpdateDisplay(const WaylandOutput::Metrics& metrics) {
       panel_rotation == display::Display::Rotation::ROTATE_270) {
     size_in_pixels.Transpose();
   }
+  size_in_pixels.Enlarge(-metrics.physical_overscan_insets.width(),
+                         -metrics.physical_overscan_insets.height());
   changed_display.set_size_in_pixels(size_in_pixels);
 
   if (!metrics.logical_size.IsEmpty()) {

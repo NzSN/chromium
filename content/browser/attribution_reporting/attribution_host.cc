@@ -34,6 +34,7 @@
 #include "content/public/common/content_client.h"
 #include "content/public/common/content_features.h"
 #include "mojo/public/cpp/bindings/message.h"
+#include "services/network/public/cpp/attribution_reporting_runtime_features.h"
 #include "services/network/public/cpp/features.h"
 #include "third_party/abseil-cpp/absl/types/optional.h"
 #include "third_party/abseil-cpp/absl/types/variant.h"
@@ -192,7 +193,7 @@ void AttributionHost::DidStartNavigation(NavigationHandle* navigation_handle) {
   attribution_manager->GetDataHostManager()
       ->NotifyNavigationRegistrationStarted(
           impression->attribution_src_token, navigation_info.source_origin,
-          impression->nav_type, navigation_info.is_within_fenced_frame,
+          navigation_info.is_within_fenced_frame,
           navigation_info.initiator_root_frame_id,
           navigation_handle->GetNavigationId());
 }
@@ -260,9 +261,10 @@ void AttributionHost::NotifyNavigationRegistrationData(
   attribution_manager->GetDataHostManager()->NotifyNavigationRegistrationData(
       impression->attribution_src_token,
       navigation_handle->GetResponseHeaders(), std::move(*reporting_origin),
-      it->second.source_origin, it->second.input_event, impression->nav_type,
+      it->second.source_origin, it->second.input_event,
       it->second.is_within_fenced_frame, it->second.initiator_root_frame_id,
-      navigation_handle->GetNavigationId(), is_final_response);
+      navigation_handle->GetNavigationId(), impression->runtime_features,
+      is_final_response);
 }
 
 absl::optional<SuitableOrigin>

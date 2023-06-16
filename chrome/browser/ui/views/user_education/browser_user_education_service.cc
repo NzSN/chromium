@@ -11,15 +11,22 @@
 #include "chrome/app/chrome_command_ids.h"
 #include "chrome/app/vector_icons/vector_icons.h"
 #include "chrome/browser/browser_process.h"
+#include "chrome/browser/search/search.h"
 #include "chrome/browser/themes/theme_properties.h"
 #include "chrome/browser/ui/browser_element_identifiers.h"
 #include "chrome/browser/ui/browser_finder.h"
+#include "chrome/browser/ui/browser_navigator.h"
 #include "chrome/browser/ui/chrome_pages.h"
 #include "chrome/browser/ui/color/chrome_color_id.h"
 #include "chrome/browser/ui/performance_controls/performance_controls_metrics.h"
+#include "chrome/browser/ui/toolbar/app_menu_model.h"
+#include "chrome/browser/ui/user_education/user_education_service_factory.h"
 #include "chrome/browser/ui/views/chrome_typography.h"
 #include "chrome/browser/ui/views/frame/browser_view.h"
+#include "chrome/browser/ui/views/toolbar/browser_app_menu_button.h"
+#include "chrome/browser/ui/views/web_apps/pwa_confirmation_bubble_view.h"
 #include "chrome/browser/ui/webui/new_tab_page/new_tab_page_ui.h"
+#include "chrome/browser/ui/webui/password_manager/password_manager_ui.h"
 #include "chrome/browser/ui/webui/side_panel/customize_chrome/customize_chrome_ui.h"
 #include "chrome/common/webui_url_constants.h"
 #include "chrome/grit/chromium_strings.h"
@@ -67,8 +74,10 @@ const char kTabGroupWithGroupTutorialMetricPrefix[] = "TabGroupWithGroup";
 const char kSidePanelReadingListTutorialMetricPrefix[] = "SidePanelReadingList";
 const char kCustomizeChromeTutorialMetricPrefix[] = "CustomizeChromeSidePanel";
 const char kSideSearchTutorialMetricPrefix[] = "SideSearch";
+const char kPasswordManagerTutorialMetricPrefix[] = "PasswordManager";
 constexpr char kTabGroupHeaderElementName[] = "TabGroupHeader";
 constexpr char kReadingListItemElementName[] = "ReadingListItem";
+constexpr char kChromeThemeBackElementName[] = "ChromeThemeBackElement";
 
 class BrowserHelpBubbleDelegate : public user_education::HelpBubbleDelegate {
  public:
@@ -177,8 +186,8 @@ const char kTabGroupWithExistingGroupTutorialId[] =
     "Tab Group With Existing Group Tutorial";
 const char kSidePanelReadingListTutorialId[] =
     "Side Panel Reading List Tutorial";
-
 const char kSideSearchTutorialId[] = "Side Search Tutorial";
+const char kPasswordManagerTutorialId[] = "Password Manager Tutorial";
 
 user_education::HelpBubbleDelegate* GetHelpBubbleDelegate() {
   static base::NoDestructor<BrowserHelpBubbleDelegate> delegate;
@@ -252,14 +261,54 @@ void MaybeRegisterChromeFeaturePromos(
                     .SetBubbleIcon(&vector_icons::kLightbulbOutlineIcon)));
 
   // kIPHDesktopCustomizeChromeFeature:
-  registry.RegisterFeature(
-      std::move(FeaturePromoSpecification::CreateForTutorialPromo(
-                    feature_engagement::kIPHDesktopCustomizeChromeFeature,
-                    kTopContainerElementId,
-                    IDS_TUTORIAL_CUSTOMIZE_CHROME_START_TUTORIAL_IPH,
-                    kSidePanelCustomizeChromeTutorialId)
-                    .SetBubbleArrow(HelpBubbleArrow::kNone)
-                    .SetBubbleIcon(&vector_icons::kLightbulbOutlineIcon)));
+  registry.RegisterFeature(std::move(
+      FeaturePromoSpecification::CreateForCustomAction(
+          feature_engagement::kIPHDesktopCustomizeChromeFeature,
+          kTopContainerElementId,
+          IDS_TUTORIAL_CUSTOMIZE_CHROME_START_TUTORIAL_IPH,
+          IDS_PROMO_SHOW_TUTORIAL_BUTTON,
+          base::BindRepeating(
+              [](ui::ElementContext ctx,
+                 user_education::FeaturePromoHandle promo_handle) {
+                auto* browser = chrome::FindBrowserWithUiElementContext(ctx);
+                if (!browser) {
+                  return;
+                }
+                if (!search::DefaultSearchProviderIsGoogle(
+                        browser->profile())) {
+                  return;
+                }
+                auto* service = UserEducationServiceFactory::GetForProfile(
+                    browser->profile());
+                user_education::TutorialService* tutorial_service =
+                    service ? &service->tutorial_service() : nullptr;
+                if (!tutorial_service) {
+                  return;
+                }
+                TabStripModel* tab_strip_model = browser->tab_strip_model();
+                if (tab_strip_model) {
+                  content::WebContents* web_contents =
+                      tab_strip_model->GetActiveWebContents();
+                  if (web_contents &&
+                      web_contents->GetURL() != browser->GetNewTabURL()) {
+                    NavigateParams params(browser->profile(),
+                                          GURL(chrome::kChromeUINewTabPageURL),
+                                          ui::PAGE_TRANSITION_LINK);
+                    params.disposition =
+                        WindowOpenDisposition::NEW_FOREGROUND_TAB;
+                    Navigate(&params);
+                  }
+                }
+                user_education::TutorialIdentifier tutorial_id =
+                    kSidePanelCustomizeChromeTutorialId;
+
+                tutorial_service->StartTutorial(tutorial_id, ctx);
+                tutorial_service->LogIPHLinkClicked(tutorial_id, true);
+              }))
+          .SetBubbleArrow(HelpBubbleArrow::kNone)
+          .SetBubbleIcon(&vector_icons::kLightbulbOutlineIcon)
+          .SetCustomActionIsDefault(true)
+          .SetCustomActionDismissText(IDS_PROMO_SNOOZE_BUTTON)));
 
   // kIPHLiveCaptionFeature:
   registry.RegisterFeature(FeaturePromoSpecification::CreateForToastPromo(
@@ -306,10 +355,26 @@ void MaybeRegisterChromeFeaturePromos(
       IDS_PASSWORD_MANAGER_IPH_MANAGEMENT_BUBBLE_DURING_SIGNIN_SCREENREADER,
       FeaturePromoSpecification::AcceleratorInfo()));
 
+  registry.RegisterFeature(std::move(
+      FeaturePromoSpecification::CreateForTutorialPromo(
+          feature_engagement::kIPHPasswordManagerShortcutFeature,
+          kPasswordsOmniboxKeyIconElementId,
+          IDS_PASSWORD_MANAGER_IPH_CREATE_SHORTCUT_BODY,
+          kPasswordManagerTutorialId)
+          .SetBubbleArrow(HelpBubbleArrow::kBottomRight)
+          .SetBubbleIcon(&vector_icons::kLightbulbOutlineIcon)
+          .SetBubbleTitleText(IDS_PASSWORD_MANAGER_IPH_CREATE_SHORTCUT_TITLE)));
+
   // kIPHPowerBookmarksSidePanelFeature:
   registry.RegisterFeature(FeaturePromoSpecification::CreateForSnoozePromo(
       feature_engagement::kIPHPowerBookmarksSidePanelFeature,
       kSidePanelButtonElementId, IDS_POWER_BOOKMARKS_SIDE_PANEL_PROMO));
+
+  // kIPHCompanionSidePanelFeature:
+  registry.RegisterFeature(FeaturePromoSpecification::CreateForSnoozePromo(
+      feature_engagement::kIPHCompanionSidePanelFeature,
+      kSidePanelCompanionToolbarButtonElementId,
+      IDS_SIDE_PANEL_COMPANION_PROMO));
 
 #if !BUILDFLAG(IS_CHROMEOS_ASH)
   // kIPHSwitchProfileFeature:
@@ -342,11 +407,10 @@ void MaybeRegisterChromeFeaturePromos(
       &feature_engagement::kIPHReadingListInSidePanelFeature,
       kSidePanelButtonElementId, IDS_READING_LIST_IN_SIDE_PANEL_PROMO));
 
-  // kIPHReopenTabFeature:
-  registry.RegisterFeature(FeaturePromoSpecification::CreateForToastPromo(
-      feature_engagement::kIPHReopenTabFeature, kAppMenuButtonElementId,
-      IDS_REOPEN_TAB_PROMO, IDS_REOPEN_TAB_PROMO_SCREENREADER,
-      FeaturePromoSpecification::AcceleratorInfo(IDC_RESTORE_TAB)));
+  // kIPHReadingModeSidePanelFeature:
+  registry.RegisterFeature(FeaturePromoSpecification::CreateForSnoozePromo(
+      feature_engagement::kIPHReadingModeSidePanelFeature,
+      kSidePanelButtonElementId, IDS_READING_MODE_SIDE_PANEL_PROMO));
 
   // kIPHSideSearchFeature:
   registry.RegisterFeature(std::move(
@@ -419,7 +483,7 @@ void MaybeRegisterChromeFeaturePromos(
                 RecordHighEfficiencyIPHEnableMode(true);
               }))
           .SetCustomActionIsDefault(true)
-          .SetCustomActionDismissText(IDS_NOT_NOW)
+          .SetCustomActionDismissText(IDS_NO_THANKS)
           .SetBubbleTitleText(IDS_HIGH_EFFICIENCY_MODE_PROMO_TITLE)));
 
   // kIPHPriceTrackingInSidePanelFeature;
@@ -429,9 +493,11 @@ void MaybeRegisterChromeFeaturePromos(
 
   // kIPHDownloadToolbarButtonFeature:
   registry.RegisterFeature(
-      std::move(FeaturePromoSpecification::CreateForSnoozePromo(
+      std::move(FeaturePromoSpecification::CreateForToastPromo(
                     feature_engagement::kIPHDownloadToolbarButtonFeature,
-                    kDownloadToolbarButtonElementId, IDS_DOWNLOAD_BUBBLE_PROMO)
+                    kDownloadToolbarButtonElementId, IDS_DOWNLOAD_BUBBLE_PROMO,
+                    IDS_DOWNLOAD_BUBBLE_PROMO_SCREENREADER,
+                    FeaturePromoSpecification::AcceleratorInfo())
                     .SetBubbleArrow(HelpBubbleArrow::kTopRight)
                     .SetBubbleTitleText(IDS_DOWNLOAD_BUBBLE_PROMO_TITLE)));
 
@@ -442,7 +508,7 @@ void MaybeRegisterChromeFeaturePromos(
                     kBackButtonElementId, IDS_BACK_NAVIGATION_MENU_PROMO,
                     IDS_BACK_NAVIGATION_MENU_PROMO_ACCESSIBLE_TEXT,
                     FeaturePromoSpecification::AcceleratorInfo())
-                    .SetBubbleArrow(HelpBubbleArrow::kLeftTop)));
+                    .SetBubbleArrow(HelpBubbleArrow::kTopLeft)));
 
   // kIPHPriceTrackingChipFeature:
   registry.RegisterFeature(FeaturePromoSpecification::CreateForLegacyPromo(
@@ -459,6 +525,27 @@ void MaybeRegisterChromeTutorials(
   // future.
   if (tutorial_registry.IsTutorialRegistered(kTabGroupTutorialId))
     return;
+
+  {  // Menu item bubble test.
+    TutorialDescription test_description;
+    test_description.steps.emplace_back(
+        TutorialDescription::BubbleStep(kAppMenuButtonElementId)
+            .SetBubbleBodyText(IDS_OK)
+            .SetBubbleArrow(HelpBubbleArrow::kTopRight));
+    test_description.steps.emplace_back(
+        TutorialDescription::BubbleStep(AppMenuModel::kDownloadsMenuItem)
+            .SetBubbleBodyText(IDS_OK)
+            .SetBubbleArrow(HelpBubbleArrow::kRightCenter));
+    test_description.steps.emplace_back(
+        TutorialDescription::HiddenStep::WaitForHidden(
+            AppMenuModel::kDownloadsMenuItem));
+    test_description.steps.emplace_back(
+        TutorialDescription::BubbleStep(kTopContainerElementId)
+            .SetBubbleBodyText(IDS_OK)
+            .SetBubbleArrow(HelpBubbleArrow::kNone));
+    tutorial_registry.AddTutorial("Menu item bubble test tutorial",
+                                  std::move(test_description));
+  }
 
   {  // Tab Group Tutorials
 
@@ -639,9 +726,21 @@ void MaybeRegisterChromeTutorials(
         HelpBubbleArrow::kRightCenter, ui::CustomElementEventType(),
         /* must_remain_visible =*/false,
         /* transition_only_on_event =*/false,
-        user_education::TutorialDescription::NameElementsCallback(),
+        base::BindRepeating(
+            [](ui::InteractionSequence* sequence, ui::TrackedElement* element) {
+              sequence->NameElement(
+                  element, base::StringPiece(kChromeThemeBackElementName));
+              return true;
+            }),
         TutorialDescription::ContextMode::kAny);
     customize_chrome_description.steps.emplace_back(back_button_step);
+
+    // Hidden step - back button
+    TutorialDescription::Step back_button_hidden_step(
+        0, 0, ui::InteractionSequence::StepType::kHidden,
+        ui::ElementIdentifier(), kChromeThemeBackElementName,
+        HelpBubbleArrow::kNone);
+    customize_chrome_description.steps.emplace_back(back_button_hidden_step);
 
     // Completion of the tutorial.
     TutorialDescription::Step success_step(
@@ -790,5 +889,61 @@ void MaybeRegisterChromeTutorials(
     side_search_description.can_be_restarted = true;
     tutorial_registry.AddTutorial(kSideSearchTutorialId,
                                   std::move(side_search_description));
+  }
+
+  {  // Password Manager tutorial
+
+    tutorial_registry.AddTutorial(
+        kPasswordManagerTutorialId,
+        TutorialDescription::Create<kPasswordManagerTutorialMetricPrefix>(
+            // Bubble step - Browser app menu
+            TutorialDescription::BubbleStep(kAppMenuButtonElementId)
+                .SetBubbleBodyText(IDS_TUTORIAL_PASSWORD_MANAGER_OPEN_APP_MENU)
+                .SetBubbleArrow(HelpBubbleArrow::kTopRight),
+
+            // Bubble step - "Password Manager" menu item
+            TutorialDescription::BubbleStep(
+                AppMenuModel::kPasswordManagerMenuItem)
+                .SetBubbleBodyText(
+                    IDS_TUTORIAL_PASSWORD_MANAGER_CLICK_PASSWORD_MANAGER)
+                .SetBubbleArrow(HelpBubbleArrow::kRightCenter)
+                .AbortIfVisibilityLost(false),
+
+            // Bubble step - "Settings" menu item
+            TutorialDescription::BubbleStep(
+                PasswordManagerUI::kSettingsMenuItemElementId)
+                .SetBubbleBodyText(
+                    IDS_TUTORIAL_PASSWORD_MANAGER_SELECT_SETTINGS)
+                .SetBubbleArrow(HelpBubbleArrow::kLeftCenter)
+                .InAnyContext(),
+
+            // Bubble step - "Add shortcut" row
+            TutorialDescription::BubbleStep(
+                PasswordManagerUI::kAddShortcutElementId)
+                .SetBubbleBodyText(IDS_TUTORIAL_PASSWORD_MANAGER_ADD_SHORTCUT)
+                .SetBubbleArrow(HelpBubbleArrow::kTopCenter)
+                .InAnyContext(),
+
+            // Event step - Click on "Add shortcut"
+            TutorialDescription::EventStep(
+                PasswordManagerUI::kAddShortcutCustomEventId)
+                .InSameContext(),
+
+            // Bubble step - "Install" row
+            TutorialDescription::BubbleStep(
+                PWAConfirmationBubbleView::kInstallButton)
+                .SetBubbleBodyText(IDS_TUTORIAL_PASSWORD_MANAGER_CLICK_INSTALL)
+                .SetBubbleArrow(HelpBubbleArrow::kTopRight),
+
+            // Event step - Click on "Add shortcut"
+            TutorialDescription::EventStep(
+                PWAConfirmationBubbleView::kInstalledPWAEventId)
+                .InSameContext(),
+
+            // Completion of the tutorial.
+            TutorialDescription::BubbleStep(kTopContainerElementId)
+                .SetBubbleTitleText(IDS_TUTORIAL_GENERIC_SUCCESS_TITLE)
+                .SetBubbleBodyText(IDS_TUTORIAL_PASSWORD_MANAGER_SUCCESS_BODY)
+                .SetBubbleArrow(HelpBubbleArrow::kNone)));
   }
 }

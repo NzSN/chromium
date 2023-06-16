@@ -6,11 +6,15 @@ import {assert, assertExists, assertInstanceof} from '../assert.js';
 import {TIME_LAPSE_INITIAL_SPEED} from '../device/mode/video.js';
 import * as dom from '../dom.js';
 import * as localStorage from '../models/local_storage.js';
+import {
+  TIME_LAPSE_MAX_DURATION,
+  TimeLapseSaver,
+} from '../models/video_saver.js';
 import {ChromeHelper} from '../mojo/chrome_helper.js';
 import {DeviceOperator} from '../mojo/device_operator.js';
 import * as state from '../state.js';
-import {Facing, Resolution} from '../type.js';
-import {sleep} from '../util.js';
+import {Facing, Mode, Resolution} from '../type.js';
+import {assertEnumVariant, FpsObserver, sleep} from '../util.js';
 import {windowController} from '../window_controller.js';
 
 import {
@@ -22,10 +26,6 @@ import {
   UIComponent,
 } from './cca_type.js';
 
-/**
- * Possible HTMLElement types that can have a boolean attribute "disabled".
- */
-type HTMLElementWithDisabled = HTMLElement&{disabled: boolean};
 interface Coordinate {
   x: number;
   y: number;
@@ -345,10 +345,25 @@ export class CCATest {
   }
 
   /**
-   * Returns the initial speed of time-lapse recording.
+   * Gets current boolean value of |key|.
    */
-  static getTimeLapseInitialSpeed(): number {
-    return TIME_LAPSE_INITIAL_SPEED;
+  static getState(key: string): boolean {
+    const stateKey = state.assertState(key);
+    return state.get(stateKey);
+  }
+
+  /**
+   * Calculates the expected duration of the time-lapse video recorded for
+   * |recordDuration| seconds.
+   */
+  static getTimeLapseDuration(recordDuration: number): number {
+    let speed = TIME_LAPSE_INITIAL_SPEED;
+    let duration = recordDuration / speed;
+    while (duration >= TIME_LAPSE_MAX_DURATION) {
+      speed = TimeLapseSaver.getNextSpeed(speed);
+      duration = recordDuration / speed;
+    }
+    return duration;
   }
 
   /**
@@ -373,16 +388,15 @@ export class CCATest {
   }
 
   /**
-   * Returns disabled attribute of the component. In case the element with
+   * Returns disabled attribute of the component. In case the element without
    * "disabled" attribute, always returns false.
    */
   static isDisabled(component: UIComponent, index?: number): boolean {
     const element = resolveElement(component, index);
-    const withDisabledElement = element as HTMLElementWithDisabled;
-    if (withDisabledElement.disabled === undefined) {
-      return false;
+    if ('disabled' in element && typeof element.disabled === 'boolean') {
+      return element.disabled;
     }
-    return withDisabledElement.disabled;
+    return false;
   }
 
   /**
@@ -469,6 +483,17 @@ export class CCATest {
   }
 
   /**
+   * Switches to the specified camera mode.
+   */
+  static switchMode(mode: Mode): void {
+    assertEnumVariant(Mode, mode);
+    const modeSelector =
+        dom.get(`.mode-item>input[data-mode="${mode}"]`, HTMLInputElement);
+    assert(isVisibleElement(modeSelector), 'Mode selector is not visible');
+    modeSelector.click();
+  }
+
+  /**
    * Removes all the cached data in chrome.storage.local.
    */
   static removeCacheData(): void {
@@ -497,5 +522,33 @@ export class CCATest {
     assert(option !== undefined, 'Invalid SettingOption value.');
     const component = SETTING_OPTION_MAP[option].component;
     CCATest.click(component);
+  }
+
+  static getFpsObserver(): FpsObserver {
+    return new FpsObserver(getPreviewVideo());
+  }
+
+  /**
+   * Waits until the state |key| is changed to |expected| and resolves the
+   * millisecond unix timestamp of the state change.
+   */
+  static waitStateChange(key: string, expected: boolean): Promise<number> {
+    const stateKey = state.assertState(key);
+    const current = state.get(stateKey);
+    if (current === expected) {
+      throw new Error(`Cannot start observing because the state of ${
+          stateKey} is already ${expected}`);
+    }
+    return new Promise((resolve, reject) => {
+      function onChange(newState: boolean) {
+        state.removeObserver(stateKey, onChange);
+        if (newState !== expected) {
+          reject(
+              new Error(`The changed "${stateKey}" state is not ${expected}`));
+        }
+        resolve(Date.now());
+      }
+      state.addObserver(stateKey, onChange);
+    });
   }
 }

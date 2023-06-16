@@ -9,11 +9,12 @@
 #include "gpu/command_buffer/service/shared_context_state.h"
 #include "gpu/command_buffer/service/shared_image/dxgi_swap_chain_image_backing.h"
 #include "gpu/command_buffer/service/shared_image/shared_image_backing.h"
-#include "gpu/command_buffer/service/shared_image/shared_image_format_utils.h"
+#include "gpu/command_buffer/service/shared_image/shared_image_format_service_utils.h"
 #include "gpu/command_buffer/service/shared_image/shared_image_representation.h"
 #include "gpu/command_buffer/service/skia_utils.h"
 #include "gpu/command_buffer/service/texture_manager.h"
 #include "third_party/skia/include/core/SkPromiseImageTexture.h"
+#include "third_party/skia/include/gpu/GrBackendSurface.h"
 #include "third_party/skia/include/gpu/GrContextThreadSafeProxy.h"
 #include "ui/gl/scoped_restore_texture.h"
 
@@ -135,19 +136,16 @@ SkiaGLImageRepresentationDXGISwapChain::BeginWriteAccess(
     std::vector<GrBackendSemaphore>* begin_semaphores,
     std::vector<GrBackendSemaphore>* end_semaphores,
     std::unique_ptr<GrBackendSurfaceMutableState>* end_state) {
-  if (!IsCleared() && gfx::Rect(size()) != update_rect) {
-    LOG(ERROR) << "First draw to surface must draw to everything";
-    return {};
-  }
-
   std::vector<sk_sp<SkSurface>> surfaces =
       SkiaGLImageRepresentation::BeginWriteAccess(
           final_msaa_count, surface_props, update_rect, begin_semaphores,
           end_semaphores, end_state);
 
   if (!surfaces.empty()) {
-    static_cast<DXGISwapChainImageBacking*>(backing())->DidBeginWriteAccess(
-        update_rect);
+    if (!static_cast<DXGISwapChainImageBacking*>(backing())
+             ->DidBeginWriteAccess(update_rect)) {
+      return {};
+    }
   }
 
   return surfaces;

@@ -81,27 +81,9 @@ bool OmniboxPopupSelection::IsControlPresentOnMatch(
       return true;
     case KEYWORD_MODE:
       return match.associated_keyword != nullptr;
-    case FOCUSED_BUTTON_TAB_SWITCH:
-      // The default action for suggestions from the open tab provider in
-      // keyword mode is to switch to the open tab so no button is necessary.
-      if (OmniboxFieldTrial::IsSiteSearchStarterPackEnabled() &&
-          match.from_keyword &&
-          match.provider->type() == AutocompleteProvider::TYPE_OPEN_TAB) {
-        return false;
-      }
-      return match.has_tab_match.value_or(false);
     case FOCUSED_BUTTON_ACTION: {
       // Actions buttons should not be shown in keyword mode.
-      if (OmniboxFieldTrial::IsSiteSearchStarterPackEnabled() &&
-          match.from_keyword) {
-        return false;
-      }
-      if (action_index >= match.actions.size()) {
-        return false;
-      }
-      // If the action takes over the whole match, don't have a separate Action
-      // control in the tab order (or rendered).
-      return !match.actions[action_index]->TakesOverMatch();
+      return !match.from_keyword && action_index < match.actions.size();
     }
     case FOCUSED_BUTTON_REMOVE_SUGGESTION:
       return match.SupportsDeletion();
@@ -201,7 +183,6 @@ OmniboxPopupSelection::GetAllAvailableSelectionsSorted(
 
     all_states.push_back(NORMAL);
     all_states.push_back(KEYWORD_MODE);
-    all_states.push_back(FOCUSED_BUTTON_TAB_SWITCH);
 #if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_IOS)
     all_states.push_back(FOCUSED_BUTTON_ACTION);
 #endif

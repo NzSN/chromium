@@ -22,7 +22,6 @@
 #import "ios/chrome/browser/web/web_state_container_view_provider.h"
 #import "ios/chrome/browser/web_state_list/tab_insertion_browser_agent.h"
 #import "ios/components/security_interstitials/ios_blocking_page_tab_helper.h"
-#import "ios/web/common/features.h"
 #import "ios/web/public/ui/context_menu_params.h"
 
 #if !defined(__has_feature) || !__has_feature(objc_arc)
@@ -84,22 +83,29 @@ void WebStateDelegateBrowserAgent::ClearUIProviders() {
   container_view_provider_ = nil;
 }
 
-// WebStateListObserver::
+#pragma mark - WebStateListObserver
+
+void WebStateDelegateBrowserAgent::WebStateListChanged(
+    WebStateList* web_state_list,
+    const WebStateListChange& change,
+    const WebStateSelection& selection) {
+  switch (change.type()) {
+    case WebStateListChange::Type::kReplace: {
+      const WebStateListChangeReplace& replace_change =
+          change.As<WebStateListChangeReplace>();
+      ClearWebStateDelegate(replace_change.replaced_web_state());
+      SetWebStateDelegate(replace_change.inserted_web_state());
+      break;
+    }
+  }
+}
+
 void WebStateDelegateBrowserAgent::WebStateInsertedAt(
     WebStateList* web_state_list,
     web::WebState* web_state,
     int index,
     bool activating) {
   SetWebStateDelegate(web_state);
-}
-
-void WebStateDelegateBrowserAgent::WebStateReplacedAt(
-    WebStateList* web_state_list,
-    web::WebState* old_web_state,
-    web::WebState* new_web_state,
-    int index) {
-  ClearWebStateDelegate(old_web_state);
-  SetWebStateDelegate(new_web_state);
 }
 
 void WebStateDelegateBrowserAgent::WebStateDetachedAt(
@@ -237,13 +243,9 @@ void WebStateDelegateBrowserAgent::HandlePermissionsDecisionRequest(
     web::WebState* source,
     NSArray<NSNumber*>* permissions,
     web::WebStatePermissionDecisionHandler handler) API_AVAILABLE(ios(15.0)) {
-  if (web::features::IsMediaPermissionsControlEnabled()) {
-    PermissionsTabHelper::FromWebState(source)
-        ->PresentPermissionsDecisionDialogWithCompletionHandler(permissions,
-                                                                handler);
-  } else {
-    handler(web::PermissionDecisionShowDefaultPrompt);
-  }
+  PermissionsTabHelper::FromWebState(source)
+      ->PresentPermissionsDecisionDialogWithCompletionHandler(permissions,
+                                                              handler);
 }
 
 void WebStateDelegateBrowserAgent::OnAuthRequired(

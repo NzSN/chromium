@@ -102,6 +102,7 @@ void UpdateIdpSigninStatusForAccountsEndpointResponse(
       permission_delegate->SetIdpSigninStatus(idp_origin, true);
     }
   } else {
+    RecordIdpSignOutNetError(fetch_status.response_code);
     // Ensures that we only fetch accounts unconditionally once.
     permission_delegate->SetIdpSigninStatus(idp_origin, false);
   }
@@ -213,6 +214,17 @@ std::string GetConsoleErrorMessageFromResult(
     }
     case FederatedAuthRequestResult::kErrorRpPageNotVisible: {
       return "RP page is not visible.";
+    }
+    case FederatedAuthRequestResult::kErrorSilentMediationFailure: {
+      return "Silent mediation was requested, but the conditions to achieve it "
+             "were not met.";
+    }
+    case FederatedAuthRequestResult::kErrorThirdPartyCookiesBlocked: {
+      return "Third party cookies are blocked. Right now the Chromium "
+             "implementation of FedCM API requires third party cookies and "
+             "this restriction will be removed soon. In the interim, to test "
+             "FedCM without third-party cookies, enable the "
+             "#fedcm-without-third-party-cookies flag.";
     }
     case FederatedAuthRequestResult::kError: {
       return "Error retrieving a token.";

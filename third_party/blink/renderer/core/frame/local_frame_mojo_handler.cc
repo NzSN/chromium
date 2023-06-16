@@ -1005,11 +1005,12 @@ void LocalFrameMojoHandler::GetStringForRange(
     GetStringForRangeCallback callback) {
   gfx::Point baseline_point;
   ui::mojom::blink::AttributedStringPtr attributed_string = nullptr;
-  CFAttributedStringRef string = SubstringUtil::AttributedSubstringInRange(
-      frame_, base::checked_cast<WTF::wtf_size_t>(range.start()),
-      base::checked_cast<WTF::wtf_size_t>(range.length()), baseline_point);
+  base::ScopedCFTypeRef<CFAttributedStringRef> string =
+      SubstringUtil::AttributedSubstringInRange(
+          frame_, base::checked_cast<WTF::wtf_size_t>(range.start()),
+          base::checked_cast<WTF::wtf_size_t>(range.length()), baseline_point);
   if (string) {
-    attributed_string = ui::mojom::blink::AttributedString::From(string);
+    attributed_string = ui::mojom::blink::AttributedString::From(string.get());
   }
 
   std::move(callback).Run(std::move(attributed_string), baseline_point);
@@ -1163,6 +1164,7 @@ void LocalFrameMojoHandler::NotifyNavigationApiOfDisposedEntries(
 void LocalFrameMojoHandler::TraverseCancelled(
     const String& navigation_api_key,
     mojom::blink::TraverseCancelledReason reason) {
+  frame_->GetPage()->HistoryNavigationVirtualTimePauser().UnpauseVirtualTime();
   frame_->DomWindow()->navigation()->TraverseCancelled(navigation_api_key,
                                                        reason);
 }
@@ -1381,7 +1383,7 @@ void LocalFrameMojoHandler::AddResourceTimingEntryForFailedSubframeNavigation(
   response.SetEncodedDataLength(completion_status.encoded_data_length);
   response.SetHttpStatusCode(response_code);
   if (!normalized_server_timing.empty()) {
-    response.SetHttpHeaderField("Server-Timing",
+    response.SetHttpHeaderField(http_names::kServerTiming,
                                 AtomicString(normalized_server_timing));
   }
 

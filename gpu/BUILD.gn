@@ -452,6 +452,11 @@ test("gl_tests") {
     }
   }
 
+  # Simply loading the Vulkan driver leaks crbug.com/1134681
+  if (is_linux && !is_lsan) {
+    sources += [ "command_buffer/service/shared_image/angle_vulkan_image_backing_factory_unittest.cc" ]
+  }
+
   if (use_dawn) {
     deps += [
       "//third_party/dawn/src/dawn:cpp",
@@ -735,6 +740,10 @@ test("gpu_unittests") {
   # to add the shared lib to the chrome-binary-tests directory.
   if (enable_base_tracing && !is_cronet_build && is_chromeos) {
     deps += [ "//base/test:test_trace_processor" ]
+    sources += [
+      "//base/test/test_trace_processor.cc",
+      "//base/test/test_trace_processor.h",
+    ]
   }
 
   if (is_android) {

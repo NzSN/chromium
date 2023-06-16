@@ -125,7 +125,7 @@ class JSTestStarter : public content::TestNavigationObserver {
           self.testNameToRun = '$1';
         }
     )";
-    ASSERT_TRUE(content::ExecuteScript(
+    ASSERT_TRUE(content::ExecJs(
         navigation_handle->GetRenderFrameHost(),
         base::ReplaceStringPlaceholders(kScript, {test_name_}, nullptr)));
 
@@ -140,9 +140,10 @@ bool TouchFile(const base::FilePath& path,
                base::StringPiece mtime_string,
                base::StringPiece atime_string) {
   base::Time mtime, atime;
-  auto result = base::Time::FromString(mtime_string.data(), &mtime) &&
-                base::Time::FromString(atime_string.data(), &atime) &&
-                base::TouchFile(path, atime, mtime);
+  auto result =
+      base::Time::FromString(std::string(mtime_string).c_str(), &mtime) &&
+      base::Time::FromString(std::string(atime_string).c_str(), &atime) &&
+      base::TouchFile(path, atime, mtime);
   return result;
 }
 

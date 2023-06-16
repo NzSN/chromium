@@ -7,8 +7,8 @@
 #import "base/mac/foundation_util.h"
 #import "base/metrics/user_metrics.h"
 #import "components/signin/public/identity_manager/identity_manager.h"
-#import "ios/chrome/browser/main/browser.h"
 #import "ios/chrome/browser/shared/coordinator/alert/action_sheet_coordinator.h"
+#import "ios/chrome/browser/shared/model/browser/browser.h"
 #import "ios/chrome/browser/shared/model/browser_state/chrome_browser_state.h"
 #import "ios/chrome/browser/signin/authentication_service.h"
 #import "ios/chrome/browser/signin/authentication_service_factory.h"
@@ -138,7 +138,8 @@ using l10n_util::GetNSString;
       [[ManageSyncSettingsCoordinator alloc]
           initWithBaseNavigationController:
               self.advancedSettingsSigninNavigationController
-                                   browser:self.browser];
+                                   browser:self.browser
+              isInAdvancedInitialSyncSetup:YES];
   manageSyncSettingsCoordinator.delegate = self;
   self.syncSettingsCoordinator = manageSyncSettingsCoordinator;
   [self.syncSettingsCoordinator start];

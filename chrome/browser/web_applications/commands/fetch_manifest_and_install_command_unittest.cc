@@ -136,6 +136,7 @@ class FetchManifestAndInstallCommandTest : public WebAppTest {
     manifest->name = u"foo";
     manifest->short_name = u"bar";
     manifest->start_url = kWebAppUrl;
+    manifest->id = GenerateManifestIdFromStartUrlOnly(kWebAppUrl);
     manifest->display = blink::mojom::DisplayMode::kStandalone;
     return manifest;
   }
@@ -202,7 +203,7 @@ class FetchManifestAndInstallCommandTest : public WebAppTest {
  private:
   base::HistogramTester histogram_tester_;
   scoped_refptr<TestFileUtils> file_utils_;
-  raw_ptr<FakeWebAppUiManager> fake_ui_manager_ = nullptr;
+  raw_ptr<FakeWebAppUiManager, DanglingUntriaged> fake_ui_manager_ = nullptr;
 
 #if BUILDFLAG(IS_CHROMEOS_ASH)
   ArcAppTest arc_test_;

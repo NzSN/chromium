@@ -8,6 +8,7 @@
 <translation id="1104942323762546749">Chromium আপনার পাসওয়ার্ড এক্সপোর্ট করতে চাইছে। অনুমতি দিতে Windows এর পাসওয়ার্ড টাইপ করুন।</translation>
 <translation id="113122355610423240">Chromium আপনার ডিফল্ট ব্রাউজার</translation>
 <translation id="1131805035311359397">আপনার পাসওয়ার্ড ডেটার নিরাপত্তা লঙ্ঘন এবং অন্যান্য নিরাপত্তা সংক্রান্ত সমস্যা থেকে সুরক্ষিত কিনা তা চেক করতে <ph name="BEGIN_LINK" />Chromium-এ সাইন-ইন করুন<ph name="END_LINK" />।</translation>
+<translation id="1157106475430165622">{NUM_DEVICES,plural, =0{Chromium এক্সটেনশন HID ডিভাইস অ্যাক্সেস করছিল}=1{Chromium এক্সটেনশন HID ডিভাইস অ্যাক্সেস করছে}one{Chromium এক্সটেনশন #টি HID ডিভাইস অ্যাক্সেস করছে}other{Chromium এক্সটেনশন #টি HID ডিভাইস অ্যাক্সেস করছে}}</translation>
 <translation id="1185134272377778587">Chromium সম্পর্কে</translation>
 <translation id="1202417120496358351">{COUNT,plural, =1{Chromium প্ল্যাটফর্মে ১ মিনিট কিছু অ্যাক্টিভিটি না করলে, অ্যাডমিনিস্ট্রেটর অটোমেটিক এটি বন্ধ করে দেয়। ব্রাউজ করা ডেটা মুছে ফেলা হয়। এর মধ্যে ইতিহাস, অটোফিল এবং ডাউনলোড আছে।}one{Chromium প্ল্যাটফর্মে # মিনিট কিছু অ্যাক্টিভিটি না করলে, অ্যাডমিনিস্ট্রেটর অটোমেটিক এটি বন্ধ করে দেয়। ব্রাউজ করা ডেটা মুছে ফেলা হয়। এর মধ্যে ইতিহাস, অটোফিল এবং ডাউনলোড আছে।}other{Chromium প্ল্যাটফর্মে # মিনিট কিছু অ্যাক্টিভিটি না করলে, অ্যাডমিনিস্ট্রেটর অটোমেটিক এটি বন্ধ করে দেয়। ব্রাউজ করা ডেটা মুছে ফেলা হয়। এর মধ্যে ইতিহাস, অটোফিল এবং ডাউনলোড আছে।}}</translation>
 <translation id="1203500561924088507">ইনস্টল করার জন্য ধন্যবাদ। <ph name="BUNDLE_NAME" /> ব্যবহার করার আগে আপনাকে অবশ্যই ব্রাউজার রিস্টার্ট করতে হবে।</translation>
@@ -16,6 +17,7 @@
 <translation id="1414495520565016063">আপনি Chromium এ প্রবেশ করেছেন!</translation>
 <translation id="1524282610922162960">একটি Chromium ট্যাব শেয়ার করুন</translation>
 <translation id="1553461853655228091">আপনার আশেপাশের 3D ম্যাপ তৈরি করতে এই সাইটটির জন্য Chromium-কে আপনার ক্যামেরা অ্যাক্সেস করার অনুমতি দিতে হবে</translation>
+<translation id="1555506416658437797">পেমেন্ট পদ্ধতি এডিট করুন।</translation>
 <translation id="1607715478322902680">{COUNT,plural, =0{একটি আপডেট প্রয়োগ করতে আপনার অ্যাডমিনিস্ট্রেটর আপনাকে Chromium আবার চালু করতে বলছেন}=1{একটি আপডেট প্রয়োগ করতে আপনার অ্যাডমিনিস্ট্রেটর আপনাকে Chromium আবার চালু করতে বলছেন। আপনার ছদ্মবেশী উইন্ডো আবার খুলবে না।}one{একটি আপডেট প্রয়োগ করতে আপনার অ্যাডমিনিস্ট্রেটর আপনাকে Chromium আবার চালু করতে বলছেন। আপনার #টি ছদ্মবেশী উইন্ডো আবার খুলবে না।}other{একটি আপডেট প্রয়োগ করতে আপনার অ্যাডমিনিস্ট্রেটর আপনাকে Chromium আবার চালু করতে বলছেন। আপনার #টি ছদ্মবেশী উইন্ডো আবার খুলবে না।}}</translation>
 <translation id="1625909126243026060">Chromium-এ মূল গোপনীয়তা এবং নিরাপত্তা নিয়ন্ত্রণ পর্যালোচনা করুন</translation>
 <translation id="1632539827495546968">শুধু একবারের জন্য এই অ্যাকাউন্ট ব্যবহার করলে, আপনি Chromium ব্রাউজার থেকে <ph name="GUEST_LINK_BEGIN" />গেস্ট মোড<ph name="GUEST_LINK_END" /> ব্যবহার করতে পারবেন। অন্য কোনও ব্যক্তির জন্য অ্যাকাউন্ট যোগ করতে চাইলে, <ph name="DEVICE_TYPE" />-এ <ph name="LINK_BEGIN" />নতুন ব্যক্তিকে যোগ করুন<ph name="LINK_END" />।
@@ -91,6 +93,7 @@
 <translation id="3179665906251668410">Chromium ছদ্মবেশী উইন্ডোতে লিঙ্ক খুলুন</translation>
 <translation id="3185330573522821672">আপনার নতুন Chromium প্রোফাইল কাস্টমাইজ করুন</translation>
 <translation id="3190315855212034486">ওহো! Chromium ক্র্যাশ করেছে৷ এখন আবার শুরু করবেন?</translation>
+<translation id="3255926992597692024">পেমেন্ট পদ্ধতি পূরণের জন্য Chromium চেষ্টা করছে সেটিংস পরিবর্তন করার।</translation>
 <translation id="3258596308407688501">Chromium তার ডেটা ডিরেক্টরিতে পড়তে এবং লিখতে পারে না:
 
 <ph name="USER_DATA_DIRECTORY" /></translation>
@@ -135,6 +138,8 @@
 <translation id="4019629340646866719"><ph name="BEGIN_LINK_LINUX_OSS" />Linux ডেভেলপমেন্ট এনভায়রনমেন্ট<ph name="END_LINK_LINUX_OSS" />-এর ক্ষেত্রে যেমন করা হয়েছে, তেমনভাবে অতিরিক্ত <ph name="BEGIN_LINK_CROS_OSS" />ওপেন সোর্স সফ্টওয়্যার<ph name="END_LINK_CROS_OSS" />-এর মাধ্যমে ChromiumOS তৈরি করা সম্ভব হয়েছে।</translation>
 <translation id="4036079820698952681"><ph name="BEGIN_LINK" />বর্তমান সেটিংস<ph name="END_LINK" />-এর রিপোর্ট করে Chromium-কে আরও ভালো করে তুলতে সাহায্য করুন</translation>
 <translation id="4050175100176540509">গুরুত্বপূর্ণ নিরাপত্তা উন্নতি এবং নতুন বৈশিষ্ট্যগুলি সর্বশেষ ভার্সনে উপলভ্য।</translation>
+<translation id="4050599136622776556">Chromium পেমেন্ট পদ্ধতি এডিট করার চেষ্টা করছে।</translation>
+<translation id="4055805654398742145">Password Manager</translation>
 <translation id="4148957013307229264">ইনস্টল হচ্ছে...</translation>
 <translation id="419998258129752635"><ph name="PAGE_TITLE" /> - নেটওয়ার্ক সাইন-ইন - Chromium</translation>
 <translation id="421369550622382712">Chromium-এর জন্য খুব ভালো অ্যাপ্লিকেশান, গেম, এক্সটেনশন এবং থিমসমূহ আবিষ্কার করুন৷</translation>
@@ -197,6 +202,7 @@
 <translation id="5653831366781983928">এখনই Chromium রিস্টার্ট করুন</translation>
 <translation id="5690427481109656848">Google LLC</translation>
 <translation id="5698481217667032250">এই ভাষায় Chromium প্রদর্শন করুন</translation>
+<translation id="585620188971323280">পেমেন্ট পদ্ধতি পূরণ করার জন্য সেটিংসে পরিবর্তন করুন।</translation>
 <translation id="5862307444128926510">Chromium-এ স্বাগতম</translation>
 <translation id="5883558403894052917">Chromium এইসব আইটেমে ম্যালওয়্যার আছে বলে খুঁজে পেয়েছে:</translation>
 <translation id="5895138241574237353">পুনর্সূচনা</translation>
@@ -247,6 +253,7 @@
 <translation id="6475912303565314141">আপনি Chromium শুরু করলে কোন পৃষ্ঠাটি দেখানো হবে তাও এটি নিয়ন্ত্রণ করে।</translation>
 <translation id="648319183876919572">উন্নত Safe Browsing আপনাকে বিপজ্জনক ওয়েবসাইট, ডাউনলোড থেকে আরও সুরক্ষা দেয়</translation>
 <translation id="6510925080656968729">Chromium আনইনস্টল করুন</translation>
+<translation id="6539122709674868420"><ph name="TIMEOUT_DURATION" /> ধরে ব্যবহার করা না হলে, আপনার সংস্থা Chromium বন্ধ করে দেয়। ব্রাউজ করা ডেটা মুছে ফেলা হয়েছে। এর মধ্যে ইতিহাস, অটোফিল এবং ডাউনলোড সংক্রান্ত ডেটা থাকতে পারে।</translation>
 <translation id="6542839706527980775">প্রতিটি প্রোফাইলে বুকমার্ক, ইতিহাস, পাসওয়ার্ড ও আরও অনেক কিছুর মতো তার নিজস্ব Chromium তথ্য আছে</translation>
 <translation id="656935081669708576">অন্য একটি Chromium প্রোফাইল থেকে পাসওয়ার্ড দেখতে, আপনি প্রোফাইল পরিবর্তন করতে পারবেন</translation>
 <translation id="6570579332384693436">ভুল বানানগুলি ঠিক করতে, Chromium টেক্সট ফিল্ডে আপনার লেখা টেক্সট Google-এ পাঠায়</translation>
@@ -282,6 +289,7 @@
 <translation id="7025789849649390912">ইনস্টলেশন বন্ধ হয়ে গেছে।</translation>
 <translation id="705851970750939768">Chromium আপডেট করুন</translation>
 <translation id="7067091210845072982">কোনও ছবিতে যদি প্রয়োজনীয় বিবরণ দেওয়া না থাকে, তাহলে Chromium আপনাকে একটি বিবরণ দেওয়ার চেষ্টা করবে। বিবরণ তৈরির জন্য, Google-এ ছবি পাঠানো হয়।</translation>
+<translation id="7173822816570314652"><ph name="TIMEOUT_DURATION" /> ধরে ব্যবহার করা না হলে, আপনার সংস্থা Chromium ডেটা মুছে দেয়। এর মধ্যে ইতিহাস, অটোফিল এবং ডাউনলোড সংক্রান্ত ডেটা থাকতে পারে।</translation>
 <translation id="718435575166326686">এই সাইটের জন্য Chromium-এর ক্যামেরা অ্যাক্সেসের অনুমতি প্রয়োজন</translation>
 <translation id="7196312274710523067">Chromium চালু করা যায়নি। আবার চেষ্টা করুন।</translation>
 <translation id="7197677400338048821">Chromium আপনার পাসওয়ার্ড চেক করতে পারছে না। ২৪ ঘণ্টা পরে আবার চেষ্টা করুন।</translation>
@@ -336,6 +344,7 @@ Chromium আপনার সেটিংস পুনরুদ্ধার ক�
 <translation id="8248265253516264921">কোনও ছবিতে যদি প্রয়োজনীয় বিবরণ দেওয়া না থাকে, তাহলে Chromium আপনাকে একটি বিবরণ দেওয়ার চেষ্টা করবে। বিবরণ তৈরির জন্য, Google-এ ছবি পাঠানো হয়। সেটিংসে গিয়ে আপনি যেকোনও সময়ে এটি বন্ধ করতে পারেন।</translation>
 <translation id="8266560134891435528">আপনি সাইন-ইন করে না থাকার কারণে Chromium আপনার পাসওয়ার্ড চেক করতে পারছে না</translation>
 <translation id="8290862415967981663">এই ফাইলটি বিপজ্জনক হতে পারে, তাই Chromium এটিকে অবরুদ্ধ করেছে।</translation>
+<translation id="8318772038038596122"><ph name="TIMEOUT_DURATION" /> ধরে ব্যবহার করা না হলে, আপনার সংস্থা Chromium বন্ধ করে দেয়।</translation>
 <translation id="8325404639443959713">Chromium ব্যবহার করে আরও অনেক কিছু করুন</translation>
 <translation id="8330519371938183845">আপনার সব ডিভাইস জুড়ে Chromium সিঙ্ক করতে এবং নিজের মতো সাজিয়ে নিতে সাইন-ইন করুন</translation>
 <translation id="8340674089072921962"><ph name="USER_EMAIL_ADDRESS" /> পূর্বে Chromium ব্যবহার করছিলেন</translation>
@@ -354,6 +363,7 @@ Chromium আপনার সেটিংস পুনরুদ্ধার ক�
 <translation id="8608079656141766906"><ph name="BEGIN_BOLD" />এই ডেটা আমরা কীভাবে ব্যবহার করি:<ph name="END_BOLD" /> Chromium-এর মাধ্যমে আপনার আগ্রহের বিষয়ে তথ্যগুলি সাইট স্টোর করতে পারে। যেমন, আপনি যদি ম্যারাথনের জন্য জুতো কেনার একটি সাইট ভিজিট করেন, তাহলে সাইটটি আপনার আগ্রহকে ম্যারাথন দৌড় হিসেবে বিবেচনা করবে। পরে আপনি যদি রেসের জন্য রেজিস্ট্রেশন করতে অন্য একটি সাইটে যান, তাহলে আপনার আগ্রহের উপর ভিত্তি করে সাইটটি আপনাকে দৌড়ানোর জুতোর বিজ্ঞাপন দেখাবে।</translation>
 <translation id="8619360774459241877">Chromium লঞ্চ করা হচ্ছে...</translation>
 <translation id="8621669128220841554">অনির্দিষ্ট ত্রুটির কারণে ইনস্টল করা যায়নি৷ অনুগ্রহ করে Chromium আবার ডাউনলোড করুন৷</translation>
+<translation id="867492205098279939">{NUM_DEVICES,plural, =0{একটি Chromium এক্সটেনশন HID ডিভাইস অ্যাক্সেস করছিল}=1{একটি Chromium এক্সটেনশন ১টি HID ডিভাইস অ্যাক্সেস করছে}one{একটি Chromium এক্সটেনশন #টি HID ডিভাইস অ্যাক্সেস করছে}other{একটি Chromium এক্সটেনশন #টি HID ডিভাইস অ্যাক্সেস করছে}}</translation>
 <translation id="8697124171261953979">আপনি Chromium শুরু করলে বা Omnibox থেকে সার্চ করলে কোন পৃষ্ঠাটি দেখানো হবে তাও এটি নিয়ন্ত্রণ করে।</translation>
 <translation id="8704119203788522458">এটি হল আপনার Chromium</translation>
 <translation id="8796602469536043152">এই সাইটটির জন্য Chromium কে আপনার ক্যামেরা এবং মাইক্রোফোনে অ্যাক্সেস দিতে হবে</translation>
@@ -370,6 +380,7 @@ Chromium আপনার সেটিংস পুনরুদ্ধার ক�
 <translation id="9019929317751753759">Chromium-কে আরও নিরাপদ করতে, আমরা নিচের এক্সটেনশনটি বন্ধ করেছি যা <ph name="IDS_EXTENSION_WEB_STORE_TITLE" />-এ তালিকাবদ্ধ করা হয়নি এবং হয়ত আপনাকে না জানিয়ে যোগ করা হয়েছিল৷</translation>
 <translation id="9022552996538154597">Chromium-এ সাইন-ইন করুন</translation>
 <translation id="907832235989677238">Chromium-এ সাইন-ইন করুন। আপনি যদি একটি অ্যাকাউন্টে শুধুমাত্র একবার সাইন-ইন করতে চান তবে আপনি <ph name="GUEST_LINK_BEGIN" />ডিভাইসটি গেস্ট হিসেবে ব্যবহার করতে পারেন<ph name="GUEST_LINK_END" />।</translation>
+<translation id="9078733879136747090">Chromium অটোমেটিক বন্ধ হয়ে গেছে</translation>
 <translation id="9089354809943900324">Chromium পুরানো হয়ে গেছে</translation>
 <translation id="9093206154853821181">{0,plural, =1{Chromium ১ ঘণ্টার মধ্যে আবার লঞ্চ হবে}one{Chromium # ঘণ্টার মধ্যে আবার লঞ্চ হবে}other{Chromium # ঘণ্টার মধ্যে আবার লঞ্চ হবে}}</translation>
 <translation id="9106612006984859720">ভবিষ্যতে Chromium আপডেট পেতে হলে, আপনার কম্পিউটারে Windows 10 বা এর পরবর্তী যেকোনও ভার্সন থাকতে হবে। এই কম্পিউটারে Windows 8.1 ভার্সন ব্যবহার করা হচ্ছে।</translation>

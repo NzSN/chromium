@@ -7,10 +7,12 @@
 
 #include <vector>
 
+#include "base/gtest_prod_util.h"
 #include "base/memory/raw_ptr.h"
 #include "chrome/browser/ash/file_manager/file_tasks.h"
 #include "chrome/browser/ash/file_system_provider/mount_path_util.h"
 #include "chrome/browser/ash/file_system_provider/provided_file_system_interface.h"
+#include "chrome/browser/ash/file_system_provider/provider_interface.h"
 #include "chrome/browser/platform_util.h"
 #include "chrome/browser/ui/browser_list_observer.h"
 #include "chrome/browser/ui/webui/ash/cloud_upload/cloud_upload.mojom.h"
@@ -127,6 +129,7 @@ class CloudOpenTask : public BrowserListObserver,
 
  private:
   friend class RefCounted<CloudOpenTask>;  // Allow destruction by RefCounted<>.
+  friend class CloudOpenTaskBrowserTest;
 
   CloudOpenTask(Profile* profile,
                 std::vector<storage::FileSystemURL> file_urls,
@@ -145,6 +148,7 @@ class CloudOpenTask : public BrowserListObserver,
                              const file_system_provider::Actions& actions,
                              base::File::Error result);
 
+  bool ShouldShowConfirmationDialog();
   void ConfirmMoveOrStartUpload();
   void StartUpload();
 
@@ -191,16 +195,18 @@ class CloudOpenTask : public BrowserListObserver,
 };
 
 // Return True if feature `kUploadOfficeToCloud` is enabled and is eligible for
-// the user, otherwise return False. A user is eligible if they are not managed
-// or a Google employee.
-bool IsEligibleAndEnabledUploadOfficeToCloud();
+// the user of the |profile|. A user is eligible if they are not managed.
+bool IsEligibleAndEnabledUploadOfficeToCloud(Profile* profile);
 
 // Returns True if OneDrive is the selected `cloud_provider` but either ODFS
 // is not mounted or the Office PWA is not installed. Returns False otherwise.
 bool ShouldFixUpOffice(Profile* profile, const CloudProvider cloud_provider);
 
-// Returns True if the file is on the Android OneDrive DocumentsProvider.
-bool FileIsOnAndroidOneDrive(Profile* profile, const FileSystemURL& url);
+// Returns True if the url is on ODFS.
+bool UrlIsOnODFS(Profile* profile, const FileSystemURL& url);
+
+// Returns True if the url is on the Android OneDrive DocumentsProvider.
+bool UrlIsOnAndroidOneDrive(Profile* profile, const FileSystemURL& url);
 
 // Return the email from the Root Document Id of the Android OneDrive
 // DocumentsProvider.
@@ -226,6 +232,12 @@ absl::optional<ODFSFileSystemAndPath> AndroidOneDriveUrlToODFS(
     Profile* profile,
     const FileSystemURL& android_onedrive_file_url);
 
+// Launches the 'Connect OneDrive' dialog which is triggered from the Services
+// menu in Files app. This is a simplified version of setup where we just
+// connect to OneDrive. There is no 'done' callback because files app doesn't
+// need it.
+bool ShowConnectOneDriveDialog(gfx::NativeWindow modal_parent);
+
 // Defines the web dialog used to help users upload Office files to the cloud.
 class CloudUploadDialog : public SystemWebDialogDelegate {
  public:
@@ -240,6 +252,11 @@ class CloudUploadDialog : public SystemWebDialogDelegate {
                     const mojom::DialogPage dialog_page,
                     bool office_move_confirmation_shown);
 
+  // Request ODFS be mounted. If there is an existing mount, ODFS will unmount
+  // that one after authentication of the new mount.
+  static void RequestODFSMount(
+      Profile* profile,
+      file_system_provider::RequestMountCallback callback);
   static bool IsODFSMounted(Profile* profile);
   static bool IsOfficeWebAppInstalled(Profile* profile);
 

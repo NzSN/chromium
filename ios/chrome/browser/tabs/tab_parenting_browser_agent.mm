@@ -4,8 +4,8 @@
 
 #import "ios/chrome/browser/tabs/tab_parenting_browser_agent.h"
 
+#import "ios/chrome/browser/shared/model/web_state_list/web_state_list.h"
 #import "ios/chrome/browser/tabs/tab_parenting_global_observer.h"
-#import "ios/chrome/browser/web_state_list/web_state_list.h"
 
 #if !defined(__has_feature) || !__has_feature(objc_arc)
 #error "This file requires ARC support."
@@ -20,24 +20,34 @@ TabParentingBrowserAgent::TabParentingBrowserAgent(Browser* browser) {
 
 TabParentingBrowserAgent::~TabParentingBrowserAgent() = default;
 
-// BrowserObserver
+#pragma mark - BrowserObserver
+
 void TabParentingBrowserAgent::BrowserDestroyed(Browser* browser) {
   // Stop observing web state list.
   browser->GetWebStateList()->RemoveObserver(this);
   browser->RemoveObserver(this);
 }
 
-// WebStateListObserver
+#pragma mark - WebStateListObserver
+
+void TabParentingBrowserAgent::WebStateListChanged(
+    WebStateList* web_state_list,
+    const WebStateListChange& change,
+    const WebStateSelection& selection) {
+  switch (change.type()) {
+    case WebStateListChange::Type::kReplace: {
+      const WebStateListChangeReplace& replace_change =
+          change.As<WebStateListChangeReplace>();
+      TabParentingGlobalObserver::GetInstance()->OnTabParented(
+          replace_change.inserted_web_state());
+      break;
+    }
+  }
+}
+
 void TabParentingBrowserAgent::WebStateInsertedAt(WebStateList* web_state_list,
                                                   web::WebState* web_state,
                                                   int index,
                                                   bool activating) {
   TabParentingGlobalObserver::GetInstance()->OnTabParented(web_state);
-}
-
-void TabParentingBrowserAgent::WebStateReplacedAt(WebStateList* web_state_list,
-                                                  web::WebState* old_web_state,
-                                                  web::WebState* new_web_state,
-                                                  int index) {
-  TabParentingGlobalObserver::GetInstance()->OnTabParented(new_web_state);
 }

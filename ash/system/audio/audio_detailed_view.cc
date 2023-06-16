@@ -14,6 +14,7 @@
 #include "ash/shell.h"
 #include "ash/strings/grit/ash_strings.h"
 #include "ash/style/ash_color_id.h"
+#include "ash/style/ash_color_provider.h"
 #include "ash/style/rounded_container.h"
 #include "ash/style/typography.h"
 #include "ash/system/audio/mic_gain_slider_controller.h"
@@ -32,6 +33,7 @@
 #include "base/functional/bind.h"
 #include "base/memory/raw_ptr.h"
 #include "base/strings/utf_string_conversions.h"
+#include "chromeos/ash/components/audio/audio_device.h"
 #include "chromeos/ash/components/audio/cras_audio_handler.h"
 #include "chromeos/constants/chromeos_features.h"
 #include "components/live_caption/caption_util.h"
@@ -48,6 +50,7 @@
 #include "ui/gfx/paint_vector_icon.h"
 #include "ui/gfx/vector_icon_types.h"
 #include "ui/views/accessibility/view_accessibility.h"
+#include "ui/views/background.h"
 #include "ui/views/border.h"
 #include "ui/views/controls/button/toggle_button.h"
 #include "ui/views/controls/focus_ring.h"
@@ -65,6 +68,7 @@ namespace {
 
 const int kLabelFontSizeDelta = 1;
 const int kToggleButtonRowViewSpacing = 18;
+const int kNbsWarningMinHeight = 80;
 constexpr auto kLiveCaptionContainerMargins = gfx::Insets::TLBR(0, 0, 8, 0);
 constexpr auto kToggleButtonRowLabelPadding = gfx::Insets::TLBR(16, 0, 15, 0);
 constexpr auto kToggleButtonRowViewPadding = gfx::Insets::TLBR(0, 56, 8, 0);
@@ -164,28 +168,30 @@ AudioDetailedView::AudioDetailedView(DetailedViewDelegate* delegate)
   CreateItems();
 
   Shell::Get()->accessibility_controller()->AddObserver(this);
+  CrasAudioHandler::Get()->AddAudioObserver(this);
 
-  if (!captions::IsLiveCaptionFeatureSupported()) {
-    return;
-  }
-  speech::SodaInstaller* soda_installer = speech::SodaInstaller::GetInstance();
-  if (soda_installer) {
-    soda_installer->AddObserver(this);
+  if (captions::IsLiveCaptionFeatureSupported()) {
+    speech::SodaInstaller* soda_installer =
+        speech::SodaInstaller::GetInstance();
+    if (soda_installer) {
+      soda_installer->AddObserver(this);
+    }
   }
 }
 
 AudioDetailedView::~AudioDetailedView() {
+  if (captions::IsLiveCaptionFeatureSupported()) {
+    speech::SodaInstaller* soda_installer =
+        speech::SodaInstaller::GetInstance();
+    // `soda_installer` is not guaranteed to be valid, since it's possible for
+    // this class to out-live it. This means that this class cannot use
+    // ScopedObservation and needs to manage removing the observer itself.
+    if (soda_installer) {
+      soda_installer->RemoveObserver(this);
+    }
+  }
+  CrasAudioHandler::Get()->RemoveAudioObserver(this);
   Shell::Get()->accessibility_controller()->RemoveObserver(this);
-  if (!captions::IsLiveCaptionFeatureSupported()) {
-    return;
-  }
-  speech::SodaInstaller* soda_installer = speech::SodaInstaller::GetInstance();
-  // `soda_installer` is not guaranteed to be valid, since it's possible for
-  // this class to out-live it. This means that this class cannot use
-  // ScopedObservation and needs to manage removing the observer itself.
-  if (soda_installer) {
-    soda_installer->RemoveObserver(this);
-  }
 }
 
 views::View* AudioDetailedView::GetAsView() {
@@ -249,10 +255,15 @@ views::View* AudioDetailedView::AddDeviceSlider(
   device_name_container->tri_view()->SetContainerBorder(
       TriView::Container::CENTER,
       views::CreateEmptyBorder(kDevicesTriViewBorder));
-  // TODO(b/262281693): Update the font for `device_name_container` text label.
-  device_name_container->text_label()->SetEnabledColorId(
-      device.active ? cros_tokens::kCrosSysSystemOnPrimaryContainer
-                    : cros_tokens::kCrosSysOnSurfaceVariant);
+  const bool is_muted =
+      is_output_device
+          ? CrasAudioHandler::Get()->IsOutputMutedForDevice(device.id)
+          : CrasAudioHandler::Get()->IsInputMutedForDevice(device.id);
+  UpdateDeviceContainerColor(device_name_container, is_muted);
+  if (chromeos::features::IsJellyEnabled()) {
+    TypographyProvider::Get()->StyleLabel(TypographyToken::kCrosButton2,
+                                          *device_name_container->text_label());
+  }
   device_name_container->SetPaintToLayer();
   // If this device is the active one, disables event handling on
   // `device_name_container` so that `slider` can handle the events.
@@ -340,12 +351,15 @@ void AudioDetailedView::CreateLiveCaptionView() {
                            : kUnifiedMenuLiveCaptionOffIcon,
       cros_tokens::kCrosSysOnSurface, kQsSliderIconSize));
   live_caption_icon_ = toggle_icon.get();
-  // TODO(b/262281693): Update the font and color for `live_caption_view_` text.
   live_caption_view_->AddViewAndLabel(
       std::move(toggle_icon),
       l10n_util::GetStringUTF16(IDS_ASH_STATUS_TRAY_LIVE_CAPTION));
-  live_caption_view_->text_label()->SetEnabledColorId(
-      cros_tokens::kCrosSysOnSurface);
+  if (chromeos::features::IsJellyEnabled()) {
+    live_caption_view_->text_label()->SetEnabledColorId(
+        cros_tokens::kCrosSysOnSurface);
+    TypographyProvider::Get()->StyleLabel(TypographyToken::kCrosButton1,
+                                          *live_caption_view_->text_label());
+  }
 
   // Creates a toggle button on the right.
   auto toggle = std::make_unique<Switch>(base::BindRepeating(
@@ -517,7 +531,7 @@ void AudioDetailedView::OnInputNoiseCancellationTogglePressed() {
 }
 
 void AudioDetailedView::OnSettingsButtonClicked() {
-  DCHECK(features::IsAudioSettingsPageEnabled());
+  CHECK(features::IsAudioSettingsPageEnabled());
   if (!TrayPopupUtils::CanOpenWebUISettings()) {
     return;
   }
@@ -604,9 +618,11 @@ void AudioDetailedView::UpdateScrollableList() {
   scroll_content()->RemoveAllChildViews();
   device_map_.clear();
 
+  const bool is_qs_revamp = features::IsQsRevampEnabled();
+
   // Uses the `RoundedContainer` for QsRevamp.
   views::View* container = scroll_content();
-  if (features::IsQsRevampEnabled()) {
+  if (is_qs_revamp) {
     container =
         scroll_content()->AddChildView(std::make_unique<RoundedContainer>());
   }
@@ -614,7 +630,7 @@ void AudioDetailedView::UpdateScrollableList() {
   // Adds the live caption toggle.
   AccessibilityControllerImpl* controller =
       Shell::Get()->accessibility_controller();
-  if (features::IsQsRevampEnabled()) {
+  if (is_qs_revamp) {
     CreateLiveCaptionView();
   } else if (controller->IsLiveCaptionSettingVisibleInTray()) {
     live_caption_view_ = AddScrollListCheckableItem(
@@ -638,7 +654,12 @@ void AudioDetailedView::UpdateScrollableList() {
         container, gfx::kNoneIcon, GetAudioDeviceName(device), device.active);
     device_map_[device_name_container] = device;
 
-    if (features::IsQsRevampEnabled()) {
+    if (is_qs_revamp) {
+      // Sets this flag to false to make the assigned color id effective.
+      // Otherwise it will use `color_utils::BlendForMinContrast()` to improve
+      // label readability over the background.
+      device_name_container->text_label()->SetAutoColorReadabilityEnabled(
+          /*enabled=*/false);
       last_output_device =
           AddDeviceSlider(container, device, device_name_container,
                           /*is_output_device=*/true);
@@ -646,7 +667,7 @@ void AudioDetailedView::UpdateScrollableList() {
   }
 
   if (has_output_devices) {
-    if (features::IsQsRevampEnabled()) {
+    if (is_qs_revamp) {
       last_output_device->SetProperty(views::kMarginsKey, kQsSubsectionMargins);
     } else {
       container->AddChildView(TrayPopupUtils::CreateListSubHeaderSeparator());
@@ -667,7 +688,10 @@ void AudioDetailedView::UpdateScrollableList() {
         container, gfx::kNoneIcon, GetAudioDeviceName(device), device.active);
     device_map_[device_name_container] = device;
 
-    if (features::IsQsRevampEnabled()) {
+    if (is_qs_revamp) {
+      // Sets this flag to false to make the assigned color id effective.
+      device_name_container->text_label()->SetAutoColorReadabilityEnabled(
+          /*enabled=*/false);
       AddDeviceSlider(container, device, device_name_container,
                       /*is_output_device=*/false);
     }
@@ -675,7 +699,7 @@ void AudioDetailedView::UpdateScrollableList() {
     // Adds the input noise cancellation toggle.
     if (audio_handler->GetPrimaryActiveInputNode() == device.id &&
         audio_handler->IsNoiseCancellationSupportedForDevice(device.id)) {
-      if (features::IsQsRevampEnabled()) {
+      if (is_qs_revamp) {
         noise_cancellation_view_ = container->AddChildView(
             AudioDetailedView::CreateQsNoiseCancellationToggleRow(device));
 
@@ -697,10 +721,82 @@ void AudioDetailedView::UpdateScrollableList() {
       scroll_content()->AddChildView(mic_gain_controller_->CreateMicGainSlider(
           device.id, device.IsInternalMic()));
     }
+
+    // Adds a warning message if NBS is selected.
+    if (features::IsAudioHFPNbsWarningEnabled()) {
+      if (audio_handler->GetPrimaryActiveInputNode() == device.id &&
+          device.type == AudioDeviceType::kBluetoothNbMic) {
+        std::unique_ptr<TriView> nbs_warning_view(
+            TrayPopupUtils::CreateDefaultRowView(
+                /*use_wide_layout=*/is_qs_revamp));
+        nbs_warning_view->SetMinHeight(kNbsWarningMinHeight);
+        nbs_warning_view->SetContainerVisible(TriView::Container::END, false);
+
+        std::unique_ptr<views::ImageView> image_view =
+            base::WrapUnique(TrayPopupUtils::CreateMainImageView(
+                /*use_wide_layout=*/is_qs_revamp));
+        image_view->SetImage(ui::ImageModel::FromVectorIcon(
+            vector_icons::kNotificationWarningIcon, kColorAshIconColorWarning,
+            kMenuIconSize));
+        image_view->SetBackground(
+            views::CreateSolidBackground(SK_ColorTRANSPARENT));
+        nbs_warning_view->AddView(TriView::Container::START,
+                                  std::move(image_view));
+
+        std::unique_ptr<views::Label> label =
+            base::WrapUnique(TrayPopupUtils::CreateDefaultLabel());
+        label->SetText(
+            l10n_util::GetStringUTF16(IDS_ASH_STATUS_TRAY_AUDIO_NBS_MESSAGE));
+        label->SetMultiLine(/*multi_line=*/true);
+        label->SetBackground(views::CreateSolidBackground(SK_ColorTRANSPARENT));
+        label->SetEnabledColorId(kColorAshTextColorWarning);
+        TrayPopupUtils::SetLabelFontList(
+            label.get(), TrayPopupUtils::FontStyle::kDetailedViewLabel);
+        nbs_warning_view->AddView(TriView::Container::CENTER, std::move(label));
+
+        container->AddChildView(std::move(nbs_warning_view));
+      }
+    }
   }
 
   container->SizeToPreferredSize();
   scroller()->Layout();
+}
+
+void AudioDetailedView::UpdateDeviceContainerColor(
+    HoverHighlightView* device_name_container,
+    bool is_muted) {
+  AudioDeviceMap::iterator iter = device_map_.find(device_name_container);
+  if (iter == device_map_.end()) {
+    return;
+  }
+  const ui::ColorId color_id =
+      iter->second.active
+          ? (is_muted ? cros_tokens::kCrosSysOnSurface
+                      : cros_tokens::kCrosSysSystemOnPrimaryContainer)
+          : cros_tokens::kCrosSysOnSurfaceVariant;
+  device_name_container->text_label()->SetEnabledColorId(color_id);
+  TrayPopupUtils::UpdateCheckMarkColor(device_name_container, color_id);
+}
+
+void AudioDetailedView::UpdateActiveDeviceColor(bool is_input, bool is_muted) {
+  uint64_t device_id =
+      is_input ? CrasAudioHandler::Get()->GetPrimaryActiveInputNode()
+               : CrasAudioHandler::Get()->GetPrimaryActiveOutputNode();
+  // Only the active node could trigger the mute state change. Iterates the
+  // `device_map_` to find the corresponding `device_name_container` and updates
+  // the color.
+  auto it = std::find_if(
+      std::begin(device_map_), std::end(device_map_),
+      [device_id](const std::pair<views::View*, AudioDevice>& audio_device) {
+        return device_id == audio_device.second.id;
+      });
+
+  if (it == std::end(device_map_)) {
+    return;
+  }
+  UpdateDeviceContainerColor(static_cast<HoverHighlightView*>(it->first),
+                             is_muted);
 }
 
 void AudioDetailedView::HandleViewClicked(views::View* view) {
@@ -781,6 +877,20 @@ void AudioDetailedView::OnSodaProgress(speech::LanguageCode language_code,
   std::u16string message = l10n_util::GetStringFUTF16Int(
       IDS_ASH_ACCESSIBILITY_SETTING_SUBTITLE_SODA_DOWNLOAD_PROGRESS, progress);
   MaybeShowSodaMessage(language_code, message);
+}
+
+void AudioDetailedView::OnOutputMuteChanged(bool mute_on) {
+  UpdateActiveDeviceColor(/*is_input=*/false, mute_on);
+}
+
+void AudioDetailedView::OnInputMuteChanged(
+    bool mute_on,
+    CrasAudioHandler::InputMuteChangeMethod method) {
+  UpdateActiveDeviceColor(/*is_input=*/true, mute_on);
+}
+
+void AudioDetailedView::OnInputMutedByMicrophoneMuteSwitchChanged(bool muted) {
+  UpdateActiveDeviceColor(/*is_input=*/true, muted);
 }
 
 BEGIN_METADATA(AudioDetailedView, views::View)

@@ -55,6 +55,10 @@ namespace blink {
 
 namespace {
 
+// Max number of @try rules in a @position-fallback rule to prevent the amount
+// of excess layout work that may be required.
+const size_t kPositionFallbackRuleMaxLength = 5;
+
 // This may still consume tokens if it fails
 AtomicString ConsumeStringOrURI(CSSParserTokenStream& stream) {
   const CSSParserToken& token = stream.Peek();
@@ -153,7 +157,7 @@ CSSParserImpl::CSSParserImpl(const CSSParserContext* context,
 MutableCSSPropertyValueSet::SetResult CSSParserImpl::ParseValue(
     MutableCSSPropertyValueSet* declaration,
     CSSPropertyID unresolved_property,
-    const String& string,
+    StringView string,
     bool important,
     const CSSParserContext* context) {
   STACK_UNINITIALIZED CSSParserImpl parser(context);
@@ -172,7 +176,7 @@ MutableCSSPropertyValueSet::SetResult CSSParserImpl::ParseValue(
 MutableCSSPropertyValueSet::SetResult CSSParserImpl::ParseVariableValue(
     MutableCSSPropertyValueSet* declaration,
     const AtomicString& property_name,
-    const String& value,
+    StringView value,
     bool important,
     const CSSParserContext* context,
     bool is_animation_tainted) {
@@ -677,7 +681,7 @@ StyleRuleBase* CSSParserImpl::ConsumeAtRuleContents(
     if (id != CSSAtRuleID::kCSSAtRuleMedia &&      // [css-conditional-3]
         id != CSSAtRuleID::kCSSAtRuleSupports &&   // [css-conditional-3]
         id != CSSAtRuleID::kCSSAtRuleContainer &&  // [css-contain-3]
-        id != CSSAtRuleID::kCSSAtRuleInitial) {
+        id != CSSAtRuleID::kCSSAtRuleStartingStyle) {
       ConsumeErroneousAtRule(stream);
       return nullptr;
     }
@@ -743,9 +747,9 @@ StyleRuleBase* CSSParserImpl::ConsumeAtRuleContents(
       case CSSAtRuleID::kCSSAtRuleSupports:
         return ConsumeSupportsRule(stream, nesting_type,
                                    parent_rule_for_nesting);
-      case CSSAtRuleID::kCSSAtRuleInitial:
-        return ConsumeInitialRule(stream, nesting_type,
-                                  parent_rule_for_nesting);
+      case CSSAtRuleID::kCSSAtRuleStartingStyle:
+        return ConsumeStartingStyleRule(stream, nesting_type,
+                                        parent_rule_for_nesting);
       case CSSAtRuleID::kCSSAtRuleFontFace:
         return ConsumeFontFaceRule(stream);
       case CSSAtRuleID::kCSSAtRuleFontPaletteValues:
@@ -1104,7 +1108,7 @@ StyleRuleSupports* CSSParserImpl::ConsumeSupportsRule(
       std::move(rules));
 }
 
-StyleRuleInitial* CSSParserImpl::ConsumeInitialRule(
+StyleRuleStartingStyle* CSSParserImpl::ConsumeStartingStyleRule(
     CSSParserTokenStream& stream,
     CSSNestingType nesting_type,
     StyleRule* parent_rule_for_nesting) {
@@ -1117,11 +1121,11 @@ StyleRuleInitial* CSSParserImpl::ConsumeInitialRule(
   CSSParserTokenStream::BlockGuard guard(stream);
 
   if (!prelude.AtEnd()) {
-    return nullptr;  // Parse error; @initial prelude should be empty
+    return nullptr;  // Parse error; @starting-style prelude should be empty
   }
 
   if (observer_) {
-    observer_->StartRuleHeader(StyleRule::kInitial, prelude_offset_start);
+    observer_->StartRuleHeader(StyleRule::kStartingStyle, prelude_offset_start);
     observer_->EndRuleHeader(prelude_offset_end);
     observer_->StartRuleBody(stream.Offset());
   }
@@ -1153,7 +1157,7 @@ StyleRuleInitial* CSSParserImpl::ConsumeInitialRule(
 
   // NOTE: There will be a copy of rules here, to deal with the different inline
   // size.
-  return MakeGarbageCollected<StyleRuleInitial>(std::move(rules));
+  return MakeGarbageCollected<StyleRuleStartingStyle>(std::move(rules));
 }
 
 StyleRuleFontFace* CSSParserImpl::ConsumeFontFaceRule(
@@ -1783,13 +1787,18 @@ StyleRulePositionFallback* CSSParserImpl::ConsumePositionFallbackRule(
     observer_->StartRuleBody(stream.Offset());
   }
 
+  const bool has_max_length = context_->Mode() != kUASheetMode;
   auto* position_fallback_rule =
       MakeGarbageCollected<StyleRulePositionFallback>(AtomicString(name));
   ConsumeRuleList(
       stream, kPositionFallbackRuleList, CSSNestingType::kNone,
       /*parent_rule_for_nesting=*/nullptr,
-      [position_fallback_rule](StyleRuleBase* try_rule) {
-        position_fallback_rule->ParserAppendTryRule(To<StyleRuleTry>(try_rule));
+      [position_fallback_rule, has_max_length](StyleRuleBase* try_rule) {
+        if (!has_max_length || position_fallback_rule->TryRules().size() <
+                                   kPositionFallbackRuleMaxLength) {
+          position_fallback_rule->ParserAppendTryRule(
+              To<StyleRuleTry>(try_rule));
+        }
       });
 
   if (observer_) {

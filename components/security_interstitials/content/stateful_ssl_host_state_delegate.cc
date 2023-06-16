@@ -197,7 +197,7 @@ StatefulSSLHostStateDelegate::StatefulSSLHostStateDelegate(
           host_content_settings_map,
           clock_.get(),
           base::Seconds(kDeltaDefaultExpirationInSeconds)),
-      https_only_mode_enforcelist_(host_content_settings_map_),
+      https_only_mode_enforcelist_(host_content_settings_map_, clock_.get()),
       recurrent_interstitial_threshold_for_testing(-1),
       recurrent_interstitial_mode_for_testing(NOT_SET),
       recurrent_interstitial_reset_time_for_testing(-1) {}
@@ -397,6 +397,10 @@ bool StatefulSSLHostStateDelegate::IsHttpsEnforcedForHost(
                                                         is_nondefault_storage);
 }
 
+void StatefulSSLHostStateDelegate::ClearHttpsOnlyModeAllowlist() {
+  https_only_mode_allowlist_.ClearAllowlist(base::Time(), base::Time::Max());
+}
+
 void StatefulSSLHostStateDelegate::RevokeUserAllowExceptions(
     const std::string& host) {
   GURL url = GetSecureGURLForHost(host);
@@ -496,9 +500,7 @@ void StatefulSSLHostStateDelegate::SetClockForTesting(
     std::unique_ptr<base::Clock> clock) {
   clock_ = std::move(clock);
   https_only_mode_allowlist_.SetClockForTesting(clock_.get());
-
-  // https_only_mode_enforcelist_ doesn't have a clock as site engagement scores
-  // already decay with time.
+  https_only_mode_enforcelist_.SetClockForTesting(clock_.get());
 }
 
 void StatefulSSLHostStateDelegate::SetRecurrentInterstitialThresholdForTesting(

@@ -4,14 +4,14 @@
 
 //! GN build file generation.
 
-use crate::config;
+use crate::config::{BuildConfig, CrateConfig};
 use crate::crates::*;
 use crate::deps;
 use crate::manifest::CargoPackage;
 use crate::paths;
 use crate::platforms;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::From;
 use std::fmt::{self, Display, Write};
 use std::path::Path;
@@ -34,6 +34,7 @@ impl BuildFile {
         BuildFileFormatter { build_file: self, with_preamble: true }
     }
 
+    #[allow(unused)]
     pub fn display_no_preamble(&self) -> impl '_ + fmt::Display {
         BuildFileFormatter { build_file: self, with_preamble: false }
     }
@@ -48,7 +49,7 @@ pub struct RuleCommon {
     pub public_visibility: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RuleConcrete {
     pub crate_name: Option<String>,
     pub epoch: Option<Epoch>,
@@ -60,6 +61,10 @@ pub struct RuleConcrete {
     pub cargo_pkg_authors: Option<String>,
     pub cargo_pkg_name: String,
     pub cargo_pkg_description: Option<String>,
+    pub add_library_configs: Vec<String>,
+    pub remove_library_configs: Vec<String>,
+    pub add_executable_configs: Vec<String>,
+    pub remove_executable_configs: Vec<String>,
     pub deps: Vec<RuleDep>,
     pub dev_deps: Vec<RuleDep>,
     pub build_deps: Vec<RuleDep>,
@@ -67,10 +72,11 @@ pub struct RuleConcrete {
     pub features: Vec<String>,
     pub build_root: Option<String>,
     pub build_script_outputs: Vec<String>,
+    pub rustc_metadata: Option<String>,
     pub rustflags: Vec<String>,
     pub rustenv: Vec<String>,
     pub output_dir: Option<String>,
-    pub gn_variables_lib: String,
+    pub gn_variables_lib: Option<String>,
 }
 
 /// Describes a single GN build rule for a crate configuration. Each field
@@ -92,6 +98,7 @@ pub enum Rule {
 }
 
 impl Rule {
+    #[allow(unused)]
     pub fn display<'a>(&'a self, name: &'a str) -> impl 'a + fmt::Display {
         RuleFormatter { rule: self, name }
     }
@@ -109,9 +116,21 @@ pub struct RuleDep {
 }
 
 impl RuleDep {
+    #[cfg(test)]
     pub fn construct_for_testing(cond: Condition, rule: String) -> RuleDep {
         RuleDep { cond, rule }
     }
+}
+
+/// Extra metadata influencing GN output for a particular crate.
+#[derive(Clone, Debug, Default)]
+pub struct PerCrateMetadata {
+    /// Names of files the build.rs script may output.
+    pub build_script_outputs: Vec<String>,
+    /// Extra GN code pasted literally into the build rule.
+    pub gn_variables: Option<String>,
+    /// GN target visibility.
+    pub visibility: Visibility,
 }
 
 /// Generate `BuildFile` descriptions for each third party crate in the
@@ -123,24 +142,21 @@ impl RuleDep {
 ///   script for each package.
 /// * `deps_visibility` is the visibility for each package, defining if it can
 ///   be used outside of third-party code and outside of tests.
-pub fn build_files_from_chromium_deps<'a, 'b, Iter: IntoIterator<Item = &'a deps::Package>>(
+pub fn build_files_from_chromium_deps<'a, 'b, Iter, GetManifest>(
     deps: Iter,
-    paths: &'b paths::ChromiumPaths,
-    metadata: &HashMap<ChromiumVendoredCrate, CargoPackage>,
-    build_script_outputs: &HashMap<ChromiumVendoredCrate, Vec<String>>,
-    deps_visibility: &HashMap<ChromiumVendoredCrate, Visibility>,
-    gn_variables_libs: &HashMap<ChromiumVendoredCrate, String>,
-) -> HashMap<ChromiumVendoredCrate, BuildFile> {
+    paths: &paths::ChromiumPaths,
+    metadatas: &HashMap<VendoredCrate, PerCrateMetadata>,
+    get_manifest: GetManifest,
+) -> HashMap<VendoredCrate, BuildFile>
+where
+    Iter: IntoIterator<Item = &'a deps::Package>,
+    GetManifest: Fn(&VendoredCrate) -> &'b CargoPackage,
+{
     deps.into_iter()
         .filter_map(|dep| {
-            make_build_file_for_chromium_dep(
-                dep,
-                paths,
-                metadata,
-                build_script_outputs,
-                deps_visibility,
-                gn_variables_libs,
-            )
+            let crate_id = dep.crate_id();
+            let metadata = metadatas.get(&crate_id).cloned().unwrap_or_default();
+            make_build_file_for_chromium_dep(dep, paths, get_manifest(&crate_id), metadata)
         })
         .collect()
 }
@@ -148,7 +164,7 @@ pub fn build_files_from_chromium_deps<'a, 'b, Iter: IntoIterator<Item = &'a deps
 pub fn build_file_from_std_deps<'a, 'b, Iter: IntoIterator<Item = &'a deps::Package>>(
     deps: Iter,
     paths: &'b paths::ChromiumPaths,
-    extra_config: &'b config::BuildConfig,
+    extra_config: &'b BuildConfig,
 ) -> BuildFile {
     let rules =
         deps.into_iter().map(|dep| build_rule_from_std_dep(dep, paths, extra_config)).collect();
@@ -159,18 +175,32 @@ pub fn build_file_from_std_deps<'a, 'b, Iter: IntoIterator<Item = &'a deps::Pack
 pub fn build_rule_from_std_dep(
     dep: &deps::Package,
     paths: &paths::ChromiumPaths,
-    extra_config: &config::BuildConfig,
+    extra_config: &BuildConfig,
 ) -> (String, Rule) {
+    // Used by reference if the provided crate config is empty.
+    let default_crate_config = Default::default();
+    let crate_config =
+        extra_config.per_crate_config.get(&*dep.package_name).unwrap_or(&default_crate_config);
+    let all_config = &extra_config.all_config;
+
     let lib_target = dep.lib_target.as_ref().expect("dependency had no lib target");
     let crate_root_from_src = paths.to_gn_abs_path(&lib_target.root).unwrap();
+    let build_script_from_src = dep
+        .build_script
+        .as_ref()
+        .filter(|_| !crate_config.skip_build_rs)
+        .map(|p| paths.to_gn_abs_path(&p).unwrap());
     let normalize_target_name = |package_name: &str| package_name.replace("-", "_");
     let cargo_pkg_authors =
         if dep.authors.is_empty() { None } else { Some(dep.authors.join(", ")) };
 
-    // Used by reference if the provided crate config is empty.
-    let default_crate_config = Default::default();
-    let crate_config =
-        extra_config.per_crate_config.get(&dep.package_name).unwrap_or(&default_crate_config);
+    // Helper macro to iterate over a particular config field: first the
+    // crate-specific one, then the overall one.
+    macro_rules! config_field {
+        ($field:ident) => {
+            do_concat_field(|c| &c.$field, &crate_config, &all_config)
+        };
+    }
 
     // Collect the set of rustflags for this crate. This is a combination of
     // those for the crate specifically, and any overall ones set. Additionally,
@@ -179,71 +209,73 @@ pub fn build_rule_from_std_dep(
     // This expression is complicated to avoid creating unnecessary clones. We
     // only need to clone each String once, and create one new Vec with
     // collect() at the end.
-    let rustflags = crate_config
-        .cfg
-        .iter()
-        .chain(extra_config.all_config.cfg.iter())
+    let rustflags = config_field!(cfg)
         .map(|cfg| format!("--cfg={cfg}"))
-        .chain(
-            crate_config.rustflags.iter().chain(extra_config.all_config.rustflags.iter()).cloned(),
-        )
+        .chain(config_field!(rustflags).cloned())
         .collect();
 
-    // Do the same for rustenv, which is simpler.
-    let rustenv =
-        crate_config.env.iter().chain(extra_config.all_config.env.iter()).cloned().collect();
+    let rustenv = config_field!(env).cloned().collect();
+    let exclude_deps: Vec<String> = config_field!(exclude_deps_in_gn).cloned().collect();
 
-    let extra_deps = crate_config
-        .extra_gn_deps
-        .iter()
-        .chain(extra_config.all_config.extra_gn_deps.iter())
+    let extra_deps_to_ignore: HashSet<&str> =
+        config_field!(extra_gn_deps_to_ignore).map(|s| s.as_ref()).collect();
+    let extra_deps = config_field!(extra_gn_deps)
+        .filter(|d| !extra_deps_to_ignore.contains(d.as_str()))
         .cloned()
         .map(|dep| RuleDep { cond: Condition::Always, rule: dep })
         .collect();
 
+    let rustc_metadata = config_field!(rustc_metadata).next().cloned();
+
+    let add_library_configs: Vec<String> = config_field!(add_library_configs).cloned().collect();
+    let remove_library_configs: Vec<String> =
+        config_field!(remove_library_configs).cloned().collect();
+
     let mut rule = RuleConcrete {
-        crate_name: None,
-        epoch: None,
         crate_type: "rlib".to_string(),
         crate_root: format!("//{crate_root_from_src}"),
         no_std: true,
         edition: dep.edition.clone(),
         cargo_pkg_version: dep.version.to_string(),
         cargo_pkg_authors,
-        cargo_pkg_name: dep.package_name.clone(),
+        cargo_pkg_name: dep.package_name.to_string(),
         cargo_pkg_description: dep.description.clone(),
+        build_root: build_script_from_src.as_ref().map(|p| format!("//{p}")),
+        add_library_configs: Vec::new(),
+        remove_library_configs: Vec::new(),
+        add_executable_configs: Vec::new(),
+        remove_executable_configs: Vec::new(),
         deps: extra_deps,
-        dev_deps: vec![],
-        build_deps: vec![],
-        aliased_deps: vec![],
-        features: vec![],
-        build_root: None,
-        build_script_outputs: vec![],
+        rustc_metadata,
         rustflags,
         rustenv,
         output_dir: crate_config
             .output_dir
             .clone()
             .or_else(|| extra_config.all_config.output_dir.clone()),
-        gn_variables_lib: String::new(),
+        ..Default::default()
     };
+
+    apply_default_configs(&mut rule);
+    rule.add_library_configs.extend(add_library_configs);
+    rule.remove_library_configs.extend(remove_library_configs);
 
     rule.features = dep
         .dependency_kinds
         .get(&deps::DependencyKind::Normal)
         .map(|pki| pki.features.clone())
         .unwrap_or(vec![]);
-
-    let exclude_deps: Vec<String> = crate_config
-        .exclude_deps_in_gn
-        .iter()
-        .chain(extra_config.all_config.exclude_deps_in_gn.iter())
-        .cloned()
-        .collect();
+    rule.features.append(&mut config_field!(features).cloned().collect());
+    rule.features.sort_unstable();
+    rule.features.dedup();
 
     // Add only normal dependencies: we don't run unit tests, and we don't run
     // build scripts (instead manually configuring build flags and env vars).
-    for dep_of_dep in dep.dependencies.iter().filter(|d| !exclude_deps.contains(&d.package_name)) {
+    for dep_of_dep in dep
+        .dependencies
+        .iter()
+        .filter(|d| exclude_deps.iter().find(|e| e.as_str() == &*d.package_name).is_none())
+    {
         let cond = match &dep_of_dep.platform {
             None => Condition::Always,
             Some(p) => Condition::If(platform_to_condition(p)),
@@ -266,57 +298,57 @@ pub fn build_rule_from_std_dep(
     )
 }
 
+/// Combine a field from `crate_config` and `all_config`, in order. This can be
+/// used to combine config lists, or get the first set `Option<_>` of the two
+/// configs.
+fn do_concat_field<
+    'a,
+    T: 'a,
+    Field: 'a + IntoIterator<Item = T>,
+    F: Fn(&'a CrateConfig) -> Field,
+>(
+    field_mapper: F,
+    crate_config: &'a CrateConfig,
+    all_config: &'a CrateConfig,
+) -> impl Iterator<Item = T> {
+    field_mapper(crate_config).into_iter().chain(field_mapper(all_config).into_iter())
+}
+
 /// Generate the `BuildFile` for `dep`, or return `None` if no rules would be
 /// present.
-fn make_build_file_for_chromium_dep(
+fn make_build_file_for_chromium_dep<'a>(
     dep: &deps::Package,
     paths: &paths::ChromiumPaths,
-    metadata: &HashMap<ChromiumVendoredCrate, CargoPackage>,
-    build_script_outputs: &HashMap<ChromiumVendoredCrate, Vec<String>>,
-    deps_visibility: &HashMap<ChromiumVendoredCrate, Visibility>,
-    gn_variables_libs: &HashMap<ChromiumVendoredCrate, String>,
-) -> Option<(ChromiumVendoredCrate, BuildFile)> {
+    manifest: &CargoPackage,
+    metadata: PerCrateMetadata,
+) -> Option<(VendoredCrate, BuildFile)> {
     let third_party_path_str = paths.third_party.to_str().unwrap();
-    let crate_id = dep.third_party_crate_id();
-    let crate_abs_path = paths.root.join(paths.third_party.join(crate_id.build_path()));
+    let crate_id = dep.crate_id();
+    let crate_abs_path =
+        paths.root.join(paths.third_party.join(ThirdPartySource::build_path(&crate_id)));
 
     let to_gn_path = |abs_path: &Path| {
         abs_path.strip_prefix(&crate_abs_path).unwrap().to_string_lossy().into_owned()
     };
 
-    let package_metadata = metadata.get(&crate_id).unwrap();
-    let cargo_pkg_description = package_metadata.description.clone();
-    let cargo_pkg_authors = if package_metadata.authors.is_empty() {
-        None
-    } else {
-        Some(package_metadata.authors.join(", "))
-    };
+    let cargo_pkg_description = manifest.description.clone();
+    let cargo_pkg_authors =
+        if manifest.authors.is_empty() { None } else { Some(manifest.authors.join(", ")) };
 
     // Template for all the rules in a build file. Several fields are
-    // the same for all a package's rules.
+    // the same for all of a package's rules.
     let mut rule_template = RuleConcrete {
-        crate_name: None,
-        epoch: None,
-        crate_type: String::new(),
-        crate_root: String::new(),
-        no_std: false,
-        edition: package_metadata.edition.0.clone(),
-        cargo_pkg_version: package_metadata.version.to_string(),
+        edition: manifest.edition.to_string(),
+        cargo_pkg_version: manifest.version.to_string(),
         cargo_pkg_authors: cargo_pkg_authors,
-        cargo_pkg_name: package_metadata.name.clone(),
+        cargo_pkg_name: manifest.name.clone(),
         cargo_pkg_description,
-        deps: Vec::new(),
-        dev_deps: Vec::new(),
-        build_deps: Vec::new(),
-        aliased_deps: Vec::new(),
-        features: Vec::new(),
         build_root: dep.build_script.as_ref().map(|p| to_gn_path(p.as_path())),
-        build_script_outputs: build_script_outputs.get(&crate_id).cloned().unwrap_or_default(),
-        rustflags: vec![],
-        rustenv: vec![],
-        output_dir: None,
-        gn_variables_lib: String::new(),
+        build_script_outputs: metadata.build_script_outputs,
+        ..Default::default()
     };
+
+    apply_default_configs(&mut rule_template);
 
     // Enumerate the dependencies of each kind for the package.
     //
@@ -335,10 +367,10 @@ fn make_build_file_for_chromium_dep(
                 Some(p) => Condition::If(platform_to_condition(p)),
             };
 
-            let crate_id = dep_of_dep.third_party_crate_id();
+            let crate_id = dep_of_dep.crate_id();
             let normalized_name = crate_id.normalized_name();
             let dep_use_name = dep_of_dep.use_name.as_str();
-            let epoch = crate_id.epoch;
+            let epoch = Epoch::from_version(&crate_id.version);
             let rule = format!("//{third_party_path_str}/{normalized_name}/{epoch}:{target_name}");
 
             if dep_use_name != normalized_name.as_str() {
@@ -420,16 +452,14 @@ fn make_build_file_for_chromium_dep(
 
             let mut lib_details = rule_template.clone();
             lib_details.crate_name = Some(crate_id.normalized_name().to_string());
-            lib_details.epoch = Some(crate_id.epoch);
+            lib_details.epoch = Some(Epoch::from_version(&crate_id.version));
             lib_details.crate_type = lib_target.lib_type.to_string();
             lib_details.crate_root = to_gn_path(lib_target.root.as_path());
             lib_details.features = per_kind_info.features.clone();
-            lib_details.gn_variables_lib =
-                gn_variables_libs.get(&crate_id).cloned().unwrap_or_default();
+            lib_details.gn_variables_lib = metadata.gn_variables.clone();
 
             let testonly = dep_kind == deps::DependencyKind::Development;
-            let visibility =
-                deps_visibility.get(&crate_id).map(Clone::clone).unwrap_or(Visibility::ThirdParty);
+            let visibility = metadata.visibility;
 
             let lib_rule = Rule::Concrete {
                 common: RuleCommon {
@@ -458,6 +488,17 @@ fn make_build_file_for_chromium_dep(
     }
 
     if rules.is_empty() { None } else { Some((crate_id, BuildFile { rules })) }
+}
+
+fn apply_default_configs(rule: &mut RuleConcrete) {
+    // Hard-code these for now. They should be moved into a configuration file
+    // later.
+    let chromium_code = "//build/config/compiler:chromium_code";
+    let no_chromium_code = "//build/config/compiler:no_chromium_code";
+    rule.add_library_configs.push(no_chromium_code.to_string());
+    rule.add_executable_configs.push(no_chromium_code.to_string());
+    rule.remove_library_configs.push(chromium_code.to_string());
+    rule.remove_executable_configs.push(chromium_code.to_string());
 }
 
 /// `BuildFile` wrapper with a `Display` impl. Displays the `BuildFile` as a GN
@@ -550,10 +591,26 @@ fn write_concrete<W: Write>(
         // Write implementation does not know where the end of input will be.
         writeln!(writer, "cargo_pkg_description = \"{}\"", escaped(description.trim_end()))?;
     }
-    writeln!(writer, "library_configs -= [ \"//build/config/compiler:chromium_code\" ]")?;
-    writeln!(writer, "library_configs += [ \"//build/config/compiler:no_chromium_code\" ]")?;
-    writeln!(writer, "executable_configs -= [ \"//build/config/compiler:chromium_code\" ]")?;
-    writeln!(writer, "executable_configs += [ \"//build/config/compiler:no_chromium_code\" ]")?;
+
+    if !details.remove_library_configs.is_empty() {
+        write!(writer, "library_configs -= ")?;
+        write_list(&mut writer, &details.remove_library_configs)?;
+    }
+
+    if !details.add_library_configs.is_empty() {
+        write!(writer, "library_configs += ")?;
+        write_list(&mut writer, &details.add_library_configs)?;
+    }
+
+    if !details.remove_executable_configs.is_empty() {
+        write!(writer, "executable_configs -= ")?;
+        write_list(&mut writer, &details.remove_executable_configs)?;
+    }
+
+    if !details.add_executable_configs.is_empty() {
+        write!(writer, "executable_configs += ")?;
+        write_list(&mut writer, &details.add_executable_configs)?;
+    }
 
     if !details.deps.is_empty() {
         write_deps(&mut writer, "deps", details.deps.clone())?;
@@ -582,6 +639,10 @@ fn write_concrete<W: Write>(
         }
     }
 
+    if let Some(meta) = &details.rustc_metadata {
+        writeln!(writer, "rustc_metadata = \"{meta}\"")?;
+    }
+
     if !details.rustenv.is_empty() {
         write!(writer, "rustenv = ")?;
         write_list(&mut writer, &details.rustenv)?;
@@ -596,8 +657,8 @@ fn write_concrete<W: Write>(
         writeln!(writer, "output_dir = \"{output_dir}\"")?;
     }
 
-    if !details.gn_variables_lib.is_empty() {
-        writeln!(writer, "{}", details.gn_variables_lib)?;
+    if let Some(raw_gn) = &details.gn_variables_lib {
+        writeln!(writer, "{}", raw_gn)?;
     }
 
     writeln!(writer, "}}")
@@ -691,6 +752,7 @@ fn escaped<T: Display>(x: T) -> impl Display {
     Escaped(x)
 }
 
+#[cfg(test)]
 pub fn escaped_for_testing<T: Display>(x: T) -> impl Display {
     escaped(x)
 }
@@ -738,6 +800,7 @@ pub enum Condition {
 
 impl Condition {
     /// Get the conditional expression, or `None` if it's unconditional.
+    #[cfg(test)]
     pub fn get_if(&self) -> Option<&str> {
         match self {
             Condition::If(cond) => Some(cond),
@@ -864,3 +927,404 @@ static VISIBILITY_CONSTRAINT: &'static str =
     "# Only for usage from third-party crates. Add the crate to
 # third_party.toml to use it from first-party code.
 visibility = [ \"//third_party/rust/*\" ]";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::borrow::Borrow;
+
+    #[test]
+    fn format_build_file_with_all_fields() {
+        // A simple lib rule.
+        let build_file = BuildFile {
+            rules: vec![(
+                "lib".to_string(),
+                Rule::Concrete {
+                    common: RuleCommon { testonly: false, public_visibility: true },
+                    details: RuleConcrete {
+                        crate_name: Some("foo".to_string()),
+                        epoch: Some(Epoch::Major(1)),
+                        crate_type: "rlib".to_string(),
+                        crate_root: "crate/src/lib.rs".to_string(),
+                        no_std: false,
+                        edition: "2021".to_string(),
+                        cargo_pkg_version: "1.2.3".to_string(),
+                        cargo_pkg_authors: Some("Somebody <somebody@foo.org>".to_string()),
+                        cargo_pkg_name: "foo".to_string(),
+                        cargo_pkg_description: Some(
+                            "A generic framework for foo\nNewline\"\n".to_string(),
+                        ),
+                        add_library_configs: vec!["config_a".to_string()],
+                        remove_library_configs: vec!["config_b".to_string()],
+                        add_executable_configs: vec!["config_c".to_string()],
+                        remove_executable_configs: vec!["config_d".to_string()],
+                        deps: vec![RuleDep::construct_for_testing(
+                            Condition::Always,
+                            "//third_party/rust/bar:lib".to_string(),
+                        )],
+                        // dev_deps should *not* show up in the output currently.
+                        dev_deps: vec![RuleDep::construct_for_testing(
+                            Condition::Always,
+                            "//third_party/rust/rstest:lib".to_string(),
+                        )],
+                        build_deps: vec![RuleDep::construct_for_testing(
+                            Condition::Always,
+                            "//third_party/rust/bindgen:lib".to_string(),
+                        )],
+                        aliased_deps: vec![],
+                        features: vec!["std".to_string()],
+                        build_root: Some("crate/build.rs".to_string()),
+                        build_script_outputs: vec!["binding.rs".to_string()],
+                        rustc_metadata: Some("foometadata".to_string()),
+                        rustflags: vec![
+                            "--cfg=foo".to_string(),
+                            "--cfg=feature=\"std\"".to_string(),
+                            "-Zunstable-feature".to_string(),
+                        ],
+                        rustenv: vec!["BAR_ENV=123".to_string()],
+                        output_dir: Some("some/out/dir".to_string()),
+                        gn_variables_lib: Some("variables = []".to_string()),
+                    },
+                },
+            )],
+        };
+        assert_eq_diff(
+            format!("{}", build_file.display()),
+            r#"# Copyright 2023 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/cargo_crate.gni")
+
+cargo_crate("lib") {
+crate_name = "foo"
+epoch = "1"
+crate_type = "rlib"
+crate_root = "crate/src/lib.rs"
+
+# Unit tests skipped. Generate with --with-tests to include them.
+build_native_rust_unit_tests = false
+sources = [ "crate/src/lib.rs" ]
+edition = "2021"
+cargo_pkg_version = "1.2.3"
+cargo_pkg_authors = "Somebody <somebody@foo.org>"
+cargo_pkg_name = "foo"
+cargo_pkg_description = "A generic framework for foo Newline\""
+library_configs -= [
+"config_b",
+]
+library_configs += [
+"config_a",
+]
+executable_configs -= [
+"config_d",
+]
+executable_configs += [
+"config_c",
+]
+deps = [
+"//third_party/rust/bar:lib",
+]
+build_deps = [
+"//third_party/rust/bindgen:lib",
+]
+features = [
+"std",
+]
+build_root = "crate/build.rs"
+build_sources = [ "crate/build.rs" ]
+build_script_outputs = [
+"binding.rs",
+]
+rustc_metadata = "foometadata"
+rustenv = [
+"BAR_ENV=123",
+]
+rustflags = [
+"--cfg=foo",
+"--cfg=feature=\"std\"",
+"-Zunstable-feature",
+]
+output_dir = "some/out/dir"
+variables = []
+}
+"#,
+        );
+
+        // Third-party only visibility, two rules in a file.
+        let build_file = BuildFile {
+            rules: vec![
+                (
+                    "lib".to_string(),
+                    Rule::Concrete {
+                        common: RuleCommon { testonly: false, public_visibility: false },
+                        details: RuleConcrete {
+                            crate_name: Some("foo".to_string()),
+                            epoch: Some(Epoch::Major(1)),
+                            crate_type: "rlib".to_string(),
+                            crate_root: "crate/src/lib.rs".to_string(),
+                            edition: "2021".to_string(),
+                            cargo_pkg_version: "1.2.3".to_string(),
+                            cargo_pkg_name: "foo".to_string(),
+                            ..Default::default()
+                        },
+                    },
+                ),
+                (
+                    "test_support".to_string(),
+                    Rule::Group {
+                        concrete_target: "lib".to_string(),
+                        common: RuleCommon { testonly: true, public_visibility: true },
+                    },
+                ),
+            ],
+        };
+        assert_eq_diff(
+            format!("{}", build_file.display()),
+            r#"# Copyright 2023 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/cargo_crate.gni")
+
+cargo_crate("lib") {
+crate_name = "foo"
+epoch = "1"
+crate_type = "rlib"
+
+# Only for usage from third-party crates. Add the crate to
+# third_party.toml to use it from first-party code.
+visibility = [ "//third_party/rust/*" ]
+crate_root = "crate/src/lib.rs"
+
+# Unit tests skipped. Generate with --with-tests to include them.
+build_native_rust_unit_tests = false
+sources = [ "crate/src/lib.rs" ]
+edition = "2021"
+cargo_pkg_version = "1.2.3"
+cargo_pkg_name = "foo"
+}
+group("test_support") {
+public_deps = [ ":lib" ]
+testonly = true
+}
+"#,
+        );
+
+        // A lib rule with conditional deps and aliases.
+        let build_file = BuildFile {
+            rules: vec![(
+                "lib".to_string(),
+                Rule::Concrete {
+                    common: RuleCommon { testonly: false, public_visibility: true },
+                    details: RuleConcrete {
+                        crate_name: Some("foo".to_string()),
+                        epoch: Some(Epoch::Major(1)),
+                        crate_type: "rlib".to_string(),
+                        crate_root: "crate/src/lib.rs".to_string(),
+                        edition: "2021".to_string(),
+                        cargo_pkg_version: "1.2.3".to_string(),
+                        cargo_pkg_name: "foo".to_string(),
+                        deps: vec![
+                            RuleDep::construct_for_testing(
+                                Condition::Always,
+                                "//third_party/rust/bar:lib".to_string(),
+                            ),
+                            RuleDep::construct_for_testing(
+                                Condition::If("foo".to_string()),
+                                "//third_party/rust/dep1:lib".to_string(),
+                            ),
+                            RuleDep::construct_for_testing(
+                                Condition::If("foo".to_string()),
+                                "//third_party/rust/dep2:lib".to_string(),
+                            ),
+                            RuleDep::construct_for_testing(
+                                Condition::If("bar".to_string()),
+                                "//third_party/rust/dep3:lib".to_string(),
+                            ),
+                        ],
+                        // dev_deps should *not* show up in the output currently.
+                        dev_deps: vec![RuleDep::construct_for_testing(
+                            Condition::Always,
+                            "//third_party/rust/rstest:lib".to_string(),
+                        )],
+                        build_deps: vec![RuleDep::construct_for_testing(
+                            Condition::Always,
+                            "//third_party/rust/bindgen:lib".to_string(),
+                        )],
+                        aliased_deps: vec![
+                            (
+                                "renamed1".to_string(),
+                                "//third_party/rust/dep1:lib__rlib".to_string(),
+                            ),
+                            (
+                                "renamed2".to_string(),
+                                "//third_party/rust/dep2:lib__rlib".to_string(),
+                            ),
+                        ],
+                        features: vec!["std".to_string()],
+                        build_root: Some("crate/build.rs".to_string()),
+                        build_script_outputs: vec!["binding.rs".to_string()],
+                        ..Default::default()
+                    },
+                },
+            )],
+        };
+        assert_eq_diff(
+            format!("{}", build_file.display()),
+            r#"# Copyright 2023 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/cargo_crate.gni")
+
+cargo_crate("lib") {
+crate_name = "foo"
+epoch = "1"
+crate_type = "rlib"
+crate_root = "crate/src/lib.rs"
+
+# Unit tests skipped. Generate with --with-tests to include them.
+build_native_rust_unit_tests = false
+sources = [ "crate/src/lib.rs" ]
+edition = "2021"
+cargo_pkg_version = "1.2.3"
+cargo_pkg_name = "foo"
+deps = [
+"//third_party/rust/bar:lib",
+]
+if (bar) {
+deps += [
+"//third_party/rust/dep3:lib",
+]
+}
+if (foo) {
+deps += [
+"//third_party/rust/dep1:lib",
+"//third_party/rust/dep2:lib",
+]
+}
+build_deps = [
+"//third_party/rust/bindgen:lib",
+]
+aliased_deps = {
+renamed1 = "//third_party/rust/dep1:lib__rlib"
+renamed2 = "//third_party/rust/dep2:lib__rlib"
+}
+features = [
+"std",
+]
+build_root = "crate/build.rs"
+build_sources = [ "crate/build.rs" ]
+build_script_outputs = [
+"binding.rs",
+]
+}
+"#,
+        );
+    }
+
+    /// Expect two strings are equal, printing a human-readable diff when
+    /// they're different. Logs a gtest failure if they're not equal.
+    fn assert_eq_diff<T: Borrow<str>, U: Borrow<str>>(actual: T, expected: U) {
+        let actual = actual.borrow();
+        let expected = expected.borrow();
+
+        assert_eq!(actual, expected);
+
+        // Do not invoke `diff` if they're equal.
+        if actual == expected {
+            return;
+        }
+
+        use std::io::BufWriter;
+        use std::io::Write;
+        use std::process::*;
+
+        // For prettier output, allow setting an env var to colorize output. Don't
+        // do this by default since it might not work on all terminals.
+        let color_arg = format!(
+            "--color={option}",
+            option = std::env::var("DIFF_COLOR").map(|s| s).unwrap_or("never".to_string()),
+        );
+
+        // Closure to invoke diff on the inputs. This is wrapped in a closure so
+        // that we can fail softly if `diff` could not be run.
+        let inner = || {
+            // One of the inputs must be a temporary file since we don't have a way
+            // to pass two inputs through pipes.
+            let expected_file = tempfile::NamedTempFile::new()?;
+            let expected_file_path = expected_file.path().to_string_lossy().into_owned();
+            write!(BufWriter::new(&expected_file), "{expected}")?;
+
+            let mut diff = Command::new("diff")
+                .args(["-U", "3", &color_arg, &expected_file_path, "-"])
+                .stdin(Stdio::piped())
+                .spawn()?;
+
+            // Write the second input to `diff`'s stdin then wait for the result.
+            let stdin = diff.stdin.take().unwrap();
+            write!(BufWriter::new(stdin), "{actual}")?;
+            diff.wait()
+        };
+
+        // Print warning message if running `diff` failed, but don't panic. The test
+        // already failed, we just don't get a pretty failure message.
+        match inner() {
+            Ok(exit_status) => {
+                if !exit_status.success() {
+                    eprintln!("diff failed: {exit_status}");
+                }
+            }
+            Err(err) => eprintln!("could not run diff: {err}"),
+        }
+    }
+
+    #[test]
+    fn platform_to_condition() {
+        use crate::platforms::{Platform, PlatformSet};
+        use cargo_platform::CfgExpr;
+        use std::convert::From;
+        use std::str::FromStr;
+
+        // Try an unconditional filter.
+        assert_eq!(Condition::from(PlatformSet::one(None)), Condition::Always);
+
+        // Try a target triple.
+        assert_eq!(
+            Condition::from(PlatformSet::one(Some(Platform::Name(
+                "x86_64-pc-windows-msvc".to_string()
+            ))))
+            .get_if()
+            .unwrap(),
+            "(is_win && target_cpu == \"x64\")"
+        );
+
+        // Try a cfg expression.
+        assert_eq!(
+            Condition::from(PlatformSet::one(Some(Platform::Cfg(
+                CfgExpr::from_str("any(windows, target_os = \"android\")").unwrap()
+            ))))
+            .get_if()
+            .unwrap(),
+            "((is_win) || (is_android))"
+        );
+
+        // Try a PlatformSet with multiple filters.
+        let mut platform_set = PlatformSet::empty();
+        platform_set.add(Some(Platform::Name("armv7-linux-android".to_string())));
+        platform_set.add(Some(Platform::Cfg(CfgExpr::from_str("windows").unwrap())));
+        assert_eq!(
+            Condition::from(platform_set).get_if().unwrap(),
+            "(is_android && target_cpu == \"arm\") || (is_win)"
+        );
+    }
+
+    #[test]
+    fn string_excaping() {
+        assert_eq!("foo bar", format!("{}", escaped_for_testing("foo bar")));
+        assert_eq!("foo bar ", format!("{}", escaped_for_testing("foo\nbar\n")));
+        assert_eq!(r#"foo \"bar\""#, format!("{}", escaped_for_testing(r#"foo "bar""#)));
+        assert_eq!("foo 'bar'", format!("{}", escaped_for_testing("foo 'bar'")));
+    }
+}

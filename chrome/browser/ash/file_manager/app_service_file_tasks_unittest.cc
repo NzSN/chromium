@@ -25,6 +25,7 @@
 #include "chrome/browser/ash/file_manager/file_tasks.h"
 #include "chrome/browser/ash/file_manager/path_util.h"
 #include "chrome/browser/ash/login/users/fake_chrome_user_manager.h"
+#include "chrome/browser/ash/policy/dlp/dlp_files_controller_ash.h"
 #include "chrome/browser/chromeos/policy/dlp/dlp_rules_manager_factory.h"
 #include "chrome/browser/chromeos/policy/dlp/mock_dlp_rules_manager.h"
 #include "chrome/common/pref_names.h"
@@ -411,22 +412,6 @@ TEST_F(AppServiceFileTasksTestEnabled, FindAppServiceFileTasksText) {
   EXPECT_EQ(kAppIdText, tasks[0].task_descriptor.app_id);
   EXPECT_EQ(kActivityLabelText, tasks[0].task_title);
   EXPECT_FALSE(tasks[0].is_generic_file_handler);
-}
-
-// Test that policy assigning .jpeg to an invalid app results in
-// kIncorrectAssignment.
-TEST_F(AppServiceFileTasksTestEnabled, WrongPolicyConfiguration) {
-  AddChromeApp();
-
-  profile()->AsTestingProfile()->GetTestingPrefService()->SetManagedPref(
-      prefs::kDefaultHandlersForFileExtensions,
-      base::Value(
-          base::Value::Dict().Set(".jpeg", "longandtediouschromeappid")));
-  // Find apps for a "text/plain" file.
-  std::unique_ptr<ResultingTasks> resulting_tasks =
-      FindAppServiceTasksWithPolicy({{"bar.jpeg", kMimeTypeImage}});
-  ASSERT_EQ(resulting_tasks->policy_default_handler_status,
-            PolicyDefaultHandlerStatus::kIncorrectAssignment);
 }
 
 // Test that between an image app and text app, the image app can be
@@ -950,10 +935,10 @@ TEST_F(AppServiceFileTasksTestEnabled, CrositiniTasksControlledByPolicy) {
 // Tests applying policies when listing tasks.
 class AppServiceFileTasksPolicyTest : public AppServiceFileTasksTestEnabled {
  protected:
-  class MockFilesController : public policy::DlpFilesController {
+  class MockFilesController : public policy::DlpFilesControllerAsh {
    public:
     explicit MockFilesController(const policy::DlpRulesManager& rules_manager)
-        : DlpFilesController(rules_manager) {}
+        : DlpFilesControllerAsh(rules_manager) {}
     ~MockFilesController() override = default;
 
     MOCK_METHOD(bool,

@@ -17,7 +17,7 @@
 #include "media/base/video_decoder_config.h"
 #include "media/gpu/buildflags.h"
 #include "media/gpu/gpu_video_encode_accelerator_helpers.h"
-#include "media/gpu/test/video.h"
+#include "media/gpu/test/raw_video.h"
 #include "media/gpu/test/video_encoder/bitstream_file_writer.h"
 #include "media/gpu/test/video_encoder/bitstream_validator.h"
 #include "media/gpu/test/video_encoder/decoder_buffer_validator.h"
@@ -145,7 +145,7 @@ class VideoEncoderTest : public ::testing::Test {
   }
 
   std::unique_ptr<VideoEncoder> CreateVideoEncoder(
-      Video* video,
+      const RawVideo* video,
       const VideoEncoderClientConfig& config) {
     LOG_ASSERT(video);
 
@@ -161,7 +161,7 @@ class VideoEncoderTest : public ::testing::Test {
 
  private:
   std::unique_ptr<BitstreamProcessor> CreateBitstreamValidator(
-      const Video* video,
+      const RawVideo* video,
       const VideoDecoderConfig& decoder_config,
       const size_t last_frame_index,
       VideoFrameValidator::GetModelFrameCB get_model_frame_cb,
@@ -219,7 +219,7 @@ class VideoEncoderTest : public ::testing::Test {
   }
 
   std::vector<std::unique_ptr<BitstreamProcessor>> CreateBitstreamProcessors(
-      Video* video,
+      const RawVideo* video,
       const VideoEncoderClientConfig& config) {
     std::vector<std::unique_ptr<BitstreamProcessor>> bitstream_processors;
     const gfx::Rect visible_rect(config.output_resolution);
@@ -232,13 +232,6 @@ class VideoEncoderTest : public ::testing::Test {
     const VideoCodec codec =
         VideoCodecProfileToVideoCodec(config.output_profile);
     if (g_env->SaveOutputBitstream()) {
-      base::FilePath::StringPieceType extension =
-          codec == VideoCodec::kH264 ? FILE_PATH_LITERAL("h264")
-                                     : FILE_PATH_LITERAL("ivf");
-      auto output_bitstream_filepath =
-          g_env->OutputFolder()
-              .Append(g_env->GetTestOutputFilePath())
-              .Append(video->FilePath().BaseName().ReplaceExtension(extension));
       if (!spatial_layer_resolutions.empty()) {
         CHECK_GE(config.num_spatial_layers, 1u);
         CHECK_GE(config.num_temporal_layers, 1u);
@@ -251,11 +244,8 @@ class VideoEncoderTest : public ::testing::Test {
                temporal_layer_index_to_write < config.num_temporal_layers;
                ++temporal_layer_index_to_write) {
             bitstream_processors.emplace_back(BitstreamFileWriter::Create(
-                output_bitstream_filepath.InsertBeforeExtensionASCII(
-                    FILE_PATH_LITERAL(".SL") +
-                    base::NumberToString(spatial_layer_index_to_write) +
-                    FILE_PATH_LITERAL(".TL") +
-                    base::NumberToString(temporal_layer_index_to_write)),
+                g_env->OutputFilePath(codec, true, spatial_layer_index_to_write,
+                                      temporal_layer_index_to_write),
                 codec, layer_size, config.framerate,
                 config.num_frames_to_encode, spatial_layer_index_to_write,
                 temporal_layer_index_to_write, spatial_layer_resolutions));
@@ -264,7 +254,7 @@ class VideoEncoderTest : public ::testing::Test {
         }
       } else {
         bitstream_processors.emplace_back(BitstreamFileWriter::Create(
-            output_bitstream_filepath, codec, visible_rect.size(),
+            g_env->OutputFilePath(codec), codec, visible_rect.size(),
             config.framerate, config.num_frames_to_encode));
         LOG_ASSERT(bitstream_processors.back());
       }
@@ -274,35 +264,11 @@ class VideoEncoderTest : public ::testing::Test {
       return bitstream_processors;
     }
 
-    switch (codec) {
-      case VideoCodec::kH264:
-        bitstream_processors.emplace_back(new H264Validator(
-            config.output_profile, visible_rect, config.num_temporal_layers));
-        break;
-      case VideoCodec::kVP8:
-        bitstream_processors.emplace_back(
-            new VP8Validator(visible_rect, config.num_temporal_layers));
-        break;
-      case VideoCodec::kVP9:
-        bitstream_processors.emplace_back(new VP9Validator(
-            config.output_profile, visible_rect, config.num_spatial_layers,
-            config.num_temporal_layers));
-        break;
-      case VideoCodec::kAV1:
-        bitstream_processors.emplace_back(new AV1Validator(visible_rect));
-        break;
-      default:
-        LOG(ERROR) << "Unsupported profile: "
-                   << GetProfileName(config.output_profile);
-        break;
-    }
+    bitstream_processors.emplace_back(DecoderBufferValidator::Create(
+        config.output_profile, visible_rect, config.num_spatial_layers,
+        config.num_temporal_layers));
 
-    raw_data_helper_ = RawDataHelper::Create(video, g_env->Reverse());
-    if (!raw_data_helper_) {
-      LOG(ERROR) << "Failed to create raw data helper";
-      return bitstream_processors;
-    }
-
+    raw_data_helper_ = std::make_unique<RawDataHelper>(video, g_env->Reverse());
     if (!spatial_layer_resolutions.empty()) {
       CHECK_GE(config.num_spatial_layers, 1u);
       CHECK_GE(config.num_temporal_layers, 1u);
@@ -619,7 +585,7 @@ TEST_F(VideoEncoderTest, FlushAtEndOfStream_NV12Dmabuf) {
   if (auto skip_reason = SupportsNV12DmaBufInput())
     GTEST_SKIP() << *skip_reason;
 
-  Video* nv12_video = g_env->GenerateNV12Video();
+  RawVideo* nv12_video = g_env->GenerateNV12Video();
   VideoEncoderClientConfig config(nv12_video, g_env->Profile(),
                                   g_env->SpatialLayers(),
                                   g_env->InterLayerPredMode(),
@@ -719,7 +685,7 @@ TEST_F(VideoEncoderTest, FlushAtEndOfStream_NV12DmabufCroppingTopAndBottom) {
                  << kMaxExpandedResolution.ToString();
   }
 
-  auto nv12_expanded_video = g_env->GenerateNV12Video()->Expand(
+  auto nv12_expanded_video = g_env->GenerateNV12Video()->CreateExpandedVideo(
       expanded_resolution, expanded_visible_rect);
   ASSERT_TRUE(nv12_expanded_video);
   VideoEncoderClientConfig config(nv12_expanded_video.get(), g_env->Profile(),
@@ -762,7 +728,7 @@ TEST_F(VideoEncoderTest, FlushAtEndOfStream_NV12DmabufCroppingRightAndLeft) {
                  << kMaxExpandedResolution.ToString();
   }
 
-  auto nv12_expanded_video = g_env->GenerateNV12Video()->Expand(
+  auto nv12_expanded_video = g_env->GenerateNV12Video()->CreateExpandedVideo(
       expanded_resolution, expanded_visible_rect);
   ASSERT_TRUE(nv12_expanded_video);
   VideoEncoderClientConfig config(nv12_expanded_video.get(), g_env->Profile(),
@@ -790,7 +756,7 @@ TEST_F(VideoEncoderTest, DeactivateAndActivateSpatialLayers) {
   if (spatial_layers.size() <= 1)
     GTEST_SKIP() << "Skip (de)activate spatial layers test for simple encoding";
 
-  Video* nv12_video = g_env->GenerateNV12Video();
+  RawVideo* nv12_video = g_env->GenerateNV12Video();
   const size_t bottom_spatial_idx = 0;
   const size_t top_spatial_idx = spatial_layers.size() - 1;
   auto deactivate_spatial_layer =
@@ -859,7 +825,7 @@ TEST_F(VideoEncoderTest, DeactivateAndActivateSpatialLayers) {
 
 int main(int argc, char** argv) {
   // Set the default test data path.
-  media::test::Video::SetTestDataPath(media::GetTestDataPath());
+  media::test::RawVideo::SetTestDataPath(media::GetTestDataPath());
 
   // Print the help message if requested. This needs to be done before
   // initializing gtest, to overwrite the default gtest help message.
@@ -879,8 +845,6 @@ int main(int argc, char** argv) {
   base::FilePath video_metadata_path =
       (args.size() >= 2) ? base::FilePath(args[1]) : base::FilePath();
   std::string codec = "h264";
-  size_t num_temporal_layers = 1u;
-  size_t num_spatial_layers = 1u;
   std::string svc_mode = "L1T1";
   bool output_bitstream = false;
   absl::optional<uint32_t> output_bitrate;
@@ -901,19 +865,15 @@ int main(int argc, char** argv) {
       continue;
     }
 
+    if (it->first == "num_temporal_layers" ||
+        it->first == "num_spatial_layers") {
+      std::cout << "--num_temporal_layers and --num_spatial_layers have been "
+                << "removed. Please use --svc_mode";
+      return EXIT_FAILURE;
+    }
+
     if (it->first == "codec") {
       codec = it->second;
-    } else if (it->first == "num_temporal_layers") {
-      if (!base::StringToSizeT(it->second, &num_temporal_layers)) {
-        std::cout << "invalid number of temporal layers: " << it->second
-                  << "\n";
-        return EXIT_FAILURE;
-      }
-    } else if (it->first == "num_spatial_layers") {
-      if (!base::StringToSizeT(it->second, &num_spatial_layers)) {
-        std::cout << "invalid number of spatial layers: " << it->second << "\n";
-        return EXIT_FAILURE;
-      }
     } else if (it->first == "svc_mode") {
       svc_mode = it->second;
     } else if (it->first == "bitrate_mode") {
@@ -984,9 +944,8 @@ int main(int argc, char** argv) {
   media::test::VideoEncoderTestEnvironment* test_environment =
       media::test::VideoEncoderTestEnvironment::Create(
           video_path, video_metadata_path, enable_bitstream_validator,
-          output_folder, codec, svc_mode, num_temporal_layers,
-          num_spatial_layers, output_bitstream, output_bitrate, bitrate_mode,
-          reverse, frame_output_config,
+          output_folder, codec, svc_mode, output_bitstream, output_bitrate,
+          bitrate_mode, reverse, frame_output_config,
           /*enabled_features=*/{}, disabled_features);
 
   if (!test_environment)

@@ -25,7 +25,6 @@
 #include "components/password_manager/core/browser/ui/saved_passwords_presenter.h"
 #include "components/password_manager/core/common/password_manager_features.h"
 #include "components/password_manager/services/csv_password/csv_password_parser_service.h"
-#include "components/sync/base/bind_to_task_runner.h"
 #include "components/sync/base/features.h"
 #include "third_party/abseil-cpp/absl/types/optional.h"
 
@@ -177,10 +176,9 @@ CSVPasswordToCredentialUIEntry(const CSVPassword& csv_password,
 
   auto url = csv_password.GetURL();
   if (!url.has_value()) {
-    if (url.error().empty()) {
-      return base::unexpected(with_status(ImportEntry::Status::MISSING_URL));
-    }
-    return base::unexpected(with_status(ImportEntry::Status::INVALID_URL));
+    return base::unexpected(
+        with_status(url.error().empty() ? ImportEntry::Status::MISSING_URL
+                                        : ImportEntry::Status::INVALID_URL));
   }
   if (url->spec().length() > 2048) {
     return base::unexpected(with_status(ImportEntry::Status::LONG_URL));

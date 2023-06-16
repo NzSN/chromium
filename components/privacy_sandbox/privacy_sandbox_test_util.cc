@@ -24,6 +24,8 @@ namespace privacy_sandbox_test_util {
 
 namespace {
 
+constexpr int kTestTaxonomyVersion = 1;
+
 // Convenience function that unpacks a map keyed on both MultipleXKeys, and
 // single keys (e.g. keyed on the TestKey variant type), into a map key _only_
 // on single keys.
@@ -76,6 +78,7 @@ void ApplyTestState(
     MockPrivacySandboxSettingsDelegate* mock_delegate,
     PrivacySandboxServiceTestInterface* privacy_sandbox_service,
     browsing_topics::MockBrowsingTopicsService* mock_browsing_topics_service,
+    privacy_sandbox::PrivacySandboxSettings* privacy_sandbox_settings,
     content_settings::MockProvider* user_content_setting_provider,
     content_settings::MockProvider* managed_content_setting_provider) {
   switch (key) {
@@ -148,7 +151,7 @@ void ApplyTestState(
       }
       const auto kTopic = privacy_sandbox::CanonicalTopic(
           browsing_topics::Topic(24),  // "Blues"
-          privacy_sandbox::CanonicalTopic::AVAILABLE_TAXONOMY);
+          kTestTaxonomyVersion);
       const std::vector<privacy_sandbox::CanonicalTopic> topics = {kTopic};
 
       EXPECT_CALL(*mock_browsing_topics_service, GetTopTopicsForDisplay())
@@ -163,7 +166,7 @@ void ApplyTestState(
       }
       const auto kTopic = privacy_sandbox::CanonicalTopic(
           browsing_topics::Topic(25),  // "Classical Music"
-          privacy_sandbox::CanonicalTopic::AVAILABLE_TAXONOMY);
+          kTestTaxonomyVersion);
       privacy_sandbox_service->SetTopicAllowed(kTopic, false);
       return;
     }
@@ -280,6 +283,12 @@ void ApplyTestState(
       SCOPED_TRACE("State Setup: Appropriate Topics Consent");
       mock_delegate->SetUpHasAppropriateTopicsConsentResponse(
           GetItemValue<bool>(value));
+      return;
+    }
+    case (StateKey::kAttestationsMap): {
+      SCOPED_TRACE("State Setup: Attestations Map");
+      privacy_sandbox_settings->SetPrivacySandboxAttestationsMapForTesting(
+          GetItemValue<privacy_sandbox::PrivacySandboxAttestationsMap>(value));
       return;
     }
     default:
@@ -766,7 +775,7 @@ void RunTestCase(
     ApplyTestState(key, value, task_environment, testing_pref_service,
                    host_content_settings_map, mock_delegate,
                    privacy_sandbox_service, mock_browsing_topics_service_,
-                   user_content_setting_provider,
+                   privacy_sandbox_settings, user_content_setting_provider,
                    managed_content_setting_provider);
   }
 

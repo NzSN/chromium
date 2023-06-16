@@ -148,6 +148,7 @@
 <translation id="3600792891314830896">سایت‌هایی که صدا پخش می‌کنند بی‌صدا شوند</translation>
 <translation id="3602290021589620013">پیش‌نمایش</translation>
 <translation id="3628308229821498208">جستجوهای پیشنهادی</translation>
+<translation id="3707034683772193706">‏سایتی که از آن بازدید می‌کنید می‌تواند مقدار کمی از اطلاعات را در Chrome ذخیره کند. این کار عمدتاً برای تأیید اینکه شما روبات نیستید انجام می‌شود</translation>
 <translation id="3721953990244350188">رد شدن و نمایش کنش دردسترس بعدی</translation>
 <translation id="3744111561329211289">همگام‌سازی پس‌زمینه</translation>
 <translation id="3763247130972274048">در سمت راست یا چپ ویدیو دو ضربه سریع بزنید تا ۱۰ ثانیه رد شود</translation>
@@ -188,7 +189,6 @@
 <translation id="4412992751769744546">اجازه به کوکی‌های شخص ثالث</translation>
 <translation id="4428065317363009941">شخصی‌سازی آگهی</translation>
 <translation id="4434045419905280838">پنجره‌های بازشو و هدایت‌ها</translation>
-<translation id="4440642537584213025">گسترده کردن <ph name="TARGET_DESCRIPTION" /></translation>
 <translation id="4468959413250150279">سایتی خاص بی‌صدا شود.</translation>
 <translation id="4475912480633855319">{COOKIES,plural, =1{# کوکی}one{# کوکی}other{# کوکی}}</translation>
 <translation id="4478158430052450698">آسان‌تر شدن سفارشی‌سازی بزرگ‌نمایی برای سایت‌های مختلف</translation>
@@ -310,6 +310,7 @@
 <translation id="6612358246767739896">محتوای محافظت‌شده</translation>
 <translation id="662080504995468778">ماندن</translation>
 <translation id="6643016212128521049">پاک کردن</translation>
+<translation id="6653342741369270081">برای خروج از حالت تمام‌صفحه، دکمه برگشت را فشار دهید.</translation>
 <translation id="6689172468748959065">عکس‌های نمایه</translation>
 <translation id="6697925417670533197">بارگیری‌های فعال</translation>
 <translation id="6722828510648505498">پیام‌واره‌های ورود به سیستم سرویس‌های تعیین هویت مسدود می‌شود.</translation>
@@ -344,6 +345,7 @@
 <translation id="7302486331832100261">معمولاً اعلان‌ها را مسدود می‌کنید. برای مجاز کردن، روی «جزئیات» ضربه بزنید.</translation>
 <translation id="7366415735885268578">افزودن سایت</translation>
 <translation id="7383715096023715447">تنظیمات <ph name="DOMAIN" /></translation>
+<translation id="7406113532070524618">این تنظیم بدون شناسایی شما یا اجازه دادن به سایت‌ها برای دیدن سابقه مرورتان کار می‌کند، هرچند سایت‌ها می‌توانند مقدار کمی اطلاعات را به‌عنوان بخشی از درستی‌سنجی هم‌رسانی کنند</translation>
 <translation id="7423098979219808738">ابتدا سؤال شود</translation>
 <translation id="7423538860840206698">خواندن محتوای بریده‌دان مسدود شد</translation>
 <translation id="7425915948813553151">زمینه تیره برای سایت‌ها</translation>
@@ -369,6 +371,7 @@
 <translation id="7846076177841592234">لغو انتخاب</translation>
 <translation id="7882806643839505685">پخش صدا برای سایت خاصی مجاز شود.</translation>
 <translation id="789180354981963912">مسدود کردن کوکی‌های شخص ثالث در «حالت ناشناس»:</translation>
+<translation id="7895868624847501462">با این کار، همه داده‌های محلی، ازجمله کوکی‌ها، پاک خواهد شد و تمام اجازه‌های <ph name="DOMAIN" /> و همه سایت‌های تحت آن بازنشانی خواهند شد</translation>
 <translation id="7940722705963108451">به من یادآوری شود</translation>
 <translation id="7974024493641668069">{COUNT,plural, =1{<ph name="FPS_MEMBERS_COUNT" /> سایت در گروه سایت‌های <ph name="FPS_OWNER" /> قرار دارد که می‌توانند فعالیت شما را در گروه ببینند}one{<ph name="FPS_MEMBERS_COUNT" /> سایت در گروه سایت‌های <ph name="FPS_OWNER" /> قرار دارد که می‌توانند فعالیت شما را در گروه ببینند}other{<ph name="FPS_MEMBERS_COUNT" /> سایت در گروه سایت‌های <ph name="FPS_OWNER" /> قرار دارد که می‌توانند فعالیت شما را در گروه ببینند}}</translation>
 <translation id="7986741934819883144">مخاطبی انتخاب کنید</translation>
@@ -394,6 +397,7 @@
 <translation id="8284326494547611709">زیرنویس‌ها</translation>
 <translation id="8300705686683892304">مدیریت‌شده توسط برنامه</translation>
 <translation id="8324158725704657629">دوباره سؤال نشود</translation>
+<translation id="8338445138528827481">با این کار، همه داده‌های محلی، ازجمله کوکی‌ها، پاک خواهد شد و تمام اجازه‌های <ph name="ORIGIN" /> بازنشانی خواهد شد</translation>
 <translation id="8362795839483915693">می‌توانید در سایت‌هایی که بازدید می‌کنید زوم‌پیش یا زوم‌پس کنید</translation>
 <translation id="8372893542064058268">«همگام‌سازی پس‌زمینه» را برای یک سایت خاص مجاز کنید.</translation>
 <translation id="8376384591331888629">شامل کوکی‌های شخص ثالث در این سایت می‌شود</translation>
@@ -433,6 +437,7 @@
 <translation id="8816026460808729765">سایت‌ها نمی‌توانند به حسگرها دسترسی داشته باشند</translation>
 <translation id="8823559166155093873">مسدود کردن کوکی‌ها</translation>
 <translation id="8847988622838149491">USB</translation>
+<translation id="8889294078294184559">‏همان‌طور که مرور می‌کنید، سایت‌ها می‌توانند ازطریق Chrome بررسی کنند و بااستفاده از سایت قبلی که بازدید کرده‌اید تأیید کنند که احتمالاً شما شخص واقعی هستید</translation>
 <translation id="8899807382908246773">آگهی‌های مزاحم</translation>
 <translation id="8903921497873541725">بزرگ‌نمایی</translation>
 <translation id="8921772741368021346"><ph name="POSITION" /> / <ph name="DURATION" /></translation>

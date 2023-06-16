@@ -53,6 +53,9 @@ builders.builder(
     name = "autosharder",
     bucket = "infra",
     executable = "recipe:chromium/autosharder",
+    # Run once daily at 12 AM Pacific/7 AM UTC.
+    schedule = "0 7 * * *",
+    triggered_by = [],
     pool = "luci.chromium.ci",
     builderless = True,
     console_view_entry = consoles.console_view_entry(
@@ -60,5 +63,12 @@ builders.builder(
         category = "autosharder",
         short_name = "auto",
     ),
+    notifies = [
+        luci.notifier(
+            name = "chromium-autosharder-notifier",
+            notify_emails = ["chrome-browser-infra-team@google.com"],
+            on_occurrence = ["FAILURE", "INFRA_FAILURE"],
+        ),
+    ],
     service_account = "chromium-autosharder@chops-service-accounts.iam.gserviceaccount.com",
 )

@@ -693,8 +693,6 @@ component("net") {
     "http/transport_security_state_source.h",
     "http/url_security_manager.cc",
     "http/url_security_manager.h",
-    "http/webfonts_histogram.cc",
-    "http/webfonts_histogram.h",
     "log/file_net_log_observer.cc",
     "log/file_net_log_observer.h",
     "log/net_log.cc",
@@ -997,7 +995,6 @@ component("net") {
     "ssl/ssl_cipher_suite_names.h",
     "ssl/ssl_client_auth_cache.cc",
     "ssl/ssl_client_auth_cache.h",
-    "ssl/ssl_client_cert_type.h",
     "ssl/ssl_client_session_cache.cc",
     "ssl/ssl_client_session_cache.h",
     "ssl/ssl_config.cc",
@@ -1267,6 +1264,11 @@ component("net") {
       "proxy_resolution/proxy_resolver_mac.cc",
       "proxy_resolution/proxy_resolver_mac.h",
     ]
+    configs += [ "//build/config/compiler:enable_arc" ]
+  }
+
+  if (is_ios) {
+    deps += [ "//base/ios" ]
   }
 
   if (is_win) {
@@ -1732,6 +1734,10 @@ source_set("net_public_deps") {
     "//third_party/boringssl",
     "//url",
   ]
+
+  if (chrome_root_store_supported) {
+    public_deps += [ "//net/cert:root_store_proto_lite" ]
+  }
 }
 
 if (is_android) {
@@ -2054,7 +2060,10 @@ static_library("test_support") {
   }
 
   if (is_ios) {
-    deps += [ ":test_support_bundle_data" ]
+    deps += [
+      ":test_support_bundle_data",
+      "//base/ios",
+    ]
   }
 
   if (use_nss_certs) {
@@ -2673,7 +2682,6 @@ test("net_unittests") {
     "http/transport_security_persister_unittest.cc",
     "http/transport_security_state_unittest.cc",
     "http/url_security_manager_unittest.cc",
-    "http/webfonts_histogram_unittest.cc",
     "log/file_net_log_observer_unittest.cc",
     "log/net_log_capture_mode_unittest.cc",
     "log/net_log_unittest.cc",
@@ -2849,7 +2857,10 @@ test("net_unittests") {
   }
 
   if (is_linux) {
-    sources += [ "proxy_resolution/proxy_config_service_linux_unittest.cc" ]
+    sources += [
+      "base/network_change_notifier_linux_unittest.cc",
+      "proxy_resolution/proxy_config_service_linux_unittest.cc",
+    ]
   }
 
   if (is_linux || is_chromeos) {
@@ -2935,6 +2946,10 @@ test("net_unittests") {
     ]
   }
 
+  if (is_ios) {
+    deps += [ "//base/ios" ]
+  }
+
   if (is_posix) {
     sources += [ "base/sockaddr_util_posix_unittest.cc" ]
   }
@@ -3008,6 +3023,7 @@ test("net_unittests") {
 
   if (is_apple) {
     sources += [ "base/mac/url_conversions_unittest.mm" ]
+    configs += [ "//build/config/compiler:enable_arc" ]
   }
 
   if (is_mac) {

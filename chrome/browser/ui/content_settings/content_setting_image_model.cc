@@ -8,9 +8,11 @@
 #include <utility>
 
 #include "base/feature_list.h"
+#include "base/memory/raw_ptr_exclusion.h"
 #include "base/metrics/field_trial_params.h"
 #include "base/metrics/user_metrics.h"
 #include "base/metrics/user_metrics_action.h"
+#include "base/ranges/algorithm.h"
 #include "build/build_config.h"
 #include "chrome/app/vector_icons/vector_icons.h"
 #include "chrome/browser/browser_process.h"
@@ -43,6 +45,7 @@
 #include "components/strings/grit/components_strings.h"
 #include "components/vector_icons/vector_icons.h"
 #include "content/public/browser/web_contents.h"
+#include "net/base/schemeful_site.h"
 #include "services/device/public/cpp/device_features.h"
 #include "services/device/public/cpp/geolocation/location_system_permission_status.h"
 #include "ui/base/l10n/l10n_util.h"
@@ -112,15 +115,9 @@ class ContentSettingGeolocationImageModel : public ContentSettingImageModel {
   bool IsGeolocationAllowedOnASystemLevel();
   bool IsGeolocationPermissionDetermined();
 
-  void AppCeasesToUseGeolocation();
-  void AppAttemptsToUseGeolocation();
-
   std::unique_ptr<ContentSettingBubbleModel> CreateBubbleModelImpl(
       ContentSettingBubbleModel::Delegate* delegate,
       WebContents* web_contents) override;
-
- private:
-  bool active_ = false;
 };
 
 class ContentSettingRPHImageModel : public ContentSettingSimpleImageModel {
@@ -248,11 +245,26 @@ class ContentSettingPopupImageModel : public ContentSettingSimpleImageModel {
   bool UpdateAndGetVisibility(WebContents* web_contents) override;
 };
 
+class ContentSettingStorageAccessImageModel
+    : public ContentSettingSimpleImageModel {
+ public:
+  ContentSettingStorageAccessImageModel();
+
+  ContentSettingStorageAccessImageModel(
+      const ContentSettingStorageAccessImageModel&) = delete;
+  ContentSettingStorageAccessImageModel& operator=(
+      const ContentSettingStorageAccessImageModel&) = delete;
+
+  bool UpdateAndGetVisibility(WebContents* web_contents) override;
+};
+
 namespace {
 
 struct ContentSettingsImageDetails {
   ContentSettingsType content_type;
-  const gfx::VectorIcon& icon;
+  // This field is not a raw_ref<> because it was filtered by the rewriter for:
+  // #global-scope
+  RAW_PTR_EXCLUSION const gfx::VectorIcon& icon;
   int blocked_tooltip_id;
   int blocked_explanatory_text_id;
   int accessed_tooltip_id;
@@ -342,6 +354,9 @@ ContentSettingImageModel::CreateForContentType(ImageType image_type) {
       return std::make_unique<ContentSettingSensorsImageModel>();
     case ImageType::NOTIFICATIONS_QUIET_PROMPT:
       return std::make_unique<ContentSettingNotificationsImageModel>();
+    case ImageType::STORAGE_ACCESS:
+      return std::make_unique<ContentSettingStorageAccessImageModel>();
+
     case ImageType::NUM_IMAGE_TYPES:
       break;
   }
@@ -522,9 +537,7 @@ bool ContentSettingBlockedImageModel::UpdateAndGetVisibility(
 ContentSettingGeolocationImageModel::ContentSettingGeolocationImageModel()
     : ContentSettingImageModel(ImageType::GEOLOCATION, kNotifyAccessibility) {}
 
-ContentSettingGeolocationImageModel::~ContentSettingGeolocationImageModel() {
-  AppCeasesToUseGeolocation();
-}
+ContentSettingGeolocationImageModel::~ContentSettingGeolocationImageModel() {}
 
 bool ContentSettingGeolocationImageModel::UpdateAndGetVisibility(
     WebContents* web_contents) {
@@ -533,7 +546,6 @@ bool ContentSettingGeolocationImageModel::UpdateAndGetVisibility(
           web_contents->GetPrimaryMainFrame());
   set_should_auto_open_bubble(false);
   if (!content_settings) {
-    AppCeasesToUseGeolocation();
     return false;
   }
 
@@ -543,7 +555,6 @@ bool ContentSettingGeolocationImageModel::UpdateAndGetVisibility(
       content_settings->IsContentBlocked(ContentSettingsType::GEOLOCATION);
 
   if (!is_allowed && !is_blocked) {
-    AppCeasesToUseGeolocation();
     return false;
   }
 
@@ -595,7 +606,6 @@ bool ContentSettingGeolocationImageModel::UpdateAndGetVisibility(
         set_explanatory_string_id(IDS_GEOLOCATION_TURNED_OFF);
 #endif  // BUILDFLAG(IS_MAC)
       }
-      AppAttemptsToUseGeolocation();
       return true;
     }
   }
@@ -607,7 +617,6 @@ bool ContentSettingGeolocationImageModel::UpdateAndGetVisibility(
   set_tooltip(l10n_util::GetStringUTF16(message_id));
   set_accessibility_string_id(message_id);
 
-  AppAttemptsToUseGeolocation();
   return true;
 }
 
@@ -616,7 +625,7 @@ bool ContentSettingGeolocationImageModel::IsGeolocationAllowedOnASystemLevel() {
   return true;
 #else
   device::GeolocationManager* geolocation_manager =
-      g_browser_process->geolocation_manager();
+      device::GeolocationManager::GetInstance();
   CHECK(geolocation_manager);
   device::LocationSystemPermissionStatus permission =
       geolocation_manager->GetSystemPermission();
@@ -631,37 +640,13 @@ bool ContentSettingGeolocationImageModel::IsGeolocationPermissionDetermined() {
 #else
 
   device::GeolocationManager* geolocation_manager =
-      g_browser_process->geolocation_manager();
+      device::GeolocationManager::GetInstance();
   CHECK(geolocation_manager);
   device::LocationSystemPermissionStatus permission =
       geolocation_manager->GetSystemPermission();
 
   return permission != device::LocationSystemPermissionStatus::kNotDetermined;
 #endif
-}
-
-void ContentSettingGeolocationImageModel::AppAttemptsToUseGeolocation() {
-  if (!active_) {
-    active_ = true;
-#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_CHROMEOS)
-    device::GeolocationManager* geolocation_manager =
-        g_browser_process->geolocation_manager();
-    CHECK(geolocation_manager);
-    geolocation_manager->AppAttemptsToUseGeolocation();
-#endif
-  }
-}
-
-void ContentSettingGeolocationImageModel::AppCeasesToUseGeolocation() {
-  if (active_) {
-    active_ = false;
-#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_CHROMEOS)
-    device::GeolocationManager* geolocation_manager =
-        g_browser_process->geolocation_manager();
-    CHECK(geolocation_manager);
-    geolocation_manager->AppCeasesToUseGeolocation();
-#endif
-  }
 }
 
 std::unique_ptr<ContentSettingBubbleModel>
@@ -1058,6 +1043,38 @@ bool ContentSettingPopupImageModel::UpdateAndGetVisibility(
   return true;
 }
 
+// Storage Access
+// ---------------------------------------------------------------------
+
+ContentSettingStorageAccessImageModel::ContentSettingStorageAccessImageModel()
+    : ContentSettingSimpleImageModel(ImageType::STORAGE_ACCESS,
+                                     ContentSettingsType::STORAGE_ACCESS) {}
+
+bool ContentSettingStorageAccessImageModel::UpdateAndGetVisibility(
+    WebContents* web_contents) {
+  PageSpecificContentSettings* content_settings =
+      PageSpecificContentSettings::GetForFrame(
+          web_contents->GetPrimaryMainFrame());
+  if (!content_settings) {
+    return false;
+  }
+  std::map<net::SchemefulSite, bool> entries =
+      content_settings->GetTwoSiteRequests(content_type());
+  if (entries.empty()) {
+    return false;
+  }
+  bool has_blocked_requests =
+      base::ranges::any_of(entries, [](auto& entry) { return !entry.second; });
+
+  // TODO(crbug.com/1433644): Update icon and tooltips.
+  set_icon(vector_icons::kCookieIcon, has_blocked_requests
+                                          ? vector_icons::kBlockedBadgeIcon
+                                          : gfx::kNoneIcon);
+  // set_explanatory_string_id(IDS_BLOCKED_POPUPS_EXPLANATORY_TEXT);
+  // set_tooltip(l10n_util::GetStringUTF16(IDS_BLOCKED_POPUPS_TOOLTIP));
+  return true;
+}
+
 // Notifications --------------------------------------------------------------
 
 ContentSettingNotificationsImageModel::ContentSettingNotificationsImageModel()
@@ -1175,6 +1192,7 @@ ContentSettingImageModel::GenerateContentSettingImageModels() {
       ImageType::FRAMEBUST,
       ImageType::CLIPBOARD_READ_WRITE,
       ImageType::NOTIFICATIONS_QUIET_PROMPT,
+      ImageType::STORAGE_ACCESS,
   };
 
   std::vector<std::unique_ptr<ContentSettingImageModel>> result;

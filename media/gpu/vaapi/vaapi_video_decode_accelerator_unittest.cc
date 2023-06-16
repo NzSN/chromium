@@ -68,6 +68,7 @@ class MockAcceleratedVideoDecoder : public AcceleratedVideoDecoder {
   MOCK_CONST_METHOD0(GetProfile, VideoCodecProfile());
   MOCK_CONST_METHOD0(GetBitDepth, uint8_t());
   MOCK_CONST_METHOD0(GetChromaSampling, VideoChromaSampling());
+  MOCK_CONST_METHOD0(GetVideoColorSpace, VideoColorSpace());
   MOCK_CONST_METHOD0(GetHDRMetadata, absl::optional<gfx::HDRMetadata>());
   MOCK_CONST_METHOD0(GetVisibleRect, gfx::Rect());
   MOCK_CONST_METHOD0(GetRequiredNumOfPictures, size_t());
@@ -76,7 +77,8 @@ class MockAcceleratedVideoDecoder : public AcceleratedVideoDecoder {
 
 class MockVaapiWrapper : public VaapiWrapper {
  public:
-  MockVaapiWrapper(CodecMode mode) : VaapiWrapper(mode) {}
+  explicit MockVaapiWrapper(CodecMode mode)
+      : VaapiWrapper(VADisplayStateHandle(), mode) {}
   MOCK_METHOD5(CreateContextAndSurfaces,
                bool(unsigned int,
                     const gfx::Size&,

@@ -127,6 +127,8 @@ FeatureNames FeatureToNames(WebSchedulerTrackedFeature feature) {
       return {"AuthorizationHeader", "Authorization header used"};
     case WebSchedulerTrackedFeature::kIndexedDBEvent:
       return {"IndexedDBEvent", "IndexedDB event is pending"};
+    case WebSchedulerTrackedFeature::kWebSerial:
+      return {"WebSerial", "Serial port open"};
   }
   return {};
 }
@@ -190,7 +192,7 @@ bool IsFeatureSticky(WebSchedulerTrackedFeature feature) {
 }
 
 WebSchedulerTrackedFeatures StickyFeatures() {
-  constexpr WebSchedulerTrackedFeatures features = WebSchedulerTrackedFeatures(
+  constexpr WebSchedulerTrackedFeatures features = {
       WebSchedulerTrackedFeature::kMainResourceHasCacheControlNoStore,
       WebSchedulerTrackedFeature::kMainResourceHasCacheControlNoCache,
       WebSchedulerTrackedFeature::kSubresourceHasCacheControlNoStore,
@@ -214,7 +216,7 @@ WebSchedulerTrackedFeatures StickyFeatures() {
       WebSchedulerTrackedFeature::kInjectedStyleSheet,
       WebSchedulerTrackedFeature::kKeepaliveRequest,
       WebSchedulerTrackedFeature::kDummy,
-      WebSchedulerTrackedFeature::kAuthorizationHeader);
+      WebSchedulerTrackedFeature::kAuthorizationHeader};
   return features;
 }
 

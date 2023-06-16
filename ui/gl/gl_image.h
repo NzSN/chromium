@@ -7,7 +7,6 @@
 
 #include "base/gtest_prod_util.h"
 #include "base/memory/ref_counted.h"
-#include "ui/gfx/geometry/size.h"
 #include "ui/gl/gl_export.h"
 
 namespace gpu {
@@ -22,12 +21,6 @@ namespace gpu::gles2 {
 class GLES2DecoderImpl;
 class GLES2DecoderPassthroughImpl;
 }  // namespace gpu::gles2
-
-namespace media {
-class GLImageEGLStream;
-class GLImagePbuffer;
-class DXVAVideoDecodeAccelerator;
-}
 
 namespace gl {
 
@@ -50,14 +43,6 @@ class GL_EXPORT GLImage : public base::RefCounted<GLImage> {
 
   virtual ~GLImage() = default;
 
-  // Get the size of the image.
-  virtual gfx::Size GetSize();
-
- public:
-  // Allow usage of these methods from text sites that are inconvenient to
-  // friend.
-  gfx::Size GetSizeForTesting() { return GetSize(); }
-
  protected:
   // An identifier for subclasses. Necessary for safe downcasting.
   enum class Type { NONE, EGL_STREAM, D3D, PBUFFER };
@@ -67,15 +52,12 @@ class GL_EXPORT GLImage : public base::RefCounted<GLImage> {
   // Safe downcasts. All functions return nullptr if |image| does not exist or
   // does not have the specified type.
   static GLImageD3D* ToGLImageD3D(GLImage* image);
-  static media::GLImageEGLStream* ToGLImageEGLStream(GLImage* image);
-  static media::GLImagePbuffer* ToGLImagePbuffer(GLImage* image);
 
   friend class gpu::D3DImageBacking;
   friend class gpu::D3DImageBackingFactoryTest;
   friend class gpu::GLTexturePassthroughD3DImageRepresentation;
   friend class gpu::gles2::GLES2DecoderImpl;
   friend class gpu::gles2::GLES2DecoderPassthroughImpl;
-  friend class media::DXVAVideoDecodeAccelerator;
   FRIEND_TEST_ALL_PREFIXES(gpu::D3DImageBackingFactoryTestSwapChain,
                            CreateAndPresentSwapChain);
 

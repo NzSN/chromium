@@ -34,11 +34,20 @@ WebAuthnClientAndroid* WebAuthnClientAndroid::GetClient() {
 void WebAuthnClientAndroid::OnCredManConditionalRequestPending(
     content::RenderFrameHost* render_frame_host,
     bool has_results,
-    base::RepeatingClosure full_assertion_request) {
+    base::RepeatingCallback<void(bool)> full_assertion_request) {
   auto* cred_man_delegate = WebAuthnCredManDelegate::GetRequestDelegate(
       content::WebContents::FromRenderFrameHost(render_frame_host));
   cred_man_delegate->OnCredManConditionalRequestPending(
       render_frame_host, has_results, std::move(full_assertion_request));
+  return;
+}
+
+void WebAuthnClientAndroid::OnCredManUiClosed(
+    content::RenderFrameHost* render_frame_host,
+    bool success) {
+  auto* cred_man_delegate = WebAuthnCredManDelegate::GetRequestDelegate(
+      content::WebContents::FromRenderFrameHost(render_frame_host));
+  cred_man_delegate->OnCredManUiClosed(success);
   return;
 }
 

@@ -90,9 +90,6 @@ class AppBannerManager : public content::WebContentsObserver,
     // engagement to trigger the banner.
     PENDING_ENGAGEMENT,
 
-    // The pipeline is waiting for service worker install to trigger the banner.
-    PENDING_WORKER,
-
     // The beforeinstallprompt event has been sent and the pipeline is waiting
     // for the response.
     SENDING_EVENT,
@@ -136,9 +133,6 @@ class AppBannerManager : public content::WebContentsObserver,
 
   // Fast-forwards the current time for testing.
   static void SetTimeDeltaForTesting(int days);
-
-  // Sets the total engagement required for triggering the banner in testing.
-  static void SetTotalEngagementToTrigger(double engagement);
 
   // TODO(https://crbug.com/930612): Move |GetInstallableAppName| and
   // |IsExternallyInstalledWebApp| out into a more general purpose
@@ -227,6 +221,26 @@ class AppBannerManager : public content::WebContentsObserver,
   // Tracks that the IPH has been shown. Only used on Android.
   void TrackIphWasShown();
 
+  // Tracks whether the current site URL obtained from the web_contents is fully
+  // installed. The only difference from IsWebAppConsideredInstalled() is that
+  // the former considers the scope obtained from a manifest as check for if an
+  // app is already installed.
+  virtual bool IsAppFullyInstalledForSiteUrl(const GURL& site_url) const = 0;
+
+  // Tracks whether the current site URL obtained from the web_contents is not
+  // locally installed.
+  virtual bool IsAppPartiallyInstalledForSiteUrl(
+      const GURL& site_url) const = 0;
+
+  // The user has ignored the installation dialog and it went away due to
+  // another interaction (e.g. the tab was changed, page navigated, etc).
+  virtual void SaveInstallationIgnoredForMl(const GURL& manifest_id) = 0;
+  // The user has taken active action on the dialog to make it go away.
+  virtual void SaveInstallationDismissedForMl(const GURL& manifest_id) = 0;
+  virtual void SaveInstallationAcceptedForMl(const GURL& manifest_id) = 0;
+  virtual bool IsMlPromotionBlockedByHistoryGuardrail(
+      const GURL& manifest_id) = 0;
+
  protected:
   explicit AppBannerManager(content::WebContents* web_contents);
   ~AppBannerManager() override;
@@ -293,11 +307,6 @@ class AppBannerManager : public content::WebContentsObserver,
   // overwritten with a new app install for the current page.
   virtual bool ShouldAllowWebAppReplacementInstall();
 
-  // Possibly retries the installable manager request given the current state
-  // and the result. Returns |true| if the request was restarted.
-  // Currently only called during requests to InstallationManager
-  bool DidRetryInstallableManagerRequest(const InstallableData& result);
-
   // Callback invoked by the InstallableManager once it has fetched the page's
   // manifest.
   virtual void OnDidGetManifest(const InstallableData& data);
@@ -305,10 +314,6 @@ class AppBannerManager : public content::WebContentsObserver,
   // Returns an InstallableParams object that requests all checks
   // necessary for a web app banner.
   virtual InstallableParams ParamsToPerformInstallableWebAppCheck();
-
-  // Returns an InstallableParams object that requests service worker check
-  // only.
-  virtual InstallableParams ParamsToPerformWorkerCheck();
 
   // Run at the conclusion of OnDidGetManifest. For web app banners, this calls
   // back to the InstallableManager to continue checking criteria. For native
@@ -322,15 +327,6 @@ class AppBannerManager : public content::WebContentsObserver,
   // Callback invoked by the InstallableManager once it has finished checking
   // all other installable properties.
   virtual void OnDidPerformInstallableWebAppCheck(const InstallableData& data);
-
-  // Run at the conclusion of OnDidPerformInstallableWebAppCheck. This calls
-  // back to the InstallableManager to continue checking service worker criteria
-  // for web app banners.
-  virtual void PerformServiceWorkerCheck();
-
-  // Callback invoked by the InstallableManager once it has finished checking
-  // service worker.
-  virtual void OnDidPerformWorkerCheck(const InstallableData& data);
 
   // Records that a banner was shown.
   void RecordDidShowBanner();
@@ -452,9 +448,6 @@ class AppBannerManager : public content::WebContentsObserver,
   // Called when Blink has prevented a banner from being shown, and is now
   // requesting that it be shown later.
   void DisplayAppBanner() override;
-
-  // Returns a status code indicating whether a banner should be shown.
-  InstallableStatusCode ShouldShowBannerCode();
 
   // Returns a status code based on the current state, to log when terminating.
   InstallableStatusCode TerminationCode() const;

@@ -17,8 +17,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import org.chromium.base.test.util.Batch;
+import org.chromium.base.test.util.CommandLineFlags;
 import org.chromium.base.test.util.Criteria;
 import org.chromium.base.test.util.CriteriaHelper;
+import org.chromium.base.test.util.DisabledTest;
 import org.chromium.base.test.util.Matchers;
 import org.chromium.content_public.browser.test.ContentJUnit4ClassRunner;
 
@@ -29,6 +31,7 @@ import java.util.concurrent.Callable;
  * being sent when there's a caret on screen.
  */
 @RunWith(ContentJUnit4ClassRunner.class)
+@CommandLineFlags.Add({"enable-features=HiddenSelectionBounds"})
 @Batch(Batch.PER_CLASS)
 public class InsertionMarkerTest {
     @Rule
@@ -46,6 +49,7 @@ public class InsertionMarkerTest {
 
     @Test
     @MediumTest
+    @DisabledTest(message = "https://crbug.com/1441435")
     public void boundsSentOnFocus() throws Exception {
         requestCursorUpdates(InputConnection.CURSOR_UPDATE_MONITOR);
 

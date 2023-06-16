@@ -23,6 +23,7 @@
 #include "gpu/command_buffer/common/skia_utils.h"
 #include "gpu/command_buffer/service/gl_context_virtual_delegate.h"
 #include "gpu/command_buffer/service/gr_cache_controller.h"
+#include "gpu/command_buffer/service/gr_shader_cache.h"
 #include "gpu/command_buffer/service/memory_tracking.h"
 #include "gpu/config/gpu_preferences.h"
 #include "gpu/gpu_gles2_export.h"
@@ -75,7 +76,8 @@ class GPU_GLES2_EXPORT SharedContextState
       public base::RefCounted<SharedContextState>,
       public GrContextOptions::ShaderErrorHandler {
  public:
-  using ContextLostCallback = base::OnceCallback<void(bool)>;
+  using ContextLostCallback =
+      base::OnceCallback<void(bool, error::ContextLostReason)>;
 
   // TODO(vikassoni): Refactor code to have seperate constructor for GL and
   // Vulkan and not initialize/use GL related info for vulkan and vice-versa.
@@ -126,24 +128,27 @@ class GPU_GLES2_EXPORT SharedContextState
 
   void StoreVkPipelineCacheIfNeeded();
 
-  gl::GLShareGroup* share_group() { return share_group_.get(); }
-  gl::GLContext* context() { return context_.get(); }
-  gl::GLContext* real_context() { return real_context_.get(); }
-  gl::GLSurface* surface() { return surface_.get(); }
-  gl::GLDisplay* display();
-  viz::VulkanContextProvider* vk_context_provider() {
+  void UseShaderCache(
+      absl::optional<gpu::raster::GrShaderCache::ScopedCacheUse>& cache_use,
+      int32_t client_id) const;
+
+  gl::GLShareGroup* share_group() const { return share_group_.get(); }
+  gl::GLContext* context() const { return context_.get(); }
+  gl::GLContext* real_context() const { return real_context_.get(); }
+  gl::GLSurface* surface() const { return surface_.get(); }
+  gl::GLDisplay* display();  // non const since it calls GLSurface::GetGLDisplay
+  viz::VulkanContextProvider* vk_context_provider() const {
     return vk_context_provider_;
   }
-  viz::MetalContextProvider* metal_context_provider() {
+  viz::MetalContextProvider* metal_context_provider() const {
     return metal_context_provider_;
   }
-  viz::DawnContextProvider* dawn_context_provider() {
+  viz::DawnContextProvider* dawn_context_provider() const {
     return dawn_context_provider_;
   }
   gl::ProgressReporter* progress_reporter() const { return progress_reporter_; }
   // Ganesh/Graphite contexts may only be used on the GPU main thread.
-  GrDirectContext* gr_context() { return gr_context_; }
-#if BUILDFLAG(ENABLE_SKIA_GRAPHITE)
+  GrDirectContext* gr_context() const { return gr_context_; }
   skgpu::graphite::Context* graphite_context() const {
     return graphite_context_;
   }
@@ -156,15 +161,6 @@ class GPU_GLES2_EXPORT SharedContextState
   skgpu::graphite::Recorder* viz_compositor_graphite_recorder() const {
     return viz_compositor_graphite_recorder_.get();
   }
-#else
-  skgpu::graphite::Context* graphite_context() const { return nullptr; }
-  skgpu::graphite::Recorder* gpu_main_graphite_recorder() const {
-    return nullptr;
-  }
-  skgpu::graphite::Recorder* viz_compositor_graphite_recorder() const {
-    return nullptr;
-  }
-#endif
   GrContextType gr_context_type() const { return gr_context_type_; }
   // Handles Skia-reported shader compilation errors.
   void compileError(const char* shader, const char* errors) override;
@@ -252,6 +248,8 @@ class GPU_GLES2_EXPORT SharedContextState
   bool device_needs_reset() { return device_needs_reset_; }
 
   void ScheduleGrContextCleanup();
+
+  int32_t GetMaxTextureSize() const;
 
  private:
   friend class base::RefCounted<SharedContextState>;
@@ -352,11 +350,9 @@ class GPU_GLES2_EXPORT SharedContextState
   const raw_ptr<viz::DawnContextProvider> dawn_context_provider_ = nullptr;
   bool created_on_compositor_gpu_thread_ = false;
   raw_ptr<GrDirectContext> gr_context_ = nullptr;
-#if BUILDFLAG(ENABLE_SKIA_GRAPHITE)
   raw_ptr<skgpu::graphite::Context> graphite_context_ = nullptr;
   std::unique_ptr<skgpu::graphite::Recorder> gpu_main_graphite_recorder_;
   std::unique_ptr<skgpu::graphite::Recorder> viz_compositor_graphite_recorder_;
-#endif
 
   scoped_refptr<gl::GLShareGroup> share_group_;
   scoped_refptr<gl::GLContext> context_;

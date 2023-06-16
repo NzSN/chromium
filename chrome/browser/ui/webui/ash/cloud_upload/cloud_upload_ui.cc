@@ -12,6 +12,7 @@
 #include "chrome/common/webui_url_constants.h"
 #include "chrome/grit/cloud_upload_resources.h"
 #include "chrome/grit/cloud_upload_resources_map.h"
+#include "chrome/grit/generated_resources.h"
 #include "chromeos/constants/chromeos_features.h"
 #include "components/strings/grit/components_strings.h"
 #include "content/public/browser/web_ui.h"
@@ -22,7 +23,8 @@ namespace ash::cloud_upload {
 
 bool CloudUploadUIConfig::IsWebUIEnabled(
     content::BrowserContext* browser_context) {
-  return cloud_upload::IsEligibleAndEnabledUploadOfficeToCloud();
+  return cloud_upload::IsEligibleAndEnabledUploadOfficeToCloud(
+      Profile::FromBrowserContext(browser_context));
 }
 
 CloudUploadUI::CloudUploadUI(content::WebUI* web_ui)
@@ -32,13 +34,18 @@ CloudUploadUI::CloudUploadUI(content::WebUI* web_ui)
 
   static constexpr webui::LocalizedString kStrings[] = {
       {"cancel", IDS_CANCEL},
-  };
+      {"close", IDS_CLOSE},
+      {"connectToOneDriveTitle", IDS_CONNECT_TO_ONEDRIVE_TITLE},
+      {"connectToOneDriveBodyText", IDS_CONNECT_TO_ONEDRIVE_BODY_TEXT},
+      {"cantConnectOneDrive", IDS_CANT_CONNECT_ONEDRIVE},
+      {"connectOneDrive", IDS_CONNECT_ONEDRIVE},
+      {"oneDriveConnectedTitle", IDS_ONEDRIVE_CONNECTED_TITLE},
+      {"oneDriveConnectedBodyText", IDS_ONEDRIVE_CONNECTED_BODY_TEXT}};
   source->AddLocalizedStrings(kStrings);
   source->AddBoolean("isJellyEnabled", chromeos::features::IsJellyEnabled());
   webui::SetupWebUIDataSource(
       source, base::make_span(kCloudUploadResources, kCloudUploadResourcesSize),
       IDR_CLOUD_UPLOAD_MAIN_HTML);
-  source->DisableTrustedTypesCSP();
   // Required for lottie animations.
   source->OverrideContentSecurityPolicy(
       network::mojom::CSPDirectiveName::WorkerSrc,

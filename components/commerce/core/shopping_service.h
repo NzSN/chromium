@@ -10,6 +10,7 @@
 #include <string>
 #include <tuple>
 
+#include "base/cancelable_callback.h"
 #include "base/containers/flat_set.h"
 #include "base/functional/callback.h"
 #include "base/memory/raw_ptr.h"
@@ -24,6 +25,7 @@
 #include "components/commerce/core/subscriptions/commerce_subscription.h"
 #include "components/keyed_service/core/keyed_service.h"
 #include "components/optimization_guide/core/optimization_guide_decision.h"
+#include "components/unified_consent/consent_throttle.h"
 #include "services/data_decoder/public/cpp/data_decoder.h"
 
 class GURL;
@@ -38,6 +40,7 @@ class Value;
 
 namespace bookmarks {
 class BookmarkModel;
+class BookmarkNode;
 }  // namespace bookmarks
 
 namespace network {
@@ -49,26 +52,42 @@ class NewOptimizationGuideDecider;
 class OptimizationMetadata;
 }  // namespace optimization_guide
 
-namespace signin {
-class IdentityManager;
-}  // namespace signin
-
 namespace power_bookmarks {
 class PowerBookmarkService;
 }  // namespace power_bookmarks
 
+namespace signin {
+class IdentityManager;
+}  // namespace signin
+
+namespace syncer {
+class SyncService;
+}  // namespace syncer
+
 namespace commerce {
 
-extern const char kOgTitle[];
+// Open graph keys.
 extern const char kOgImage[];
-extern const char kOgPriceCurrency[];
 extern const char kOgPriceAmount[];
+extern const char kOgPriceCurrency[];
+extern const char kOgProductLink[];
+extern const char kOgTitle[];
+extern const char kOgType[];
+
+// Specific open graph values we're interested in.
+extern const char kOgTypeOgProduct[];
+extern const char kOgTypeProductItem[];
 
 // The conversion multiplier to go from standard currency units to
 // micro-currency units.
 extern const long kToMicroCurrency;
 
 extern const char kImageAvailabilityHistogramName[];
+extern const char kProductInfoJavascriptTime[];
+
+// The amount of time to wait after the last "stopped loading" event to run the
+// on-page extraction for product info.
+extern const uint64_t kProductInfoJavascriptDelayMs;
 
 // The availability of the product image for an offer. This needs to be kept in
 // sync with the ProductImageAvailability enum in enums.xml.
@@ -112,8 +131,8 @@ struct ProductInfo {
 
   std::string title;
   GURL image_url;
-  uint64_t product_cluster_id{0};
-  uint64_t offer_id{0};
+  absl::optional<uint64_t> product_cluster_id;
+  absl::optional<uint64_t> offer_id;
   std::string currency_code;
   int64_t amount_micros{0};
   absl::optional<int64_t> previous_amount_micros;
@@ -142,6 +161,12 @@ struct ProductInfoCacheEntry {
 
   // Whether the fallback javascript needs to run for page.
   bool needs_javascript_run{false};
+
+  // The time that the javascript execution started. This is primarily used for
+  // metrics.
+  base::Time javascript_execution_start_time;
+
+  std::unique_ptr<base::CancelableOnceClosure> run_javascript_task;
 
   // The product info associated with the URL.
   std::unique_ptr<ProductInfo> product_info;
@@ -263,6 +288,17 @@ class ShoppingService : public KeyedService, public base::SupportsUserData {
   // by this API is not guaranteed to be correct.
   virtual bool IsSubscribedFromCache(const CommerceSubscription& subscription);
 
+  // Gets all bookmarks that are price tracked. Internally this calls the
+  // function by the same name in price_tracking_utils.h.
+  virtual void GetAllPriceTrackedBookmarks(
+      base::OnceCallback<void(std::vector<const bookmarks::BookmarkNode*>)>
+          callback);
+
+  // Gets all bookmarks that have shopping information associated with them.
+  // Internally this calls the function by the same name in
+  // price_tracking_utils.h.
+  virtual std::vector<const bookmarks::BookmarkNode*> GetAllShoppingBookmarks();
+
   // Fetch users' pref from server on whether to receive price tracking emails.
   void FetchPriceEmailPref();
 
@@ -277,6 +313,14 @@ class ShoppingService : public KeyedService, public base::SupportsUserData {
   // method can change at runtime, so it should not be used when deciding
   // whether to create critical, feature-related infrastructure.
   virtual bool IsShoppingListEligible();
+
+  // Wait for the shopping service and all of its dependent components to be
+  // ready before attempting to access different features. This can be used for
+  // UI that is available shortly after startup. If the dependencies time out or
+  // the browser is being shut down, a null pointer to the shopping service will
+  // be passed to the callback.
+  virtual void WaitForReady(
+      base::OnceCallback<void(ShoppingService*)> callback);
 
   // Check whether a product (based on cluster ID) is explicitly price tracked
   // by the user.
@@ -293,6 +337,13 @@ class ShoppingService : public KeyedService, public base::SupportsUserData {
   // if the user has the feature flag enabled or (if applicable) is in an
   // enabled country and locale.
   virtual bool IsCommercePriceTrackingEnabled();
+
+  // This is a feature check for the "price insights", which will return true
+  // if the user has the feature flag enabled, has MSBB enabled, and (if
+  // applicable) is in an eligible country and locale. The value returned by
+  // this method can change at runtime, so it should not be used when deciding
+  // whether to create critical, feature-related infrastructure.
+  virtual bool IsPriceInsightsEligible();
 
   // Get a weak pointer for this service instance.
   base::WeakPtr<ShoppingService> AsWeakPtr();
@@ -326,12 +377,23 @@ class ShoppingService : public KeyedService, public base::SupportsUserData {
   // A notification that the user navigated away from the |from_url|.
   void DidNavigateAway(WebWrapper* web, const GURL& from_url);
 
+  // A notification that the provided web wrapper has stopped loading. This does
+  // not necessarily correspond to the page being completely finished loading
+  // and is a useful signal to help detect and deal with single-page web apps.
+  void DidStopLoading(WebWrapper* web);
+
   // A notification that the provided web wrapper has finished loading its main
   // frame.
   void DidFinishLoad(WebWrapper* web);
 
-  // Perform any logic associated with page load for the product info API.
-  void HandleDidFinishLoadForProductInfo(WebWrapper* web);
+  // Schedule (or reschedule) the on-page javascript execution. Calling this
+  // sequentially for the same web wrapper with the same URL will cancel the
+  // pending task and schedule a new one. The script will, at most, run once
+  // per unique navigation.
+  void ScheduleProductInfoJavascript(WebWrapper* web);
+
+  // Run the on-page, javascript info extraction if needed.
+  void TryRunningJavascriptForProductInfo(base::WeakPtr<WebWrapper> web);
 
   // Whether APIs like |GetProductInfoForURL| are enabled and allowed to be
   // used.
@@ -350,6 +412,7 @@ class ShoppingService : public KeyedService, public base::SupportsUserData {
 
   void HandleOptGuideProductInfoResponse(
       const GURL& url,
+      WebWrapper* web,
       ProductInfoCallback callback,
       optimization_guide::OptimizationGuideDecision decision,
       const optimization_guide::OptimizationMetadata& metadata);
@@ -380,6 +443,11 @@ class ShoppingService : public KeyedService, public base::SupportsUserData {
   void OnProductInfoJsonSanitizationCompleted(
       const GURL url,
       data_decoder::DataDecoder::ValueOrError result);
+
+  // Tries to determine whether a page is a PDP only from information in meta
+  // tags extracted from the page. If enough information is present to call the
+  // page a PDP, this function returns true.
+  static bool CheckIsPDPFromMetaOnly(const base::Value::Dict& on_page_meta_map);
 
   // Merge shopping data from existing |info| and the result of on-page
   // heuristics -- a JSON object holding key -> value pairs (a map) stored in
@@ -429,6 +497,8 @@ class ShoppingService : public KeyedService, public base::SupportsUserData {
 
   raw_ptr<PrefService> pref_service_;
 
+  raw_ptr<syncer::SyncService> sync_service_;
+
   raw_ptr<bookmarks::BookmarkModel> bookmark_model_;
 
   std::unique_ptr<AccountChecker> account_checker_;
@@ -456,6 +526,10 @@ class ShoppingService : public KeyedService, public base::SupportsUserData {
   // The object tracking metrics that are recorded at specific intervals.
   std::unique_ptr<commerce::metrics::ScheduledMetricsManager>
       scheduled_metrics_manager_;
+
+  // A consent throttle that will hold callbacks until the specific consent is
+  // obtained.
+  unified_consent::ConsentThrottle bookmark_consent_throttle_;
 
   // Ensure certain functions are being executed on the same thread.
   SEQUENCE_CHECKER(sequence_checker_);

@@ -105,6 +105,7 @@
 #include "ppapi/buildflags/buildflags.h"
 #include "services/device/public/mojom/sensor_provider.mojom-forward.h"
 #include "services/metrics/public/cpp/ukm_source_id.h"
+#include "services/network/public/cpp/attribution_reporting_runtime_features.h"
 #include "services/network/public/cpp/cross_origin_embedder_policy.h"
 #include "services/network/public/cpp/cross_origin_opener_policy.h"
 #include "services/network/public/mojom/cookie_access_observer.mojom.h"
@@ -281,7 +282,6 @@ class RenderWidgetHostView;
 class ServiceWorkerContainerHost;
 class SiteInfo;
 class SpeechSynthesisImpl;
-class SubresourceWebBundleNavigationInfo;
 class TimeoutMonitor;
 class WebAuthRequestSecurityChecker;
 class WebBluetoothServiceImpl;
@@ -2134,7 +2134,7 @@ class CONTENT_EXPORT RenderFrameHostImpl
 
   // Semi-formal definition of COOP:
   // https://gist.github.com/annevk/6f2dd8c79c77123f39797f6bdac43f3e
-  network::CrossOriginOpenerPolicy cross_origin_opener_policy() const {
+  const network::CrossOriginOpenerPolicy& cross_origin_opener_policy() const {
     return policy_container_host_->cross_origin_opener_policy();
   }
 
@@ -2335,8 +2335,8 @@ class CONTENT_EXPORT RenderFrameHostImpl
                             RunModalPromptDialogCallback callback) override;
   void RunBeforeUnloadConfirm(bool is_reload,
                               RunBeforeUnloadConfirmCallback callback) override;
-  void WillPotentiallyStartOutermostMainFrameNavigation(
-      const GURL& url) override;
+  void MaybeStartOutermostMainFrameNavigation(
+      const std::vector<GURL>& urls) override;
   void UpdateFaviconURL(
       std::vector<blink::mojom::FaviconURLPtr> favicon_urls) override;
   void DownloadURL(blink::mojom::DownloadURLParamsPtr params) override;
@@ -2403,12 +2403,14 @@ class CONTENT_EXPORT RenderFrameHostImpl
   void SendFencedFrameReportingBeacon(
       const std::string& event_data,
       const std::string& event_type,
-      const std::vector<blink::FencedFrame::ReportingDestination>& destinations)
-      override;
+      const std::vector<blink::FencedFrame::ReportingDestination>& destinations,
+      network::AttributionReportingRuntimeFeatures
+          attribution_reporting_runtime_features) override;
   void SetFencedFrameAutomaticBeaconReportEventData(
       const std::string& event_data,
-      const std::vector<blink::FencedFrame::ReportingDestination>& destinations)
-      override;
+      const std::vector<blink::FencedFrame::ReportingDestination>& destinations,
+      network::AttributionReportingRuntimeFeatures
+          attribution_reporting_runtime_features) override;
   void SendPrivateAggregationRequestsForFencedFrameEvent(
       const std::string& event_type) override;
   void CreatePortal(
@@ -2921,6 +2923,18 @@ class CONTENT_EXPORT RenderFrameHostImpl
   // subframes.
   void RecordNavigationSuddenTerminationHandlers();
 
+  // Returns the devtools_navigation_token (see
+  // NavigationRequest::devtools_navigation_token()) associated with the last
+  // cross-document navigation in this RenderFrameHost. This is the same value
+  // that is stored in the DocumentLoader for the RFH's document in the renderer
+  // (and therefore it has per-document semantics). Returns absl::nullopt for a
+  // RenderFrameHost that is the initial empty document (see
+  // |is_initial_empty_document_| for definition).
+  // Note: This is different from the value returned by GetDevToolsFrameToken(),
+  // which is a stable identifier used by DevTools to identify frames and is
+  // kept constant across navigations in a frame.
+  const absl::optional<base::UnguessableToken>& GetDevToolsNavigationToken();
+
  protected:
   friend class RenderFrameHostFactory;
 
@@ -2967,9 +2981,7 @@ class CONTENT_EXPORT RenderFrameHostImpl
           controller_service_worker_info,
       blink::mojom::ServiceWorkerContainerInfoForClientPtr container_info,
       mojo::PendingRemote<network::mojom::URLLoaderFactory>
-          prefetch_loader_factory,
-      mojo::PendingRemote<network::mojom::URLLoaderFactory>
-          topics_loader_factory,
+          subresource_proxying_loader_factory,
       mojo::PendingRemote<network::mojom::URLLoaderFactory>
           keep_alive_loader_factory,
       mojo::PendingRemote<blink::mojom::ResourceCache> resource_cache_remote,
@@ -3012,7 +3024,7 @@ class CONTENT_EXPORT RenderFrameHostImpl
                                 bool for_legacy);
 
  private:
-  friend class ResumeCommitClosureSetObserver;
+  friend class CommitNavigationPauser;
   friend class RenderFrameHostPermissionsPolicyTest;
   friend class TestRenderFrameHost;
   friend class TestRenderViewHost;
@@ -3131,6 +3143,12 @@ class CONTENT_EXPORT RenderFrameHostImpl
                            KeepPrerenderRFHOwnerAfterActivation);
   FRIEND_TEST_ALL_PREFIXES(NavigationSuddenTerminationDisablerTypeBrowserTest,
                            RecordUma);
+  FRIEND_TEST_ALL_PREFIXES(
+      NavigationBrowserTest,
+      NavigationSuddenTerminationDisablerTypeRecordUmaNotHttp);
+  FRIEND_TEST_ALL_PREFIXES(
+      NavigationBrowserTest,
+      NavigationSuddenTerminationDisablerTypeRecordUmaInitialEmptyDocument);
   FRIEND_TEST_ALL_PREFIXES(
       NavigationBrowserTest,
       NavigationSuddenTerminationDisablerTypeRecordUmaSameOrigin);
@@ -3654,7 +3672,9 @@ class CONTENT_EXPORT RenderFrameHostImpl
   enum NavigationSuddenTerminationDisablerType : uint32_t {
     kMainFrame = 1 << 0,
     kUnload = 1 << 1,
-    kMaxValue = kUnload,
+    kInitialEmptyDocument = 1 << 2,
+    kNotHttp = 1 << 3,
+    kMaxValue = kNotHttp,
   };
   // Returns information to be recoreded in UMA about sudden termination
   // disablers presence.
@@ -3941,23 +3961,33 @@ class CONTENT_EXPORT RenderFrameHostImpl
   // "reserved.top_navigation" beacon) will originate from the browser. All
   // other fenced frame beacon calls happen through a `fence.sendBeacon()`
   // JavaScript call which will originate from the renderer.
+  // `attribution_reporting_runtime_features` indicates whether Attribution
+  // Reporting API related runtime features are enabled and is needed for
+  // integration with Attribution Reporting API.
   void SendFencedFrameReportingBeaconInternal(
       const std::string& event_data,
       const std::string& event_type,
       blink::FencedFrame::ReportingDestination destination,
       bool from_renderer,
+      network::AttributionReportingRuntimeFeatures
+          attribution_reporting_features,
+      int initiator_frame_tree_node_id,
       absl::optional<int64_t> navigation_id = absl::nullopt);
 
   // Indicates whether this frame has third-party storage
   // partitioning enabled. This depends on the deprecation trial (which can
   // block), content browser client (which can block), and base feature (which
-  // can allow/block). `main_frame_for_storage_partitioning` indicates the top
-  // most frame that third-party storage partitioning is affected by (this can
-  // be the real main frame or it could be a subframe when taking into account
-  // special embedding cases, see CalculateStorageKey's implementation for more
-  // information.)
+  // can allow/block). The `new_rfh_origin` is the same one passed into
+  // CalculateStorageKey.
   bool IsThirdPartyStoragePartitioningEnabled(
-      RenderFrameHostImpl* main_frame_for_storage_partitioning);
+      const url::Origin& new_rfh_origin);
+
+  // Returns the recursive list of parent frames starting with `this` and ending
+  // with the top-level frame, or one frame before the top-level frame if the
+  // top-level frame is an extension. The `new_rfh_origin` is the same one
+  // passed into CalculateStorageKey.
+  std::vector<RenderFrameHostImpl*> GetAncestorChainForStorageKeyCalculation(
+      const url::Origin& new_rfh_origin);
 
   // The RenderViewHost that this RenderFrameHost is associated with.
   //
@@ -4652,11 +4682,6 @@ class CONTENT_EXPORT RenderFrameHostImpl
   //    will be used.  This will match the opaque origin of such a frame.
   net::IsolationInfo isolation_info_ = net::IsolationInfo::CreateTransient();
 
-  // Subresource Web Bundle information that are kept around across
-  // same-document navigations.
-  std::unique_ptr<SubresourceWebBundleNavigationInfo>
-      subresource_web_bundle_navigation_info_;
-
   // Tainted once MediaStream access was granted.
   bool was_granted_media_access_ = false;
 
@@ -4766,6 +4791,18 @@ class CONTENT_EXPORT RenderFrameHostImpl
     void set_navigation_or_document_handle(
         scoped_refptr<NavigationOrDocumentHandle> handle);
 
+    // See comments for |RenderFrameHostImpl::GetDevToolsNavigationToken()| for
+    // more details.
+    const absl::optional<base::UnguessableToken>& devtools_navigation_token()
+        const {
+      return devtools_navigation_token_;
+    }
+
+    void set_devtools_navigation_token(
+        const base::UnguessableToken& devtools_navigation_token) {
+      devtools_navigation_token_ = devtools_navigation_token;
+    }
+
     // Produces weak pointers to the hosting RenderFrameHostImpl. This is
     // invalidated whenever DocumentAssociatedData is destroyed, due to
     // RenderFrameHost deletion or cross-document navigation.
@@ -4781,6 +4818,8 @@ class CONTENT_EXPORT RenderFrameHostImpl
     std::vector<internal::DocumentServiceBase*> services_;
     scoped_refptr<NavigationOrDocumentHandle> navigation_or_document_handle_;
     base::WeakPtrFactory<RenderFrameHostImpl> weak_factory_;
+    absl::optional<base::UnguessableToken> devtools_navigation_token_ =
+        absl::nullopt;
   };
 
   // Reset immediately before a RenderFrameHost is reused for hosting a new

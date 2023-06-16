@@ -62,6 +62,7 @@ extern DEVICE_BLUETOOTH_EXPORT const char kRemoveBond[];
 extern DEVICE_BLUETOOTH_EXPORT const char kGetRemoteType[];
 extern DEVICE_BLUETOOTH_EXPORT const char kGetRemoteClass[];
 extern DEVICE_BLUETOOTH_EXPORT const char kGetRemoteAppearance[];
+extern DEVICE_BLUETOOTH_EXPORT const char kGetRemoteVendorProductInfo[];
 extern DEVICE_BLUETOOTH_EXPORT const char kGetConnectionState[];
 extern DEVICE_BLUETOOTH_EXPORT const char kGetRemoteUuids[];
 extern DEVICE_BLUETOOTH_EXPORT const char kGetBondState[];
@@ -92,8 +93,11 @@ extern DEVICE_BLUETOOTH_EXPORT const char kOnNameChanged[];
 extern DEVICE_BLUETOOTH_EXPORT const char kOnDiscoverableChanged[];
 extern DEVICE_BLUETOOTH_EXPORT const char kOnDeviceFound[];
 extern DEVICE_BLUETOOTH_EXPORT const char kOnDeviceCleared[];
+extern DEVICE_BLUETOOTH_EXPORT const char kOnDevicePropertiesChanged[];
 extern DEVICE_BLUETOOTH_EXPORT const char kOnDiscoveringChanged[];
 extern DEVICE_BLUETOOTH_EXPORT const char kOnSspRequest[];
+extern DEVICE_BLUETOOTH_EXPORT const char kOnPinDisplay[];
+extern DEVICE_BLUETOOTH_EXPORT const char kOnPinRequest[];
 
 extern DEVICE_BLUETOOTH_EXPORT const char kOnBondStateChanged[];
 extern DEVICE_BLUETOOTH_EXPORT const char kOnSdpSearchComplete[];
@@ -895,7 +899,7 @@ class FlossProperty {
   // |update_callback| - Caller can provide this to be notified when there are
   //                     updates.
   void Init(FlossDBusClient* client,
-            raw_ptr<dbus::Bus> bus,
+            dbus::Bus* bus,
             const std::string& service_name,
             const dbus::ObjectPath& path,
             const dbus::ObjectPath& callback_path,

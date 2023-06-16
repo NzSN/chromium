@@ -30,6 +30,7 @@
 #include "ash/app_list/app_list_controller_impl.h"
 #include "ash/app_list/app_list_feature_usage_metrics.h"
 #include "ash/assistant/assistant_controller_impl.h"
+#include "ash/booting/booting_animation_controller.h"
 #include "ash/calendar/calendar_controller.h"
 #include "ash/capture_mode/capture_mode_controller.h"
 #include "ash/child_accounts/parent_access_controller_impl.h"
@@ -134,6 +135,8 @@
 #include "ash/system/federated/federated_service_controller_impl.h"
 #include "ash/system/firmware_update/firmware_update_notification_controller.h"
 #include "ash/system/geolocation/geolocation_controller.h"
+#include "ash/system/hotspot/hotspot_icon_animation.h"
+#include "ash/system/hotspot/hotspot_info_cache.h"
 #include "ash/system/human_presence/human_presence_orientation_controller.h"
 #include "ash/system/human_presence/snooping_protection_controller.h"
 #include "ash/system/input_device_settings/input_device_key_alias_manager.h"
@@ -168,6 +171,7 @@
 #include "ash/system/session/logout_confirmation_controller.h"
 #include "ash/system/status_area_widget.h"
 #include "ash/system/system_notification_controller.h"
+#include "ash/system/toast/anchored_nudge_manager_impl.h"
 #include "ash/system/toast/toast_manager_impl.h"
 #include "ash/system/tray/system_tray_notifier.h"
 #include "ash/system/usb_peripheral/usb_peripheral_notification_controller.h"
@@ -224,6 +228,7 @@
 #include "base/system/sys_info.h"
 #include "base/trace_event/trace_event.h"
 #include "chromeos/ash/components/dbus/fwupd/fwupd_client.h"
+#include "chromeos/ash/components/dbus/typecd/typecd_client.h"
 #include "chromeos/ash/components/dbus/usb/usbguard_client.h"
 #include "chromeos/ash/components/fwupd/firmware_update_manager.h"
 #include "chromeos/ash/components/peripheral_notification/peripheral_notification_manager.h"
@@ -255,6 +260,7 @@
 #include "ui/display/manager/display_change_observer.h"
 #include "ui/display/manager/display_configurator.h"
 #include "ui/display/manager/display_manager.h"
+#include "ui/display/manager/display_port_observer.h"
 #include "ui/display/manager/touch_transform_setter.h"
 #include "ui/display/screen.h"
 #include "ui/display/types/native_display_delegate.h"
@@ -683,6 +689,7 @@ Shell::~Shell() {
     DCHECK(rwc->GetHost()->dispatcher()->in_shutdown());
   }
 #endif
+  booting_animation_controller_.reset();
   login_unlock_throughput_recorder_.reset();
 
   hud_display::HUDDisplayView::Destroy();
@@ -819,6 +826,7 @@ Shell::~Shell() {
   clipboard_history_controller_->Shutdown();
 
   toast_manager_.reset();
+  anchored_nudge_manager_.reset();
 
   // Accesses root window containers.
   logout_confirmation_controller_.reset();
@@ -849,6 +857,10 @@ Shell::~Shell() {
   window_cycle_controller_.reset();
   overview_controller_.reset();
 
+  // As clients of `capture_mode_controller_`, `projector_controller_` and
+  // `game_dashboard_controller_` need to be destroyed before
+  // `capture_mode_controller_`
+  projector_controller_.reset();
   game_dashboard_controller_.reset();
 
   // This must be destroyed before deleting all the windows below in
@@ -952,6 +964,10 @@ Shell::~Shell() {
   // Removes itself as an observer of |pref_service_|.
   shelf_controller_.reset();
 
+  // `CameraEffectsController` depends on `AutozoomController`, so it must be
+  // destructed before it.
+  camera_effects_controller_.reset();
+
   // NightLightControllerImpl depends on the PrefService, the window tree host
   // manager, and `geolocation_controller_`, so it must be destructed before
   // them. crbug.com/724231.
@@ -999,8 +1015,6 @@ Shell::~Shell() {
   display_color_manager_.reset();
   projecting_observer_.reset();
 
-  projector_controller_.reset();
-
   partial_magnifier_controller_.reset();
 
   touch_selection_magnifier_runner_ash_.reset();
@@ -1017,6 +1031,8 @@ Shell::~Shell() {
   }
   display_change_observer_.reset();
   display_shutdown_observer_.reset();
+
+  display_port_observer_.reset();
 
   keyboard_controller_.reset();
 
@@ -1059,8 +1075,6 @@ Shell::~Shell() {
   // `CalendarController` observes `SessionController` and must be destructed
   // before it.
   calendar_controller_.reset();
-
-  camera_effects_controller_.reset();
 
   audio_effects_controller_.reset();
 
@@ -1157,10 +1171,8 @@ void Shell::Init(
   }
 
   // Manages lifetime of DiagnosticApp logs.
-  if (features::IsLogControllerForDiagnosticsAppEnabled()) {
-    diagnostics_log_controller_ =
-        std::make_unique<diagnostics::DiagnosticsLogController>();
-  }
+  diagnostics_log_controller_ =
+      std::make_unique<diagnostics::DiagnosticsLogController>();
 
   pcie_peripheral_notification_controller_ =
       std::make_unique<PciePeripheralNotificationController>(
@@ -1175,6 +1187,7 @@ void Shell::Init(
   accessibility_delegate_.reset(shell_delegate_->CreateAccessibilityDelegate());
   accessibility_controller_ = std::make_unique<AccessibilityControllerImpl>();
   toast_manager_ = std::make_unique<ToastManagerImpl>();
+  anchored_nudge_manager_ = std::make_unique<AnchoredNudgeManagerImpl>();
 
   peripheral_battery_listener_ = std::make_unique<PeripheralBatteryListener>();
 
@@ -1558,7 +1571,17 @@ void Shell::Init(
     wm_mode_controller_ = std::make_unique<WmModeController>();
   }
 
+  if (features::IsHotspotEnabled()) {
+    hotspot_icon_animation_ = std::make_unique<HotspotIconAnimation>();
+    hotspot_info_cache_ = std::make_unique<HotspotInfoCache>();
+  }
+
   window_tree_host_manager_->InitHosts();
+
+  if (ash::features::IsOobeSimonEnabled()) {
+    booting_animation_controller_ =
+        std::make_unique<BootingAnimationController>();
+  }
 
   // Create virtual keyboard after WindowTreeHostManager::InitHosts() since
   // it may enable the virtual keyboard immediately, which requires a
@@ -1656,16 +1679,19 @@ void Shell::Init(
   // `clipboard_history_controller_` is destroyed.
   chromeos::clipboard_history::SetQueryItemDescriptorsImpl(base::BindRepeating(
       [](ClipboardHistoryControllerImpl* controller) {
-        return clipboard_history_util::GetItemDescriptorsFrom(
-            controller->history()->GetItems());
+        if (clipboard_history_util::IsEnabledInCurrentMode()) {
+          return clipboard_history_util::GetItemDescriptorsFrom(
+              controller->history()->GetItems());
+        }
+        return std::vector<crosapi::mojom::ClipboardHistoryItemDescriptor>();
       },
       clipboard_history_controller_.get()));
   chromeos::clipboard_history::SetPasteClipboardItemByIdImpl(
       base::BindRepeating(
-          [](const std::string& id, int event_flags,
+          [](const base::UnguessableToken& id, int event_flags,
              crosapi::mojom::ClipboardHistoryControllerShowSource show_source) {
             ClipboardHistoryController::Get()->PasteClipboardItemById(
-                id, event_flags, show_source);
+                id.ToString(), event_flags, show_source);
           }));
 
   for (auto& observer : shell_observers_) {
@@ -1724,6 +1750,12 @@ void Shell::InitializeDisplayManager() {
 
   display_color_manager_ =
       std::make_unique<DisplayColorManager>(display_manager_->configurator());
+
+  display_port_observer_ = std::make_unique<display::DisplayPortObserver>(
+      display_manager_->configurator(),
+      base::BindRepeating([](const std::vector<uint32_t>& port_nums) {
+        TypecdClient::Get()->SetTypeCPortsUsingDisplays(port_nums);
+      }));
 
   if (!display_initialized) {
     display_manager_->InitDefaultDisplay();

@@ -86,6 +86,12 @@ const int64_t kSecondsPerMinute = 60;
 constexpr base::TimeDelta kDefaultPrioritizeCompositingAfterDelay =
     base::Milliseconds(100);
 
+// Duration before rendering is considered starved by render-blocking tasks,
+// which is a safeguard against pathological cases for render-blocking image
+// prioritization.
+constexpr base::TimeDelta kRenderBlockingStarvationThreshold =
+    base::Milliseconds(500);
+
 v8::RAILMode RAILModeToV8RAILMode(RAILMode rail_mode) {
   switch (rail_mode) {
     case RAILMode::kResponse:
@@ -228,6 +234,8 @@ const char* RenderingPrioritizationStateToString(
       return "none";
     case RenderingPrioritizationState::kRenderingStarved:
       return "rendering_starved";
+    case RenderingPrioritizationState::kRenderingStarvedByRenderBlocking:
+      return "rendering_starved_by_render_blocking";
     case RenderingPrioritizationState::kWaitingForInputResponse:
       return "waiting_for_input_response";
   }
@@ -344,21 +352,18 @@ MainThreadSchedulerImpl::~MainThreadSchedulerImpl() {
   TRACE_EVENT_OBJECT_DELETED_WITH_ID(
       TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"), "MainThreadScheduler",
       this);
-
-  for (const auto& pair : task_runners_) {
-    pair.first->ShutdownTaskQueue();
-  }
-
-  if (virtual_time_control_task_queue_)
-    virtual_time_control_task_queue_->ShutdownTaskQueue();
-
-  base::trace_event::TraceLog::GetInstance()->RemoveAsyncEnabledStateObserver(
-      this);
-
   // Ensure the renderer scheduler was shut down explicitly, because otherwise
   // we could end up having stale pointers to the Blink heap which has been
   // terminated by this point.
-  DCHECK(was_shutdown_);
+  CHECK(was_shutdown_);
+
+  // These should be cleared during shutdown.
+  CHECK(task_runners_.empty());
+  CHECK(main_thread_only().detached_task_queues.empty());
+  CHECK(!virtual_time_control_task_queue_);
+
+  base::trace_event::TraceLog::GetInstance()->RemoveAsyncEnabledStateObserver(
+      this);
 }
 
 // static
@@ -581,8 +586,15 @@ void MainThreadSchedulerImpl::ShutdownAllQueues() {
     scoped_refptr<MainThreadTaskQueue> queue = task_runners_.begin()->first;
     queue->ShutdownTaskQueue();
   }
-  if (virtual_time_control_task_queue_)
+  while (!main_thread_only().detached_task_queues.empty()) {
+    scoped_refptr<MainThreadTaskQueue> queue =
+        *main_thread_only().detached_task_queues.begin();
+    queue->ShutdownTaskQueue();
+  }
+  if (virtual_time_control_task_queue_) {
     virtual_time_control_task_queue_->ShutdownTaskQueue();
+    virtual_time_control_task_queue_ = nullptr;
+  }
 }
 
 bool MainThreadSchedulerImpl::
@@ -798,6 +810,23 @@ void MainThreadSchedulerImpl::
       ->DetachOnIPCTaskPostedWhileInBackForwardCache();
 }
 
+void MainThreadSchedulerImpl::ShutdownEmptyDetachedTaskQueues() {
+  if (main_thread_only().detached_task_queues.empty()) {
+    return;
+  }
+  WTF::Vector<scoped_refptr<MainThreadTaskQueue>> queues_to_delete;
+  for (auto& queue : main_thread_only().detached_task_queues) {
+    if (queue->IsEmpty()) {
+      queues_to_delete.push_back(queue);
+    }
+  }
+  for (auto& queue : queues_to_delete) {
+    queue->ShutdownTaskQueue();
+    // The task queue is removed in `OnShutdownTaskQueue()`.
+    CHECK(!main_thread_only().detached_task_queues.Contains(queue));
+  }
+}
+
 // TODO(sreejakshetty): Cleanup NewLoadingTaskQueue.
 scoped_refptr<MainThreadTaskQueue> MainThreadSchedulerImpl::NewLoadingTaskQueue(
     MainThreadTaskQueue::QueueType queue_type,
@@ -833,11 +862,28 @@ MainThreadSchedulerImpl::NewTaskQueueForTest() {
 
 void MainThreadSchedulerImpl::OnShutdownTaskQueue(
     const scoped_refptr<MainThreadTaskQueue>& task_queue) {
-  if (was_shutdown_)
+  if (was_shutdown_) {
     return;
-
+  }
   task_queue.get()->DetachOnIPCTaskPostedWhileInBackForwardCache();
   task_runners_.erase(task_queue.get());
+  main_thread_only().detached_task_queues.erase(task_queue.get());
+}
+
+void MainThreadSchedulerImpl::OnDetachTaskQueue(
+    MainThreadTaskQueue& task_queue) {
+  if (was_shutdown_) {
+    return;
+  }
+  // `UpdatePolicy()` is not set up to handle detached frame scheduler queues.
+  // TODO(crbug.com/1143007): consider keeping FrameScheduler alive until all
+  // tasks have finished running.
+  task_runners_.erase(&task_queue);
+
+  // Don't immediately shut down the task queue even if it's empty. Tasks can
+  // still be queued before this task ends, which some parts of blink depend on.
+  main_thread_only().detached_task_queues.insert(
+      base::WrapRefCounted(&task_queue));
 }
 
 void MainThreadSchedulerImpl::AddTaskObserver(
@@ -2383,6 +2429,7 @@ void MainThreadSchedulerImpl::OnTaskCompleted(
 
   find_in_page_budget_pool_controller_->OnTaskCompleted(queue.get(),
                                                         task_timing);
+  ShutdownEmptyDetachedTaskQueues();
 }
 
 void MainThreadSchedulerImpl::RecordTaskUkm(
@@ -2568,8 +2615,11 @@ TaskPriority MainThreadSchedulerImpl::ComputeCompositorPriority() const {
   // Otherwise, this must be a combination of UseCase::kCompositorGesture and
   // rendering starvation since all other states set the priority to highest.
   CHECK(current_use_case() == UseCase::kCompositorGesture &&
-        main_thread_only().main_frame_prioritization_state ==
-            RenderingPrioritizationState::kRenderingStarved);
+        (main_thread_only().main_frame_prioritization_state ==
+             RenderingPrioritizationState::kRenderingStarved ||
+         main_thread_only().main_frame_prioritization_state ==
+             RenderingPrioritizationState::kRenderingStarvedByRenderBlocking));
+
   // The default behavior for compositor gestures like compositor-driven
   // scrolling is to deprioritize compositor TQ tasks (low priority) and not
   // apply delay-based anti-starvation. This can lead to degraded user
@@ -2610,6 +2660,12 @@ void MainThreadSchedulerImpl::
         const base::sequence_manager::TaskQueue::TaskTiming& task_timing) {
   RenderingPrioritizationState old_state =
       main_thread_only().main_frame_prioritization_state;
+  if (queue &&
+      queue->GetQueuePriority() == TaskPriority::kExtremelyHighPriority) {
+    main_thread_only().rendering_blocking_duration_since_last_frame +=
+        task_timing.wall_duration();
+  }
+
   // A main frame task resets the rendering prioritization state. Otherwise if
   // the scheduler is waiting for a frame because of discrete input, the state
   // will only change once a main frame happens. Otherwise, compute the state in
@@ -2619,6 +2675,8 @@ void MainThreadSchedulerImpl::
       main_thread_only().is_current_task_main_frame) {
     main_thread_only().last_frame_time = task_timing.end_time();
     main_thread_only().is_current_task_main_frame = false;
+    main_thread_only().rendering_blocking_duration_since_last_frame =
+        base::TimeDelta();
     main_thread_only().main_frame_prioritization_state =
         RenderingPrioritizationState::kNone;
   } else if (main_thread_only().main_frame_prioritization_state !=
@@ -2629,6 +2687,11 @@ void MainThreadSchedulerImpl::
       // Assume this input will result in a frame, which we want to show ASAP.
       main_thread_only().main_frame_prioritization_state =
           RenderingPrioritizationState::kWaitingForInputResponse;
+    } else if (main_thread_only()
+                   .rendering_blocking_duration_since_last_frame >=
+               kRenderBlockingStarvationThreshold) {
+      main_thread_only().main_frame_prioritization_state =
+          RenderingPrioritizationState::kRenderingStarvedByRenderBlocking;
     } else {
       base::TimeDelta threshold;
       switch (current_use_case()) {
@@ -2716,8 +2779,13 @@ MainThreadSchedulerImpl::ComputeCompositorPriorityForMainFrame() const {
     case RenderingPrioritizationState::kNone:
       return absl::nullopt;
     case RenderingPrioritizationState::kRenderingStarved:
-      // Set higher than most tasks, but lower than input.
+      // Set higher than most tasks, but lower than render blocking tasks and
+      // input.
       return TaskPriority::kVeryHighPriority;
+    case RenderingPrioritizationState::kRenderingStarvedByRenderBlocking:
+      // Set to rendering blocking to prevent starvation by render blocking
+      // tasks, but don't block input.
+      return TaskPriority::kExtremelyHighPriority;
     case RenderingPrioritizationState::kWaitingForInputResponse:
       // Return the highest priority here otherwise consecutive heavy inputs
       // (e.g. typing) will starve rendering.

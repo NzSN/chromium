@@ -27,18 +27,15 @@
 #include <algorithm>
 #include <new>
 
+#include "base/allocator/partition_allocator/oom.h"
 #include "base/allocator/partition_allocator/partition_alloc_base/bits.h"
 #include "base/allocator/partition_allocator/partition_alloc_buildflags.h"
+#include "base/allocator/partition_allocator/partition_alloc_check.h"
 #include "base/allocator/partition_allocator/shim/malloc_zone_functions_mac.h"
-#include "base/functional/bind.h"
+#include "base/allocator/partition_allocator/third_party/apple_apsl/CFBase.h"
 #include "base/logging.h"
 #include "base/mac/mach_logging.h"
-#include "base/process/memory.h"
-#import "base/task/sequenced_task_runner.h"
-#include "base/task/sequenced_task_runner.h"
-#include "base/time/time.h"
 #include "build/build_config.h"
-#include "third_party/apple_apsl/CFBase.h"
 
 #if BUILDFLAG(IS_IOS)
 #include "base/allocator/partition_allocator/partition_alloc_base/ios/ios_util.h"
@@ -100,10 +97,11 @@ bool DeprotectMallocZone(ChromeMallocZone* default_zone,
   // Does the region fully enclose the zone pointers? Possibly unwarranted
   // simplification used: using the size of a full version 10 malloc zone rather
   // than the actual smaller size if the passed-in zone is not version 10.
-  DCHECK(*reprotection_start <= reinterpret_cast<vm_address_t>(default_zone));
+  PA_DCHECK(*reprotection_start <=
+            reinterpret_cast<vm_address_t>(default_zone));
   vm_size_t zone_offset = reinterpret_cast<vm_address_t>(default_zone) -
                           reinterpret_cast<vm_address_t>(*reprotection_start);
-  DCHECK(zone_offset + sizeof(ChromeMallocZone) <= *reprotection_length);
+  PA_DCHECK(zone_offset + sizeof(ChromeMallocZone) <= *reprotection_length);
 
   if (info.protection & VM_PROT_WRITE) {
     // No change needed; the zone is already writable.
@@ -132,8 +130,9 @@ MallocZoneFunctions g_old_purgeable_zone;
 
 void* oom_killer_malloc(struct _malloc_zone_t* zone, size_t size) {
   void* result = g_old_zone.malloc(zone, size);
-  if (!result && size)
+  if (!result && size) {
     partition_alloc::TerminateBecauseOutOfMemory(size);
+  }
   return result;
 }
 
@@ -141,15 +140,17 @@ void* oom_killer_calloc(struct _malloc_zone_t* zone,
                         size_t num_items,
                         size_t size) {
   void* result = g_old_zone.calloc(zone, num_items, size);
-  if (!result && num_items && size)
+  if (!result && num_items && size) {
     partition_alloc::TerminateBecauseOutOfMemory(num_items * size);
+  }
   return result;
 }
 
 void* oom_killer_valloc(struct _malloc_zone_t* zone, size_t size) {
   void* result = g_old_zone.valloc(zone, size);
-  if (!result && size)
+  if (!result && size) {
     partition_alloc::TerminateBecauseOutOfMemory(size);
+  }
   return result;
 }
 
@@ -159,8 +160,9 @@ void oom_killer_free(struct _malloc_zone_t* zone, void* ptr) {
 
 void* oom_killer_realloc(struct _malloc_zone_t* zone, void* ptr, size_t size) {
   void* result = g_old_zone.realloc(zone, ptr, size);
-  if (!result && size)
+  if (!result && size) {
     partition_alloc::TerminateBecauseOutOfMemory(size);
+  }
   return result;
 }
 
@@ -182,8 +184,9 @@ void* oom_killer_memalign(struct _malloc_zone_t* zone,
 
 void* oom_killer_malloc_purgeable(struct _malloc_zone_t* zone, size_t size) {
   void* result = g_old_purgeable_zone.malloc(zone, size);
-  if (!result && size)
+  if (!result && size) {
     partition_alloc::TerminateBecauseOutOfMemory(size);
+  }
   return result;
 }
 
@@ -191,15 +194,17 @@ void* oom_killer_calloc_purgeable(struct _malloc_zone_t* zone,
                                   size_t num_items,
                                   size_t size) {
   void* result = g_old_purgeable_zone.calloc(zone, num_items, size);
-  if (!result && num_items && size)
+  if (!result && num_items && size) {
     partition_alloc::TerminateBecauseOutOfMemory(num_items * size);
+  }
   return result;
 }
 
 void* oom_killer_valloc_purgeable(struct _malloc_zone_t* zone, size_t size) {
   void* result = g_old_purgeable_zone.valloc(zone, size);
-  if (!result && size)
+  if (!result && size) {
     partition_alloc::TerminateBecauseOutOfMemory(size);
+  }
   return result;
 }
 
@@ -211,8 +216,9 @@ void* oom_killer_realloc_purgeable(struct _malloc_zone_t* zone,
                                    void* ptr,
                                    size_t size) {
   void* result = g_old_purgeable_zone.realloc(zone, ptr, size);
-  if (!result && size)
+  if (!result && size) {
     partition_alloc::TerminateBecauseOutOfMemory(size);
+  }
   return result;
 }
 
@@ -258,9 +264,10 @@ void* oom_killer_cfallocator_system_default(CFIndex alloc_size,
                                             CFOptionFlags hint,
                                             void* info) {
   void* result = g_old_cfallocator_system_default(alloc_size, hint, info);
-  if (!result)
+  if (!result) {
     partition_alloc::TerminateBecauseOutOfMemory(
         static_cast<size_t>(alloc_size));
+  }
   return result;
 }
 
@@ -268,9 +275,10 @@ void* oom_killer_cfallocator_malloc(CFIndex alloc_size,
                                     CFOptionFlags hint,
                                     void* info) {
   void* result = g_old_cfallocator_malloc(alloc_size, hint, info);
-  if (!result)
+  if (!result) {
     partition_alloc::TerminateBecauseOutOfMemory(
         static_cast<size_t>(alloc_size));
+  }
   return result;
 }
 
@@ -278,9 +286,10 @@ void* oom_killer_cfallocator_malloc_zone(CFIndex alloc_size,
                                          CFOptionFlags hint,
                                          void* info) {
   void* result = g_old_cfallocator_malloc_zone(alloc_size, hint, info);
-  if (!result)
+  if (!result) {
     partition_alloc::TerminateBecauseOutOfMemory(
         static_cast<size_t>(alloc_size));
+  }
   return result;
 }
 
@@ -293,15 +302,17 @@ allocWithZone_t g_old_allocWithZone;
 
 id oom_killer_allocWithZone(id self, SEL _cmd, NSZone* zone) {
   id result = g_old_allocWithZone(self, _cmd, zone);
-  if (!result)
+  if (!result) {
     partition_alloc::TerminateBecauseOutOfMemory(0);
+  }
   return result;
 }
 
 void UninterceptMallocZoneForTesting(struct _malloc_zone_t* zone) {
   ChromeMallocZone* chrome_zone = reinterpret_cast<ChromeMallocZone*>(zone);
-  if (!IsMallocZoneAlreadyStored(chrome_zone))
+  if (!IsMallocZoneAlreadyStored(chrome_zone)) {
     return;
+  }
   MallocZoneFunctions& functions = GetFunctionsForZone(zone);
   ReplaceZoneFunctions(chrome_zone, &functions);
 }
@@ -354,8 +365,9 @@ void StoreFunctionsForAllZones() {
   vm_address_t* zones;
   unsigned int count;
   kern_return_t kr = malloc_get_all_zones(mach_task_self(), 0, &zones, &count);
-  if (kr != KERN_SUCCESS)
+  if (kr != KERN_SUCCESS) {
     return;
+  }
   for (unsigned int i = 0; i < count; ++i) {
     ChromeMallocZone* zone = reinterpret_cast<ChromeMallocZone*>(zones[i]);
     StoreMallocZone(zone);
@@ -374,8 +386,9 @@ void ReplaceFunctionsForStoredZones(const MallocZoneFunctions* functions) {
   unsigned int count;
   kern_return_t kr =
       malloc_get_all_zones(mach_task_self(), nullptr, &zones, &count);
-  if (kr != KERN_SUCCESS)
+  if (kr != KERN_SUCCESS) {
     return;
+  }
   for (unsigned int i = 0; i < count; ++i) {
     ChromeMallocZone* zone = reinterpret_cast<ChromeMallocZone*>(zones[i]);
     if (DoesMallocZoneNeedReplacing(zone, functions)) {
@@ -386,8 +399,9 @@ void ReplaceFunctionsForStoredZones(const MallocZoneFunctions* functions) {
 }
 
 void InterceptAllocationsMac() {
-  if (g_oom_killer_enabled)
+  if (g_oom_killer_enabled) {
     return;
+  }
 
   g_oom_killer_enabled = true;
 
@@ -462,8 +476,8 @@ void InterceptAllocationsMac() {
   // This will not catch allocation done by custom allocators, but will catch
   // all allocation done by system-provided ones.
 
-  CHECK(!g_old_cfallocator_system_default && !g_old_cfallocator_malloc &&
-        !g_old_cfallocator_malloc_zone)
+  PA_CHECK(!g_old_cfallocator_system_default && !g_old_cfallocator_malloc &&
+           !g_old_cfallocator_malloc_zone)
       << "Old allocators unexpectedly non-null";
 
   bool cf_allocator_internals_known = CanGetContextForCFAllocator();
@@ -471,23 +485,23 @@ void InterceptAllocationsMac() {
   if (cf_allocator_internals_known) {
     CFAllocatorContext* context =
         ContextForCFAllocator(kCFAllocatorSystemDefault);
-    CHECK(context) << "Failed to get context for kCFAllocatorSystemDefault.";
+    PA_CHECK(context) << "Failed to get context for kCFAllocatorSystemDefault.";
     g_old_cfallocator_system_default = context->allocate;
-    CHECK(g_old_cfallocator_system_default)
+    PA_CHECK(g_old_cfallocator_system_default)
         << "Failed to get kCFAllocatorSystemDefault allocation function.";
     context->allocate = oom_killer_cfallocator_system_default;
 
     context = ContextForCFAllocator(kCFAllocatorMalloc);
-    CHECK(context) << "Failed to get context for kCFAllocatorMalloc.";
+    PA_CHECK(context) << "Failed to get context for kCFAllocatorMalloc.";
     g_old_cfallocator_malloc = context->allocate;
-    CHECK(g_old_cfallocator_malloc)
+    PA_CHECK(g_old_cfallocator_malloc)
         << "Failed to get kCFAllocatorMalloc allocation function.";
     context->allocate = oom_killer_cfallocator_malloc;
 
     context = ContextForCFAllocator(kCFAllocatorMallocZone);
-    CHECK(context) << "Failed to get context for kCFAllocatorMallocZone.";
+    PA_CHECK(context) << "Failed to get context for kCFAllocatorMallocZone.";
     g_old_cfallocator_malloc_zone = context->allocate;
-    CHECK(g_old_cfallocator_malloc_zone)
+    PA_CHECK(g_old_cfallocator_malloc_zone)
         << "Failed to get kCFAllocatorMallocZone allocation function.";
     context->allocate = oom_killer_cfallocator_malloc_zone;
   } else {
@@ -502,14 +516,14 @@ void InterceptAllocationsMac() {
   // Note that both +[NSObject new] and +[NSObject alloc] call through to
   // +[NSObject allocWithZone:].
 
-  CHECK(!g_old_allocWithZone) << "Old allocator unexpectedly non-null";
+  PA_CHECK(!g_old_allocWithZone) << "Old allocator unexpectedly non-null";
 
   Class nsobject_class = [NSObject class];
   Method orig_method =
       class_getClassMethod(nsobject_class, @selector(allocWithZone:));
   g_old_allocWithZone =
       reinterpret_cast<allocWithZone_t>(method_getImplementation(orig_method));
-  CHECK(g_old_allocWithZone)
+  PA_CHECK(g_old_allocWithZone)
       << "Failed to get allocWithZone allocation function.";
   method_setImplementation(orig_method,
                            reinterpret_cast<IMP>(oom_killer_allocWithZone));
@@ -520,7 +534,7 @@ void UninterceptMallocZonesForTesting() {
   vm_address_t* zones;
   unsigned int count;
   kern_return_t kr = malloc_get_all_zones(mach_task_self(), 0, &zones, &count);
-  CHECK(kr == KERN_SUCCESS);
+  PA_CHECK(kr == KERN_SUCCESS);
   for (unsigned int i = 0; i < count; ++i) {
     UninterceptMallocZoneForTesting(  // IN-TEST
         reinterpret_cast<struct _malloc_zone_t*>(zones[i]));
@@ -533,30 +547,6 @@ bool AreMallocZonesIntercepted() {
   return !g_allocator_shims_failed_to_install;
 }
 
-namespace {
-
-void ShimNewMallocZonesAndReschedule(base::Time end_time,
-                                     base::TimeDelta delay) {
-  ShimNewMallocZones();
-
-  if (base::Time::Now() > end_time)
-    return;
-
-  base::TimeDelta next_delay = delay * 2;
-  base::SequencedTaskRunner::GetCurrentDefault()->PostDelayedTask(
-      FROM_HERE,
-      base::BindOnce(&ShimNewMallocZonesAndReschedule, end_time, next_delay),
-      delay);
-}
-
-}  // namespace
-
-void PeriodicallyShimNewMallocZones() {
-  base::Time end_time = base::Time::Now() + base::Minutes(1);
-  base::TimeDelta initial_delay = base::Seconds(1);
-  ShimNewMallocZonesAndReschedule(end_time, initial_delay);
-}
-
 void ShimNewMallocZones() {
   StoreFunctionsForAllZones();
 
@@ -564,7 +554,7 @@ void ShimNewMallocZones() {
   // new zones.
   ChromeMallocZone* default_zone =
       reinterpret_cast<ChromeMallocZone*>(malloc_default_zone());
-  DCHECK(IsMallocZoneAlreadyStored(default_zone));
+  PA_DCHECK(IsMallocZoneAlreadyStored(default_zone));
 
   MallocZoneFunctions new_functions;
   StoreZoneFunctions(default_zone, &new_functions);
@@ -584,19 +574,22 @@ void ReplaceZoneFunctions(ChromeMallocZone* zone,
     return;
   }
 
-  CHECK(functions->malloc && functions->calloc && functions->valloc &&
-        functions->free && functions->realloc);
+  PA_CHECK(functions->malloc && functions->calloc && functions->valloc &&
+           functions->free && functions->realloc);
   zone->malloc = functions->malloc;
   zone->calloc = functions->calloc;
   zone->valloc = functions->valloc;
   zone->free = functions->free;
   zone->realloc = functions->realloc;
-  if (functions->batch_malloc)
+  if (functions->batch_malloc) {
     zone->batch_malloc = functions->batch_malloc;
-  if (functions->batch_free)
+  }
+  if (functions->batch_free) {
     zone->batch_free = functions->batch_free;
-  if (functions->size)
+  }
+  if (functions->size) {
     zone->size = functions->size;
+  }
   if (zone->version >= 5 && functions->memalign) {
     zone->memalign = functions->memalign;
   }

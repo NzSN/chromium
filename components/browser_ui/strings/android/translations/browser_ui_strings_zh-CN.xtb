@@ -148,6 +148,7 @@
 <translation id="3600792891314830896">将播放声音的网站静音</translation>
 <translation id="3602290021589620013">预览</translation>
 <translation id="3628308229821498208">建议的搜索</translation>
+<translation id="3707034683772193706">您访问的网站可将少量信息保存在 Chrome 中，主要用于验证您不是机器人</translation>
 <translation id="3721953990244350188">关闭此操作并显示下一项可查看的操作</translation>
 <translation id="3744111561329211289">后台同步</translation>
 <translation id="3763247130972274048">在视频左侧或右侧点按两次即可跳过 10 秒</translation>
@@ -188,7 +189,6 @@
 <translation id="4412992751769744546">允许第三方 Cookie</translation>
 <translation id="4428065317363009941">广告个性化</translation>
 <translation id="4434045419905280838">弹出式窗口和重定向</translation>
-<translation id="4440642537584213025">展开“<ph name="TARGET_DESCRIPTION" />”</translation>
 <translation id="4468959413250150279">将某个特定网站静音。</translation>
 <translation id="4475912480633855319">{COOKIES,plural, =1{# 个 Cookie}other{# 个 Cookie}}</translation>
 <translation id="4478158430052450698">更轻松地自定义不同网站的缩放级别</translation>
@@ -285,7 +285,7 @@
 <translation id="6181444274883918285">添加例外网站</translation>
 <translation id="6192792657125177640">例外</translation>
 <translation id="6196640612572343990">阻止第三方 Cookie</translation>
-<translation id="6205314730813004066">广告隐私设置</translation>
+<translation id="6205314730813004066">广告隐私权设置</translation>
 <translation id="6216432067784365534"><ph name="NAME_OF_LIST_ITEM" />选项</translation>
 <translation id="6231752747840485235">卸载“<ph name="APP_NAME" />”？</translation>
 <translation id="6262191102408817757">基于您的上一个标签页</translation>
@@ -310,6 +310,7 @@
 <translation id="6612358246767739896">受保护的内容</translation>
 <translation id="662080504995468778">留下</translation>
 <translation id="6643016212128521049">清除</translation>
+<translation id="6653342741369270081">按返回按钮即可退出全屏模式。</translation>
 <translation id="6689172468748959065">个人资料照片</translation>
 <translation id="6697925417670533197">正在下载内容</translation>
 <translation id="6722828510648505498">屏蔽来自身份服务的登录提示。</translation>
@@ -344,6 +345,7 @@
 <translation id="7302486331832100261">您通常会屏蔽通知。要允许显示通知，请点按“详细信息”。</translation>
 <translation id="7366415735885268578">添加网站</translation>
 <translation id="7383715096023715447"><ph name="DOMAIN" /> 的设置</translation>
+<translation id="7406113532070524618">处于启用状态时，此设置不会识别您的身份，也不会允许网站查看您的浏览记录。不过，在验证过程中，网站可能会分享少量信息</translation>
 <translation id="7423098979219808738">先询问</translation>
 <translation id="7423538860840206698">已阻止读取剪贴板中的内容</translation>
 <translation id="7425915948813553151">为网站开启深色主题</translation>
@@ -369,6 +371,7 @@
 <translation id="7846076177841592234">取消选择</translation>
 <translation id="7882806643839505685">允许特定网站播放声音。</translation>
 <translation id="789180354981963912">阻止无痕模式下的第三方 Cookie：</translation>
+<translation id="7895868624847501462">此操作会清除所有本地数据（包括 Cookie），并重置 <ph name="DOMAIN" /> 及其下属所有网站的所有权限</translation>
 <translation id="7940722705963108451">提醒我</translation>
 <translation id="7974024493641668069">{COUNT,plural, =1{<ph name="FPS_OWNER" /> 的网站群组中有 <ph name="FPS_MEMBERS_COUNT" /> 个网站能查看您在该群组中的活动记录}other{<ph name="FPS_OWNER" /> 的网站群组中有 <ph name="FPS_MEMBERS_COUNT" /> 个网站能查看您在该群组中的活动记录}}</translation>
 <translation id="7986741934819883144">选择联系人</translation>
@@ -394,6 +397,7 @@
 <translation id="8284326494547611709">字幕</translation>
 <translation id="8300705686683892304">由应用管理</translation>
 <translation id="8324158725704657629">别再询问</translation>
+<translation id="8338445138528827481">此操作会清除所有本地数据（包括 Cookie），并重置 <ph name="ORIGIN" /> 的所有权限</translation>
 <translation id="8362795839483915693">您可以放大或缩小所访问网站的内容</translation>
 <translation id="8372893542064058268">允许特定网站进行后台同步。</translation>
 <translation id="8376384591331888629">包括此网站上的第三方 Cookie</translation>
@@ -433,6 +437,7 @@
 <translation id="8816026460808729765">禁止网站使用传感器</translation>
 <translation id="8823559166155093873">屏蔽 Cookie</translation>
 <translation id="8847988622838149491">USB</translation>
+<translation id="8889294078294184559">随着您继续浏览，所访问的网站可从 Chrome 中获取上一个网站提供的相关信息来验证您可能是真实的用户</translation>
 <translation id="8899807382908246773">侵扰性广告</translation>
 <translation id="8903921497873541725">放大</translation>
 <translation id="8921772741368021346"><ph name="POSITION" /> / <ph name="DURATION" /></translation>

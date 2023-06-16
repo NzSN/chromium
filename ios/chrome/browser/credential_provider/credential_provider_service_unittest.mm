@@ -5,15 +5,19 @@
 #import "ios/chrome/browser/credential_provider/credential_provider_service.h"
 
 #import <memory>
+#import <string>
 #import <utility>
+#import <vector>
 
 #import "base/memory/scoped_refptr.h"
 #import "base/strings/sys_string_conversions.h"
+#import "base/test/scoped_feature_list.h"
 #import "base/test/task_environment.h"
 #import "components/favicon/core/large_icon_service.h"
 #import "components/password_manager/core/browser/affiliation/fake_affiliation_service.h"
 #import "components/password_manager/core/browser/password_form.h"
 #import "components/password_manager/core/browser/test_password_store.h"
+#import "components/password_manager/core/common/password_manager_features.h"
 #import "components/password_manager/core/common/password_manager_pref_names.h"
 #import "components/prefs/pref_registry_simple.h"
 #import "components/prefs/pref_service.h"
@@ -36,6 +40,18 @@
 #endif
 
 namespace {
+
+using testing::UnorderedElementsAre;
+
+// Extracts the service names of `credentials` to an std::vector, so tests can
+// use a gmock matcher on it.
+std::vector<std::string> GetServiceNames(NSArray<id<Credential>>* credentials) {
+  std::vector<std::string> service_names;
+  for (id<Credential> credential : credentials) {
+    service_names.push_back(base::SysNSStringToUTF8(credential.serviceName));
+  }
+  return service_names;
+}
 
 // Needed since FaviconLoader has no fake currently.
 class MockLargeIconService : public favicon::LargeIconService {
@@ -93,36 +109,38 @@ class CredentialProviderServiceTest : public PlatformTest {
 
   void SetUp() override {
     PlatformTest::SetUp();
-    NSUserDefaults* user_defaults = [NSUserDefaults standardUserDefaults];
-    [user_defaults removeObjectForKey:
-                       kUserDefaultsCredentialProviderFirstTimeSyncCompleted];
     password_store_->Init(&testing_pref_service_,
                           /*affiliated_match_helper=*/nullptr);
+    account_password_store_->Init(&testing_pref_service_,
+                                  /*affiliated_match_helper=*/nullptr);
     testing_pref_service_.registry()->RegisterBooleanPref(
         password_manager::prefs::kCredentialsEnableService, true);
-    credential_provider_service_ = std::make_unique<CredentialProviderService>(
-        &testing_pref_service_, password_store_.get(), credential_store_,
-        identity_test_environment_.identity_manager(), &sync_service_,
-        &affiliation_service_, &favicon_loader_);
-
-    // Fire sync service state changed to simulate sync setup finishing.
-    sync_service_.FireStateChanged();
   }
 
   void TearDown() override {
     credential_provider_service_->Shutdown();
     password_store_->ShutdownOnUIThread();
-    NSUserDefaults* user_defaults = [NSUserDefaults standardUserDefaults];
-    [user_defaults removeObjectForKey:
-                       kUserDefaultsCredentialProviderFirstTimeSyncCompleted];
+    account_password_store_->ShutdownOnUIThread();
     PlatformTest::TearDown();
   }
 
+  void CreateCredentialProviderService(bool with_account_store = false) {
+    credential_provider_service_ = std::make_unique<CredentialProviderService>(
+        &testing_pref_service_, password_store_,
+        with_account_store ? account_password_store_ : nullptr,
+        credential_store_, identity_test_environment_.identity_manager(),
+        &sync_service_, &affiliation_service_, &favicon_loader_);
+  }
+
  protected:
-  base::test::TaskEnvironment task_environment_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
   TestingPrefServiceSimple testing_pref_service_;
   scoped_refptr<password_manager::TestPasswordStore> password_store_ =
       base::MakeRefCounted<password_manager::TestPasswordStore>();
+  scoped_refptr<password_manager::TestPasswordStore> account_password_store_ =
+      base::MakeRefCounted<password_manager::TestPasswordStore>(
+          password_manager::IsAccountStore(true));
   MemoryCredentialStore* credential_store_ =
       [[MemoryCredentialStore alloc] init];
   signin::IdentityTestEnvironment identity_test_environment_;
@@ -133,18 +151,75 @@ class CredentialProviderServiceTest : public PlatformTest {
   std::unique_ptr<CredentialProviderService> credential_provider_service_;
 };
 
-// Test that CredentialProviderService syncs all the credentials the first time
+// Test that CredentialProviderService writes all the credentials the first time
 // it runs.
 TEST_F(CredentialProviderServiceTest, FirstSync) {
+  password_manager::PasswordForm form;
+  form.url = GURL("http://g.com");
+  form.username_value = u"user";
+  form.encrypted_password = "encrypted-pwd";
+  password_store_->AddLogin(form);
   base::RunLoop().RunUntilIdle();
 
-  NSUserDefaults* user_defaults = [NSUserDefaults standardUserDefaults];
-  EXPECT_TRUE([user_defaults
-      boolForKey:kUserDefaultsCredentialProviderFirstTimeSyncCompleted]);
+  CreateCredentialProviderService();
+  // The first write is delayed.
+  task_environment_.FastForwardBy(base::Seconds(30));
+  base::RunLoop().RunUntilIdle();
+
+  ASSERT_EQ(credential_store_.credentials.count, 1u);
+  EXPECT_NSEQ(credential_store_.credentials[0].serviceName, @"g.com");
+  EXPECT_NSEQ(credential_store_.credentials[0].user, @"user");
+  EXPECT_NSEQ(credential_store_.credentials[0].keychainIdentifier,
+              @"encrypted-pwd");
+}
+
+TEST_F(CredentialProviderServiceTest, TwoStores) {
+  password_manager::PasswordForm local_form;
+  local_form.url = GURL("http://local.com");
+  local_form.username_value = u"user";
+  local_form.encrypted_password = "encrypted-pwd";
+  password_store_->AddLogin(local_form);
+  password_manager::PasswordForm account_form = local_form;
+  account_form.url = GURL("http://account.com");
+  account_password_store_->AddLogin(account_form);
+  CreateCredentialProviderService(/*with_account_store=*/true);
+  base::RunLoop().RunUntilIdle();
+
+  ASSERT_EQ(credential_store_.credentials.count, 2u);
+  EXPECT_THAT(GetServiceNames(credential_store_.credentials),
+              UnorderedElementsAre("local.com", "account.com"));
+
+  password_manager::PasswordForm local_and_account_form = local_form;
+  local_and_account_form.url = GURL("http://local-and-account.com");
+  password_store_->AddLogin(local_and_account_form);
+  account_password_store_->AddLogin(local_and_account_form);
+  base::RunLoop().RunUntilIdle();
+
+  ASSERT_EQ(credential_store_.credentials.count, 3u);
+  EXPECT_THAT(GetServiceNames(credential_store_.credentials),
+              UnorderedElementsAre("local.com", "account.com",
+                                   "local-and-account.com"));
+
+  password_store_->RemoveLogin(local_and_account_form);
+  base::RunLoop().RunUntilIdle();
+
+  ASSERT_EQ(credential_store_.credentials.count, 3u);
+  EXPECT_THAT(GetServiceNames(credential_store_.credentials),
+              UnorderedElementsAre("local.com", "account.com",
+                                   "local-and-account.com"));
+
+  account_password_store_->RemoveLogin(local_and_account_form);
+  base::RunLoop().RunUntilIdle();
+
+  ASSERT_EQ(credential_store_.credentials.count, 2u);
+  EXPECT_THAT(GetServiceNames(credential_store_.credentials),
+              UnorderedElementsAre("local.com", "account.com"));
 }
 
 // Test that CredentialProviderService observes changes in the password store.
 TEST_F(CredentialProviderServiceTest, PasswordChanges) {
+  CreateCredentialProviderService();
+
   EXPECT_EQ(0u, credential_store_.credentials.count);
 
   password_manager::PasswordForm form;
@@ -180,17 +255,10 @@ TEST_F(CredentialProviderServiceTest, PasswordChanges) {
 
 // Test that CredentialProviderService observes changes in the primary identity.
 TEST_F(CredentialProviderServiceTest, AccountChange) {
-  password_manager::PasswordForm form;
-  form.url = GURL("http://0.com");
-  form.signon_realm = "http://www.example.com/";
-  form.action = GURL("http://www.example.com/action");
-  form.password_element = u"pwd";
-  form.password_value = u"example";
-  password_store_->AddLogin(form);
-  task_environment_.RunUntilIdle();
+  CreateCredentialProviderService();
 
-  ASSERT_EQ(credential_store_.credentials.count, 1u);
-  EXPECT_FALSE(credential_store_.credentials[0].validationIdentifier);
+  EXPECT_FALSE([app_group::GetGroupUserDefaults()
+      stringForKey:AppGroupUserDefaultsCredentialProviderUserID()]);
 
   // Enable sync for managed account.
   CoreAccountInfo core_account =
@@ -206,19 +274,21 @@ TEST_F(CredentialProviderServiceTest, AccountChange) {
                                                signin::ConsentLevel::kSync);
   base::RunLoop().RunUntilIdle();
 
-  ASSERT_EQ(credential_store_.credentials.count, 1u);
-  EXPECT_NSEQ(credential_store_.credentials[0].validationIdentifier,
+  EXPECT_NSEQ([app_group::GetGroupUserDefaults()
+                  stringForKey:AppGroupUserDefaultsCredentialProviderUserID()],
               base::SysUTF8ToNSString(core_account.gaia));
 
   identity_test_environment_.ClearPrimaryAccount();
   base::RunLoop().RunUntilIdle();
 
-  ASSERT_EQ(credential_store_.credentials.count, 1u);
-  EXPECT_FALSE(credential_store_.credentials[0].validationIdentifier);
+  EXPECT_FALSE([app_group::GetGroupUserDefaults()
+      stringForKey:AppGroupUserDefaultsCredentialProviderUserID()]);
 }
 
 // Test that CredentialProviderService observes changes in the password store.
 TEST_F(CredentialProviderServiceTest, AndroidCredential) {
+  CreateCredentialProviderService();
+
   EXPECT_EQ(0u, credential_store_.credentials.count);
 
   password_manager::PasswordForm form;
@@ -236,6 +306,8 @@ TEST_F(CredentialProviderServiceTest, AndroidCredential) {
 // Test that the CredentialProviderService observes changes in the preference
 // that controls password creation
 TEST_F(CredentialProviderServiceTest, PasswordCreationPreference) {
+  CreateCredentialProviderService();
+
   // The test is initialized with the preference as true. Make sure the
   // NSUserDefaults value is also true.
   EXPECT_TRUE([[app_group::GetGroupUserDefaults()
@@ -258,12 +330,17 @@ TEST_F(CredentialProviderServiceTest, PasswordCreationPreference) {
 // on the password sync state.
 TEST_F(CredentialProviderServiceTest, PasswordSyncStoredEmail) {
   // Start by signing in and turning sync on.
-  CoreAccountInfo account = identity_test_environment_.SetPrimaryAccount(
-      "foo@gmail.com", signin::ConsentLevel::kSync);
-  sync_service_.FireStateChanged();
+  CoreAccountInfo account;
+  account.email = "foo@gmail.com";
+  account.gaia = "gaia";
+  account.account_id = CoreAccountId::FromGaiaId("gaia");
+  sync_service_.SetAccountInfo(account);
+  sync_service_.SetHasSyncConsent(true);
+
+  CreateCredentialProviderService();
 
   EXPECT_NSEQ(
-      base::SysUTF8ToNSString(account.email),
+      @"foo@gmail.com",
       [app_group::GetGroupUserDefaults()
           stringForKey:AppGroupUserDefaultsCredentialProviderUserEmail()]);
 
@@ -275,6 +352,60 @@ TEST_F(CredentialProviderServiceTest, PasswordSyncStoredEmail) {
       /*sync_everything=*/false,
       /*types=*/user_selectable_type_set);
   sync_service_.FireStateChanged();
+
+  EXPECT_FALSE([app_group::GetGroupUserDefaults()
+      stringForKey:AppGroupUserDefaultsCredentialProviderUserEmail()]);
+}
+
+// Tests that the CredentialProviderService has the correct stored email based
+// on the account storage state.
+TEST_F(CredentialProviderServiceTest, SignedInUserStoredEmail) {
+  // Set up a signed in user with the flag enabled.
+  base::test::ScopedFeatureList features(
+      password_manager::features::kEnablePasswordsAccountStorage);
+  CoreAccountInfo account;
+  account.email = "foo@gmail.com";
+  account.gaia = "gaia";
+  account.account_id = CoreAccountId::FromGaiaId("gaia");
+  sync_service_.SetAccountInfo(account);
+  sync_service_.SetHasSyncConsent(false);
+
+  CreateCredentialProviderService();
+
+  EXPECT_NSEQ(
+      [app_group::GetGroupUserDefaults()
+          stringForKey:AppGroupUserDefaultsCredentialProviderUserEmail()],
+      @"foo@gmail.com");
+
+  // Disable account storage.
+  syncer::UserSelectableTypeSet user_selectable_type_set =
+      sync_service_.GetUserSettings()->GetSelectedTypes();
+  user_selectable_type_set.Remove(syncer::UserSelectableType::kPasswords);
+  sync_service_.GetUserSettings()->SetSelectedTypes(
+      /*sync_everything=*/false,
+      /*types=*/user_selectable_type_set);
+  sync_service_.FireStateChanged();
+
+  EXPECT_FALSE([app_group::GetGroupUserDefaults()
+      stringForKey:AppGroupUserDefaultsCredentialProviderUserEmail()]);
+}
+
+// Similar to SignedInUserStoredEmail but disable the account storage flag.
+TEST_F(CredentialProviderServiceTest,
+       SignedInUserStoredEmailWithFeatureDisabled) {
+  // Set up a signed in user with the flag disabled.
+  base::test::ScopedFeatureList features;
+  features.InitAndDisableFeature(
+      password_manager::features::kEnablePasswordsAccountStorage);
+  CoreAccountInfo account;
+  account.email = "foo@gmail.com";
+  account.gaia = "gaia";
+  account.account_id = CoreAccountId::FromGaiaId("gaia");
+  sync_service_.SetAccountInfo(account);
+  sync_service_.SetHasSyncConsent(false);
+  sync_service_.FireStateChanged();
+
+  CreateCredentialProviderService();
 
   EXPECT_FALSE([app_group::GetGroupUserDefaults()
       stringForKey:AppGroupUserDefaultsCredentialProviderUserEmail()]);

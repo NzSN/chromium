@@ -197,6 +197,9 @@ const char kDisableExtensions[] = "disable-extensions";
 // Disable extensions except those specified in a comma-separated list.
 const char kDisableExtensionsExcept[] = "disable-extensions-except";
 
+// Disables lazy loading of images and frames.
+const char kDisableLazyLoading[] = "disable-lazy-loading";
+
 // Disables print preview (For testing, and for users who don't like us. :[ )
 const char kDisablePrintPreview[] = "disable-print-preview";
 
@@ -295,23 +298,6 @@ const char kExtensionsInstallVerification[] = "extensions-install-verification";
 // Specifies a comma-separated list of extension ids that should be forced to
 // be treated as not from the webstore when doing install verification.
 const char kExtensionsNotWebstore[] = "extensions-not-webstore";
-
-// Specifies a proxy server for origins specified in
-// kIPAnonymizationProxyAllowList. This proxy will be used on a best-effort
-// basis when normal proxy resolution would result in trying direct connections
-// (possibly after trying some other proxy server).
-const char kIPAnonymizationProxyServer[] = "ip-anonymization-proxy-server";
-
-// Specifies a list of origins on which to use the server specified by
-// `kIPAnonymizationProxyServer`. if `kIPAnonymizationProxyServer` is empty this
-// list will be ignored. This is intended as a reverse bypass rules list.
-const char kIPAnonymizationProxyAllowList[] =
-    "ip-anonymization-proxy-allow-list";
-
-// Specifies a value for the "password" header to be passed to the proxy
-// specified by `kIPAnonymizationProxyServer`. if `kIPAnonymizationProxyServer`
-// is empty this list will be ignored.
-const char kIPAnonymizationProxyPassword[] = "ip-anonymization-proxy-password";
 
 // Forces application mode. This hides certain system UI elements and forces
 // the app to be installed if it hasn't been already.
@@ -542,6 +528,10 @@ const char kSimulateOutdatedNoAU[] = "simulate-outdated-no-au";
 // Simulates an update being available.
 const char kSimulateUpgrade[] = "simulate-upgrade";
 
+// Sets the IdleTimeout policy to a very short value (shorter than normally
+// possible) for testing purposes.
+const char kSimulateIdleTimeout[] = "simulate-idle-timeout";
+
 // Specifies the maximum SSL/TLS version ("tls1.2" or "tls1.3").
 const char kSSLVersionMax[] = "ssl-version-max";
 
@@ -646,6 +636,9 @@ const char kWebRtcRemoteEventLogUploadNoSuppression[] =
 // Override WebRTC IP handling policy to mimic the behavior when WebRTC IP
 // handling policy is specified in Preferences.
 const char kWebRtcIPHandlingPolicy[] = "webrtc-ip-handling-policy";
+
+// Specify the initial window user title: --window-name="My custom title"
+const char kWindowName[] = "window-name";
 
 // Specify the initial window position: --window-position=x,y
 const char kWindowPosition[] = "window-position";
@@ -778,10 +771,6 @@ const char kMakeChromeDefault[] = "make-chrome-default";
 #endif  // BUILDFLAG(IS_MAC)
 
 #if BUILDFLAG(IS_WIN)
-// Disables custom-drawing the window titlebar on Windows 10.
-const char kDisableWindows10CustomTitlebar[] =
-    "disable-windows10-custom-titlebar";
-
 // Force-enables the profile shortcut manager. This is needed for tests since
 // they use a custom-user-data-dir which disables this.
 const char kEnableProfileShortcutManager[] = "enable-profile-shortcut-manager";

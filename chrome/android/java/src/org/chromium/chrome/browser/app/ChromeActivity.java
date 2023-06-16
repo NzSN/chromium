@@ -221,6 +221,7 @@ import org.chromium.components.webapps.bottomsheet.PwaBottomSheetControllerProvi
 import org.chromium.components.webxr.XrDelegate;
 import org.chromium.components.webxr.XrDelegateProvider;
 import org.chromium.content_public.browser.ContentFeatureList;
+import org.chromium.content_public.browser.DeviceUtils;
 import org.chromium.content_public.browser.LoadUrlParams;
 import org.chromium.content_public.browser.ScreenOrientationProvider;
 import org.chromium.content_public.browser.SelectionPopupController;
@@ -529,7 +530,7 @@ public abstract class ChromeActivity<C extends ChromeActivityComponent>
                 /* statusBarColorProvider= */ this, getIntentRequestTracker(),
                 mTabReparentingControllerSupplier,
                 /*ephemeralTabCoordinatorSupplier=*/new ObservableSupplierImpl<>(),
-                false, mBackPressManager);
+                false, mBackPressManager, ()->null);
         // clang-format on
     }
 
@@ -703,6 +704,7 @@ public abstract class ChromeActivity<C extends ChromeActivityComponent>
         mInflateInitialLayoutBeginMs = SystemClock.elapsedRealtime();
         try (TraceEvent te = TraceEvent.scoped("ChromeActivity.triggerLayoutInflation")) {
             SelectionPopupController.setShouldGetReadbackViewFromWindowAndroid();
+            SelectionPopupController.setAllowSurfaceControlMagnifier();
 
             enableHardwareAcceleration();
             setLowEndTheme();
@@ -1019,19 +1021,14 @@ public abstract class ChromeActivity<C extends ChromeActivityComponent>
 
         Tab tab = getActivityTab();
         TabModelSelector tabModelSelector = mTabModelOrchestrator.getTabModelSelector();
-        if (tabModelSelector != null && !tabModelSelector.isReparentingInProgress()
-                && tab != null) {
+        // If tab reparenting is in progress and the activity Tab isn't being reparented, e.g.
+        // because it's an NTP, skip hiding the Tab since it will be destroyed when the Activity is
+        // destroyed prior to recreation.
+        if (tab != null
+                && ((tabModelSelector != null && !tabModelSelector.isReparentingInProgress())
+                        || AsyncTabParamsManagerSingleton.getInstance().hasParamsForTabId(
+                                tab.getId()))) {
             tab.hide(TabHidingType.ACTIVITY_HIDDEN);
-        }
-
-        if (mNativeInitialized
-                && ChromeFeatureList.isEnabled(ChromeFeatureList.KEEP_ANDROID_TINTED_RESOURCES)
-                && mCompositorViewHolderSupplier.hasValue()) {
-            LayoutManagerImpl layoutManager =
-                    mCompositorViewHolderSupplier.get().getLayoutManager();
-            if (layoutManager != null && layoutManager.getResourceManager() != null) {
-                layoutManager.getResourceManager().clearTintedResourceCache();
-            }
         }
     }
 
@@ -1717,7 +1714,7 @@ public abstract class ChromeActivity<C extends ChromeActivityComponent>
             @Override
             public void onCurrentModeChanged(Mode currentMode) {
                 if (ChromeFeatureList.isEnabled(ChromeFeatureList.FOLDABLE_JANK_FIX)
-                        && !mBlockingDrawForAppRestart && didChangeTabletMode()) {
+                        && !mBlockingDrawForAppRestart && getTabletMode().changed) {
                     mBlockingDrawForAppRestart = true;
                     findViewById(android.R.id.content).setVisibility(View.INVISIBLE);
                     showContent();
@@ -1729,8 +1726,9 @@ public abstract class ChromeActivity<C extends ChromeActivityComponent>
     }
 
     private boolean maybeOnScreenSizeChange() {
-        if (didChangeTabletMode()) {
-            return onScreenLayoutSizeChange();
+        TabletMode tabletMode = getTabletMode();
+        if (tabletMode.changed) {
+            return onScreenLayoutSizeChange(tabletMode.isTablet);
         }
         return false;
     }
@@ -2223,6 +2221,12 @@ public abstract class ChromeActivity<C extends ChromeActivityComponent>
             return true;
         }
 
+        if (mRootUiCoordinator.getBottomSheetController() != null
+                && mRootUiCoordinator.getBottomSheetController().handleBackPress()) {
+            BackPressManager.record(BackPressHandler.Type.BOTTOM_SHEET);
+            return true;
+        }
+
         if (mCompositorViewHolderSupplier.hasValue()) {
             LayoutManagerImpl layoutManager =
                     mCompositorViewHolderSupplier.get().getLayoutManager();
@@ -2246,12 +2250,6 @@ public abstract class ChromeActivity<C extends ChromeActivityComponent>
 
         if (exitFullscreenIfShowing()) {
             BackPressManager.record(Type.FULLSCREEN);
-            return true;
-        }
-
-        if (mRootUiCoordinator.getBottomSheetController() != null
-                && mRootUiCoordinator.getBottomSheetController().handleBackPress()) {
-            BackPressManager.record(BackPressHandler.Type.BOTTOM_SHEET);
             return true;
         }
 
@@ -2465,7 +2463,8 @@ public abstract class ChromeActivity<C extends ChromeActivityComponent>
         if (id == R.id.disable_price_tracking_menu_id) {
             PowerBookmarkUtils.setPriceTrackingEnabledWithSnackbars(mBookmarkModelSupplier.get(),
                     mBookmarkModelSupplier.get().getUserBookmarkIdForTab(currentTab),
-                    /*enabled=*/false, mSnackbarManager, getResources(), (success) -> {});
+                    /*enabled=*/false, mSnackbarManager, getResources(),
+                    Profile.getLastUsedRegularProfile(), (success) -> {});
             RecordUserAction.record("MobileMenuDisablePriceTracking");
             return true;
         }
@@ -2784,7 +2783,7 @@ public abstract class ChromeActivity<C extends ChromeActivityComponent>
     }
 
     @VisibleForTesting
-    public boolean didChangeTabletMode() {
+    public TabletMode getTabletMode() {
         assert mConfig
                 != null : "Can not determine the tablet mode when mConfig is not initialized";
         int smallestWidth = getCurrentSmallestScreenWidth(this);
@@ -2795,14 +2794,18 @@ public abstract class ChromeActivity<C extends ChromeActivityComponent>
         if (didChangeTabletMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Log.i(TAG, "Current smallest screen width is: " + smallestWidth);
         }
-        return didChangeTabletMode;
+        return new TabletMode(isTablet, didChangeTabletMode);
     }
 
     /**
      * Switch between phone and tablet mode and do the tab re-parenting in the meantime.
+     * Also update switch USE_MOBILE_UA depends on whether the device is tablet sized.
+     * @param isTablet whether the current screen is tablet size.
      * @return whether screen layout change lead to a recreate.
      */
-    private boolean onScreenLayoutSizeChange() {
+    private boolean onScreenLayoutSizeChange(boolean isTablet) {
+        DeviceUtils.updateDeviceSpecificUserAgentSwitch(isTablet);
+
         if (mTabReparentingControllerSupplier.get() != null && !mIsTabReparentingPrepared) {
             mTabReparentingControllerSupplier.get().prepareTabsForReparenting();
             mIsTabReparentingPrepared = true;
@@ -2906,5 +2909,24 @@ public abstract class ChromeActivity<C extends ChromeActivityComponent>
             Toast.makeText(context, R.string.open_webapk_failed, Toast.LENGTH_SHORT).show();
         }
         return true;
+    }
+
+    /**
+     * Preserve whether the current screen is tablet size; and whether the tablet mode has changed.
+     */
+    @VisibleForTesting
+    public static class TabletMode {
+        public boolean isTablet;
+        public boolean changed;
+
+        TabletMode(boolean isTablet, boolean changed) {
+            this.isTablet = isTablet;
+            this.changed = changed;
+        }
+    }
+
+    @Override
+    protected int getAutomotiveToolbarImplementation() {
+        return AutomotiveToolbarImplementation.WITH_ACTION_BAR;
     }
 }

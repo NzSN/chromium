@@ -39,3 +39,11 @@ void TestPushNotificationClient::SetBackgroundFetchResult(
     UIBackgroundFetchResult result) {
   fetch_result_ = result;
 }
+
+void TestPushNotificationClient::OnSceneActiveForegroundBrowserReady() {
+  is_browser_ready_ = true;
+}
+
+bool TestPushNotificationClient::IsBrowserReady() {
+  return is_browser_ready_;
+}

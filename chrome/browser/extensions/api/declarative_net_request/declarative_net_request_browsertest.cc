@@ -196,6 +196,7 @@ class DeclarativeNetRequestBrowserTest
          blink::features::kAdInterestGroupAPI, blink::features::kFledge,
          blink::features::kFencedFrames,
          blink::features::kFencedFramesAPIChanges,
+         blink::features::kFencedFramesDefaultMode,
          features::kPrivacySandboxAdsAPIsOverride},
         /*disabled_features=*/
         {// TODO(crbug.com/1394910): Use HTTPS URLs in tests to avoid
@@ -544,13 +545,34 @@ class DeclarativeNetRequestBrowserTest
 
     const char* referrer_policy = use_frame_referrer ? "origin" : "no-referrer";
 
-    ASSERT_TRUE(content::ExecuteScript(
+    ASSERT_TRUE(content::ExecJs(
         GetPrimaryMainFrame(),
         base::StringPrintf(R"(
           document.getElementsByName('%s')[0].referrerPolicy = '%s';
           document.getElementsByName('%s')[0].src = '%s';)",
                            frame_name.c_str(), referrer_policy,
                            frame_name.c_str(), url.spec().c_str())));
+    navigation_observer.Wait();
+  }
+
+  // Removes frame with name `frame_name` from the DOM, changes its src to
+  // `url`, and then adds it back to the DOM to trigger the navigation.
+  void RemoveNavigateAndReAddFrame(const std::string& frame_name,
+                                   const GURL& url) {
+    content::TestNavigationObserver navigation_observer(
+        web_contents(), 1 /*number_of_navigations*/);
+
+    ASSERT_TRUE(content::ExecJs(GetPrimaryMainFrame(),
+                                content::JsReplace(R"(
+          {
+            const frame = document.getElementsByName($1)[0];
+            const parentElement = frame.parentElement;
+
+            frame.remove();
+            frame.src = $2;
+            parentElement.appendChild(frame);
+          })",
+                                                   frame_name, url)));
     navigation_observer.Wait();
   }
 
@@ -2471,6 +2493,28 @@ IN_PROC_BROWSER_TEST_P(DeclarativeNetRequestBrowserTest, IFrameCollapsed) {
     SCOPED_TRACE("Extension loaded src swapped");
     test_frame_collapse(kFrameName1, false);
     test_frame_collapse(kFrameName2, true);
+  }
+
+  // Remove the frames from the DOM, swap the "src" of the frames,
+  // then add them back to the DOM. `kFrameName1` should be blocked
+  // and therefore collapsed.
+  RemoveNavigateAndReAddFrame(kFrameName1, frame_url_1);
+  RemoveNavigateAndReAddFrame(kFrameName2, frame_url_2);
+  {
+    SCOPED_TRACE("Removed src-swapped and readded to DOM");
+    test_frame_collapse(kFrameName1, true);
+    test_frame_collapse(kFrameName2, false);
+  }
+
+  // Remove the frames from the DOM again, but this time add them back
+  // without changing their "src". `kFrameName1` should still be
+  // collapsed.
+  RemoveNavigateAndReAddFrame(kFrameName1, frame_url_1);
+  RemoveNavigateAndReAddFrame(kFrameName2, frame_url_2);
+  {
+    SCOPED_TRACE("Removed and readded to DOM");
+    test_frame_collapse(kFrameName1, true);
+    test_frame_collapse(kFrameName2, false);
   }
 }
 
@@ -5405,10 +5449,7 @@ class DeclarativeNetRequestResourceTypeBrowserTest
 
     auto execute_script = [](content::RenderFrameHost* frame,
                              const std::string& script) {
-      bool subresource_loaded = false;
-      EXPECT_TRUE(content::ExecuteScriptAndExtractBool(frame, script,
-                                                       &subresource_loaded));
-      return subresource_loaded;
+      return content::EvalJs(frame, script).ExtractBool();
     };
 
     for (const auto& test_case : test_cases) {
@@ -5422,10 +5463,8 @@ class DeclarativeNetRequestResourceTypeBrowserTest
       content::RenderFrameHost* frame = GetPrimaryMainFrame();
 
       // sub-frame.
-      EXPECT_EQ(
-          !(test_case.blocked_mask & kSubframe),
-          execute_script(
-              frame, "domAutomationController.send(!!window.frameLoaded);"));
+      EXPECT_EQ(!(test_case.blocked_mask & kSubframe),
+                execute_script(frame, "!!window.frameLoaded;"));
 
       // stylesheet
       EXPECT_EQ(!(test_case.blocked_mask & kStylesheet),
@@ -5538,51 +5577,49 @@ class DeclarativeNetRequestSubresourceWebBundlesBrowserTest
   bool TryLoadScript(const std::string& script_src) {
     content::WebContents* web_contents =
         browser()->tab_strip_model()->GetActiveWebContents();
-    bool success = false;
     std::string script = base::StringPrintf(R"(
       (() => {
         const script = document.createElement('script');
-        script.addEventListener('load', () => {
-          window.domAutomationController.send(true);
+        return new Promise(resolve => {
+          script.addEventListener('load', () => {
+            resolve(true);
+          });
+          script.addEventListener('error', () => {
+            resolve(false);
+          });
+          script.src = '%s';
+          document.body.appendChild(script);
         });
-        script.addEventListener('error', () => {
-          window.domAutomationController.send(false);
-        });
-        script.src = '%s';
-        document.body.appendChild(script);
       })();
                                           )",
                                             script_src.c_str());
-    EXPECT_TRUE(ExecuteScriptAndExtractBool(web_contents->GetPrimaryMainFrame(),
-                                            script, &success));
-    return success;
+    return EvalJs(web_contents->GetPrimaryMainFrame(), script).ExtractBool();
   }
 
   bool TryLoadBundle(const std::string& href, const std::string& resources) {
     content::WebContents* web_contents =
         browser()->tab_strip_model()->GetActiveWebContents();
-    bool success = false;
     std::string script = base::StringPrintf(R"(
           (() => {
             const script = document.createElement('script');
             script.type = 'webbundle';
-            script.addEventListener('load', () => {
-              window.domAutomationController.send(true);
+            return new Promise(resolve => {
+              script.addEventListener('load', () => {
+                resolve(true);
+              });
+              script.addEventListener('error', () => {
+                resolve(false);
+              });
+              script.textContent = JSON.stringify({
+                source: '%s',
+                resources: ['%s'],
+              });
+              document.body.appendChild(script);
             });
-            script.addEventListener('error', () => {
-              window.domAutomationController.send(false);
-            });
-            script.textContent = JSON.stringify({
-              source: '%s',
-              resources: ['%s'],
-            });
-            document.body.appendChild(script);
           })();
         )",
                                             href.c_str(), resources.c_str());
-    EXPECT_TRUE(ExecuteScriptAndExtractBool(web_contents->GetPrimaryMainFrame(),
-                                            script, &success));
-    return success;
+    return EvalJs(web_contents->GetPrimaryMainFrame(), script).ExtractBool();
   }
 
   // Registers a request handler for static content.
@@ -6615,7 +6652,7 @@ IN_PROC_BROWSER_TEST_P(DeclarativeNetRequestBrowserTest, FledgeAuctionScripts) {
                                   biddingLogicUrl: $2,
                                   userBiddingSignals: [],
                                   ads: [{
-                                    renderUrl: 'https://example.com/render',
+                                    renderURL: 'https://example.com/render',
                                     metadata: {ad: 'metadata', here: [1, 2, 3]}
                                   }]
                                 }, /*joinDurationSec=*/ 300);

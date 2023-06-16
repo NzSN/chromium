@@ -237,7 +237,7 @@ class FakePasswordAutofillAgent
   }
 
 #if BUILDFLAG(IS_ANDROID)
-  void TouchToFillClosed(bool show_virtual_keyboard) override {}
+  void KeyboardReplacingSurfaceClosed(bool show_virtual_keyboard) override {}
 
   void TriggerFormSubmission() override {}
 #endif
@@ -271,6 +271,10 @@ class MockPasswordAccessoryControllerImpl
   MOCK_METHOD(void,
               RefreshSuggestionsForField,
               (autofill::mojom::FocusedFieldType, bool),
+              (override));
+  MOCK_METHOD(void,
+              UpdateCredManReentryUi,
+              (autofill::mojom::FocusedFieldType),
               (override));
 };
 
@@ -331,7 +335,7 @@ class ChromePasswordManagerClientTest : public ChromeRenderViewHostTestHarness {
 
   bool metrics_enabled_ = false;
 
-  raw_ptr<syncer::TestSyncService> sync_service_ = nullptr;
+  raw_ptr<syncer::TestSyncService, DanglingUntriaged> sync_service_ = nullptr;
 
   base::test::ScopedFeatureList scoped_feature_list_;
 };
@@ -407,8 +411,7 @@ TEST_F(ChromePasswordManagerClientTest, LogEntryNotifyRenderer) {
 TEST_F(ChromePasswordManagerClientTest, GetPasswordSyncState) {
   sync_service_->GetUserSettings()->SetSelectedTypes(
       /*sync_everything=*/false,
-      /*types=*/syncer::UserSelectableTypeSet(
-          syncer::UserSelectableType::kPasswords));
+      /*types=*/{syncer::UserSelectableType::kPasswords});
   sync_service_->SetIsUsingExplicitPassphrase(false);
 
   ChromePasswordManagerClient* client = GetClient();
@@ -432,8 +435,7 @@ TEST_F(ChromePasswordManagerClientTest, GetPasswordSyncState) {
   // Report correctly if we aren't syncing passwords.
   sync_service_->GetUserSettings()->SetSelectedTypes(
       /*sync_everything=*/false,
-      /*types=*/syncer::UserSelectableTypeSet(
-          syncer::UserSelectableType::kBookmarks));
+      /*types=*/{syncer::UserSelectableType::kBookmarks});
 
   EXPECT_EQ(password_manager::SyncState::kNotSyncing,
             client->GetPasswordSyncState());
@@ -1073,7 +1075,7 @@ TEST_F(ChromePasswordManagerClientAndroidTest,
   PasswordGenerationController* pwd_generation_controller =
       PasswordGenerationController::GetOrCreate(web_contents());
   pwd_generation_controller->FocusedInputChanged(
-      FocusedFieldType::kFillablePasswordField, driver.get()->AsWeakPtr());
+      FocusedFieldType::kFillablePasswordField, base::AsWeakPtr(driver.get()));
 
   ChromePasswordManagerClient* client = GetClient();
 
@@ -1153,8 +1155,6 @@ TEST_F(ChromePasswordManagerClientAndroidTest,
 
 TEST_F(ChromePasswordManagerClientAndroidTest,
        FocusedInputChangedFormsFetched) {
-  base::test::ScopedFeatureList scoped_feature_list(
-      {password_manager::features::kUnifiedPasswordManagerErrorMessages});
   FormData observed_form_data = MakePasswordFormData();
   SetUpGenerationPreconditions(observed_form_data.url);
 
@@ -1185,6 +1185,19 @@ TEST_F(ChromePasswordManagerClientAndroidTest,
   GetClient()->FocusedInputChanged(
       driver.get(), observed_form_data.fields[0].unique_renderer_id,
       FocusedFieldType::kFillablePasswordField);
+}
+
+TEST_F(ChromePasswordManagerClientAndroidTest,
+       FocusedInputChangeUpdatesCredManReentryUi) {
+  std::unique_ptr<password_manager::ContentPasswordManagerDriver> driver =
+      CreateContentPasswordManagerDriver(main_rfh());
+  MockPasswordAccessoryControllerImpl* weak_mock_pwd_controller =
+      SetUpMockPwdAccessoryForClientUse(driver.get());
+
+  EXPECT_CALL(*weak_mock_pwd_controller, UpdateCredManReentryUi);
+
+  GetClient()->FocusedInputChanged(driver.get(), FieldRendererId(123),
+                                   FocusedFieldType::kFillablePasswordField);
 }
 
 TEST_F(ChromePasswordManagerClientAndroidTest,

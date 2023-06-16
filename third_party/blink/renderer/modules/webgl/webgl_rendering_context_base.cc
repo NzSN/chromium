@@ -519,15 +519,6 @@ static String ExtractWebGLContextCreationError(
   return builder.ToString();
 }
 
-bool WebGLRenderingContextBase::SupportOwnOffscreenSurface(
-    ExecutionContext* execution_context) {
-  // Using an own offscreen surface disables virtualized contexts, and this
-  // doesn't currently work properly, see https://crbug.com/691102.
-  // TODO(https://crbug.com/791755): Remove this function and related code once
-  // the replacement is ready.
-  return false;
-}
-
 std::unique_ptr<WebGraphicsContext3DProvider>
 WebGLRenderingContextBase::CreateContextProviderInternal(
     CanvasRenderingContextHost* host,
@@ -538,8 +529,8 @@ WebGLRenderingContextBase::CreateContextProviderInternal(
   ExecutionContext* execution_context = host->GetTopExecutionContext();
   DCHECK(execution_context);
 
-  Platform::ContextAttributes context_attributes = ToPlatformContextAttributes(
-      attributes, context_type, SupportOwnOffscreenSurface(execution_context));
+  Platform::ContextAttributes context_attributes =
+      ToPlatformContextAttributes(attributes, context_type);
 
   // To run our tests with Chrome rendering on the low power GPU and WebGL on
   // the high performance GPU, we need to force the power preference attribute.
@@ -676,18 +667,41 @@ void WebGLRenderingContextBase::drawingBufferStorage(GLenum sizedformat,
       }
       break;
     case GL_RGBA16F:
-      if (IsWebGL2()) {
-        if (!ExtensionEnabled(kEXTColorBufferFloatName) &&
-            !ExtensionEnabled(kEXTColorBufferHalfFloatName)) {
-          SynthesizeGLError(
-              GL_INVALID_ENUM, function_name,
-              "EXT_color_buffer_float/EXT_color_buffer_half_float not enabled");
-          return;
+      if (base::FeatureList::IsEnabled(
+              blink::features::kCorrectFloatExtensionTestForWebGL)) {
+        // Correct float extension testing for WebGL1/2.
+        // See: https://github.com/KhronosGroup/WebGL/pull/3222
+        if (IsWebGL2()) {
+          if (!ExtensionEnabled(kEXTColorBufferFloatName) &&
+              !ExtensionEnabled(kEXTColorBufferHalfFloatName)) {
+            SynthesizeGLError(GL_INVALID_ENUM, function_name,
+                              "EXT_color_buffer_float/"
+                              "EXT_color_buffer_half_float not enabled");
+            return;
+          }
         } else {
           if (!ExtensionEnabled(kEXTColorBufferHalfFloatName)) {
             SynthesizeGLError(GL_INVALID_ENUM, function_name,
                               "EXT_color_buffer_half_float not enabled");
             return;
+          }
+        }
+      } else {
+        // This is the original incorrect extension testing. Remove this code
+        // once this correction safely launches.
+        if (IsWebGL2()) {
+          if (!ExtensionEnabled(kEXTColorBufferFloatName) &&
+              !ExtensionEnabled(kEXTColorBufferHalfFloatName)) {
+            SynthesizeGLError(GL_INVALID_ENUM, function_name,
+                              "EXT_color_buffer_float/"
+                              "EXT_color_buffer_half_float not enabled");
+            return;
+          } else {
+            if (!ExtensionEnabled(kEXTColorBufferHalfFloatName)) {
+              SynthesizeGLError(GL_INVALID_ENUM, function_name,
+                                "EXT_color_buffer_half_float not enabled");
+              return;
+            }
           }
         }
       }
@@ -8592,10 +8606,8 @@ void WebGLRenderingContextBase::MaybeRestoreContext(TimerBase*) {
   // ensure its resources were freed.
   DCHECK(!GetDrawingBuffer());
 
-  auto* execution_context = Host()->GetTopExecutionContext();
-  Platform::ContextAttributes attributes = ToPlatformContextAttributes(
-      CreationAttributes(), context_type_,
-      SupportOwnOffscreenSurface(execution_context));
+  Platform::ContextAttributes attributes =
+      ToPlatformContextAttributes(CreationAttributes(), context_type_);
   Platform::GraphicsInfo gl_info;
   const auto& url = Host()->GetExecutionContextUrl();
 

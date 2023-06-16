@@ -148,6 +148,7 @@
 <translation id="3600792891314830896">Izklop zvoka na spletnih mestih, ki predvajajo zvok</translation>
 <translation id="3602290021589620013">Predogled</translation>
 <translation id="3628308229821498208">Predlagane iskalne poizvedbe</translation>
+<translation id="3707034683772193706">Spletno mesto, ki ga obiščete, lahko v Chromu shrani majhno količino podatkov, predvsem za potrditev, da niste bot.</translation>
 <translation id="3721953990244350188">Opustitev in prikaz naslednjega razpoložljivega dejanja.</translation>
 <translation id="3744111561329211289">Sinhroniziranje v ozadju</translation>
 <translation id="3763247130972274048">Dvakrat se dotaknite videoposnetka levo ali desno, da preskočite 10 s</translation>
@@ -188,7 +189,6 @@
 <translation id="4412992751769744546">Omogočanje piškotkov drugih spletnih mest</translation>
 <translation id="4428065317363009941">Osebno prilagajanje oglasov</translation>
 <translation id="4434045419905280838">Pojavna okna in preusmeritve</translation>
-<translation id="4440642537584213025">Razširitev: <ph name="TARGET_DESCRIPTION" /></translation>
 <translation id="4468959413250150279">Izklop zvoka za določeno spletno mesto.</translation>
 <translation id="4475912480633855319">{COOKIES,plural, =1{# piškotek}one{# piškotek}two{# piškotka}few{# piškotki}other{# piškotkov}}</translation>
 <translation id="4478158430052450698">Poenostavljeno nastavljanje povečave po meri za različna spletna mesta</translation>
@@ -310,6 +310,7 @@
 <translation id="6612358246767739896">Zaščitena vsebina</translation>
 <translation id="662080504995468778">Ostani</translation>
 <translation id="6643016212128521049">Izbriši</translation>
+<translation id="6653342741369270081">Pritisnite gumb za nazaj, če želite zapreti celozaslonski način.</translation>
 <translation id="6689172468748959065">Profilne fotografije</translation>
 <translation id="6697925417670533197">Aktivni prenosi</translation>
 <translation id="6722828510648505498">Blokiranje poskusov prijav storitev za identiteto.</translation>
@@ -344,6 +345,7 @@
 <translation id="7302486331832100261">Obvestila običajno blokirate. Če želite to omogočiti, se dotaknite Podrobnosti.</translation>
 <translation id="7366415735885268578">Dodajanje spletnega mesta</translation>
 <translation id="7383715096023715447">Nastavitve za domeno <ph name="DOMAIN" /></translation>
+<translation id="7406113532070524618">Ta nastavitev deluje, ne da bi prišlo do vaše osebne prepoznave ali da bi bil spletnim mestom omogočen ogled vaše zgodovine brskanja. vendar lahko spletna mesta v okviru preverjanja delijo majhno količino podatkov.</translation>
 <translation id="7423098979219808738">Najprej vprašaj</translation>
 <translation id="7423538860840206698">Blokirano branje vsebine odložišča</translation>
 <translation id="7425915948813553151">Temna tema za spletna mesta</translation>
@@ -369,6 +371,7 @@
 <translation id="7846076177841592234">Prekliči izbor</translation>
 <translation id="7882806643839505685">Dovolitev zvoka za določeno spletno mesto.</translation>
 <translation id="789180354981963912">Blokiranje piškotkov tretjih oseb v anonimnem načinu:</translation>
+<translation id="7895868624847501462">To dejanje bo izbrisalo vse lokalne podatke, vključno s piškotki, in ponastavilo vsa dovoljenja za spletno mesto <ph name="DOMAIN" /> ter vsa njegova podrejena spletna mesta</translation>
 <translation id="7940722705963108451">Opomni me</translation>
 <translation id="7974024493641668069">{COUNT,plural, =1{<ph name="FPS_MEMBERS_COUNT" /> spletno mesto v skupini spletnih mest <ph name="FPS_OWNER" />, ki si lahko ogledajo vašo dejavnost v skupini.}one{<ph name="FPS_MEMBERS_COUNT" /> spletno mesto v skupini spletnih mest <ph name="FPS_OWNER" />, ki si lahko ogledajo vašo dejavnost v skupini.}two{<ph name="FPS_MEMBERS_COUNT" /> spletni mesti v skupini spletnih mest <ph name="FPS_OWNER" />, ki si lahko ogledajo vašo dejavnost v skupini.}few{<ph name="FPS_MEMBERS_COUNT" /> spletna mesta v skupini spletnih mest <ph name="FPS_OWNER" />, ki si lahko ogledajo vašo dejavnost v skupini.}other{<ph name="FPS_MEMBERS_COUNT" /> spletnih mest v skupini spletnih mest <ph name="FPS_OWNER" />, ki si lahko ogledajo vašo dejavnost v skupini.}}</translation>
 <translation id="7986741934819883144">Izberite stik</translation>
@@ -394,6 +397,7 @@
 <translation id="8284326494547611709">Napisi</translation>
 <translation id="8300705686683892304">Upravlja aplikacija</translation>
 <translation id="8324158725704657629">Ne vprašaj me več</translation>
+<translation id="8338445138528827481">To dejanje bo izbrisalo vse lokalne podatke, vključno s piškotki, in ponastavilo vsa dovoljenja za <ph name="ORIGIN" /></translation>
 <translation id="8362795839483915693">Povečate ali zmanjšate lahko prikaz obiskanih spletnih mest.</translation>
 <translation id="8372893542064058268">Dovoli sinhroniziranje v ozadju za določeno spletno mesto.</translation>
 <translation id="8376384591331888629">Vključno s piškotki drugih mest na tem spletnem mestu</translation>
@@ -433,6 +437,7 @@
 <translation id="8816026460808729765">Preprečevanje spletnim mestom dostopa do tipal</translation>
 <translation id="8823559166155093873">Blokiraj piškotke</translation>
 <translation id="8847988622838149491">USB</translation>
+<translation id="8889294078294184559">Med brskanjem se lahko spletna mesta obrnejo na Chrome in pri prejšnjem spletnem mestu, ki ste ga obiskali, potrdijo, da ste verjetno resnična oseba.</translation>
 <translation id="8899807382908246773">Vsiljivi oglasi</translation>
 <translation id="8903921497873541725">Povečaj</translation>
 <translation id="8921772741368021346"><ph name="POSITION" />/<ph name="DURATION" /></translation>

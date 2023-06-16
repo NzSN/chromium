@@ -4,11 +4,11 @@
 
 package org.chromium.chrome.browser.bookmarks;
 
+import org.chromium.chrome.browser.commerce.ShoppingFeatures;
 import org.chromium.chrome.browser.sync.SyncService;
 import org.chromium.chrome.browser.sync.SyncService.SyncStateChangedListener;
 import org.chromium.components.bookmarks.BookmarkId;
 import org.chromium.components.bookmarks.BookmarkItem;
-import org.chromium.components.bookmarks.BookmarkType;
 import org.chromium.components.power_bookmarks.PowerBookmarkMeta;
 
 import java.util.ArrayList;
@@ -16,74 +16,62 @@ import java.util.List;
 
 /** Simple implementation of {@link BookmarkQueryHandler} for the old experience. */
 public class LegacyBookmarkQueryHandler implements BookmarkQueryHandler {
-    private static final int MAXIMUM_NUMBER_OF_SEARCH_RESULTS = 500;
-
+    private final BasicBookmarkQueryHandler mBasicBookmarkQueryHandler;
     private final BookmarkModel mBookmarkModel;
     private final SyncService mSyncService;
     private final SyncStateChangedListener mSyncStateChangedListener = this::syncStateChanged;
     private final List<BookmarkId> mTopLevelFolders = new ArrayList<>();
+    private final BookmarkUiPrefs mBookmarkUiPrefs;
 
     /**
      * @param bookmarkModel The underlying source of bookmark data.
+     * @param bookmarkUiPrefs Stores display preferences for bookmarks.
      */
-    public LegacyBookmarkQueryHandler(BookmarkModel bookmarkModel) {
+    public LegacyBookmarkQueryHandler(
+            BookmarkModel bookmarkModel, BookmarkUiPrefs bookmarkUiPrefs) {
         mBookmarkModel = bookmarkModel;
         mBookmarkModel.finishLoadingBookmarkModel(this::onBookmarkModelLoaded);
         mSyncService = SyncService.get();
         mSyncService.addSyncStateChangedListener(mSyncStateChangedListener);
+        mBasicBookmarkQueryHandler = new BasicBookmarkQueryHandler(bookmarkModel, bookmarkUiPrefs);
+        mBookmarkUiPrefs = bookmarkUiPrefs;
     }
 
     @Override
     public void destroy() {
         mSyncService.removeSyncStateChangedListener(mSyncStateChangedListener);
+        mBasicBookmarkQueryHandler.destroy();
     }
 
     @Override
     public List<BookmarkListEntry> buildBookmarkListForParent(BookmarkId parentId) {
-        final List<BookmarkId> childIdList;
         if (parentId.equals(mBookmarkModel.getRootFolderId())) {
-            childIdList = mTopLevelFolders;
+            return buildBookmarkListForRootView();
         } else {
-            childIdList = mBookmarkModel.getChildIds(parentId);
+            return mBasicBookmarkQueryHandler.buildBookmarkListForParent(parentId);
         }
-
-        final List<BookmarkListEntry> bookmarkListEntries = new ArrayList<>();
-        for (BookmarkId bookmarkId : childIdList) {
-            PowerBookmarkMeta powerBookmarkMeta = mBookmarkModel.getPowerBookmarkMeta(bookmarkId);
-            if (BookmarkId.SHOPPING_FOLDER.equals(parentId)) {
-                // TODO(https://crbug.com/1435518): Stop using deprecated #getIsPriceTracked().
-                if (powerBookmarkMeta == null || !powerBookmarkMeta.hasShoppingSpecifics()
-                        || !powerBookmarkMeta.getShoppingSpecifics().getIsPriceTracked()) {
-                    continue;
-                }
-            }
-
-            BookmarkItem bookmarkItem = mBookmarkModel.getBookmarkById(bookmarkId);
-            BookmarkListEntry bookmarkListEntry =
-                    BookmarkListEntry.createBookmarkEntry(bookmarkItem, powerBookmarkMeta);
-            bookmarkListEntries.add(bookmarkListEntry);
-        }
-
-        if (parentId.getType() == BookmarkType.READING_LIST) {
-            ReadingListSectionHeader.maybeSortAndInsertSectionHeaders(bookmarkListEntries);
-        }
-
-        return bookmarkListEntries;
     }
 
     @Override
     public List<BookmarkListEntry> buildBookmarkListForSearch(String query) {
-        final List<BookmarkId> searchIdList =
-                mBookmarkModel.searchBookmarks(query, MAXIMUM_NUMBER_OF_SEARCH_RESULTS);
+        return mBasicBookmarkQueryHandler.buildBookmarkListForSearch(query);
+    }
+
+    private List<BookmarkListEntry> buildBookmarkListForRootView() {
         final List<BookmarkListEntry> bookmarkListEntries = new ArrayList<>();
-        for (BookmarkId bookmarkId : searchIdList) {
-            org.chromium.components.power_bookmarks.PowerBookmarkMeta powerBookmarkMeta =
-                    mBookmarkModel.getPowerBookmarkMeta(bookmarkId);
+        for (BookmarkId bookmarkId : mTopLevelFolders) {
+            PowerBookmarkMeta powerBookmarkMeta = mBookmarkModel.getPowerBookmarkMeta(bookmarkId);
             BookmarkItem bookmarkItem = mBookmarkModel.getBookmarkById(bookmarkId);
-            BookmarkListEntry bookmarkListEntry =
-                    BookmarkListEntry.createBookmarkEntry(bookmarkItem, powerBookmarkMeta);
+            BookmarkListEntry bookmarkListEntry = BookmarkListEntry.createBookmarkEntry(
+                    bookmarkItem, powerBookmarkMeta, mBookmarkUiPrefs.getBookmarkRowDisplayPref());
             bookmarkListEntries.add(bookmarkListEntry);
         }
+
+        if (ShoppingFeatures.isShoppingListEligible()) {
+            bookmarkListEntries.add(BookmarkListEntry.createDivider());
+            bookmarkListEntries.add(BookmarkListEntry.createShoppingFilter());
+        }
+
         return bookmarkListEntries;
     }
 

@@ -1352,6 +1352,16 @@ void WindowState::OnWindowPropertyChanged(aura::Window* window,
                                           const void* key,
                                           intptr_t old) {
   DCHECK_EQ(window_, window);
+  if (key == aura::client::kRestoreBoundsKey) {
+    // Updates the window bounds restore history after updating the restore
+    // bounds to keep them always aligned. This is necessary to avoid getting
+    // incorrect restore bounds from the outdated restore history stack.
+    if (HasRestoreBounds() && !window_state_restore_history_.empty()) {
+      window_state_restore_history_.back().restore_bounds_in_screen =
+          GetRestoreBoundsInScreen();
+    }
+    return;
+  }
   if (key == aura::client::kShowStateKey) {
     if (!ignore_property_change_) {
       WMEvent event(WMEventTypeFromShowState(GetShowState()));
@@ -1376,7 +1386,8 @@ void WindowState::OnWindowPropertyChanged(aura::Window* window,
     }
     return;
   }
-  if (key == aura::client::kWindowWorkspaceKey || key == kDeskGuidKey) {
+  if (key == aura::client::kWindowWorkspaceKey ||
+      key == aura::client::kDeskUuidKey) {
     // Save the window for window restore purposes unless
     // |ignore_property_change_| is true. Note that moving windows across
     // displays will also trigger a kWindowWorkspaceKey change, even if the

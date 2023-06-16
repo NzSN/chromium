@@ -85,9 +85,6 @@ ASH_PUBLIC_EXPORT extern const aura::WindowProperty<bool>* const
 ASH_PUBLIC_EXPORT extern const aura::WindowProperty<bool>* const
     kIsDraggingTabsKey;
 
-// If true, the window is considered to be a game.
-ASH_PUBLIC_EXPORT extern const aura::WindowProperty<bool>* const kIsGameKey;
-
 // If true, the window will be ignored when mirroring the desk contents into
 // the desk's mini_view.
 ASH_PUBLIC_EXPORT extern const aura::WindowProperty<bool>* const
@@ -196,11 +193,6 @@ ASH_PUBLIC_EXPORT extern const aura::WindowProperty<bool>* const
 // handle.
 ASH_PUBLIC_EXPORT extern const aura::WindowProperty<gfx::Rect*>* const
     kWindowPipResizeHandleBoundsKey;
-
-// A property key to indicate a desk guid of a workspace this window belongs
-// to.
-ASH_PUBLIC_EXPORT extern const aura::WindowProperty<std::string*>* const
-    kDeskGuidKey;
 
 // Alphabetical sort.
 

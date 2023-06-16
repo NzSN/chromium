@@ -8,6 +8,7 @@
 <translation id="1104942323762546749">‏Chromium می‌خواهد گذرواژه‌های شما را صادر کند. برای اجازه به این کار، گذرواژه Windows خود را تایپ کنید.</translation>
 <translation id="113122355610423240">‏Chromium مرورگر پیش‌فرضتان است</translation>
 <translation id="1131805035311359397">‏برای بررسی اینکه از گذرواژه‌هایتان دربرابر نقض داده یا دیگر مشکلات امنیتی محافظت می‌شود، <ph name="BEGIN_LINK" />به سیستم Chromium وارد شوید<ph name="END_LINK" />.</translation>
+<translation id="1157106475430165622">{NUM_DEVICES,plural, =0{‏افزونه‌های Chromium به «دستگاه‌های میانای انسانی» دسترسی داشتند}=1{‏افزونه‌های Chromium به «دستگاه‌های میانای انسانی» دسترسی دارند}one{‏افزونه‌های Chromium به # «دستگاه میانای انسانی» دسترسی دارند}other{‏افزونه‌های Chromium به # «دستگاه میانای انسانی» دسترسی دارند}}</translation>
 <translation id="1185134272377778587">‏درباره Chromium</translation>
 <translation id="1202417120496358351">{COUNT,plural, =1{‏اگر به‌مدت یک دقیقه از Chromium استفاده نشود، سرپرست شما آن را به‌طور خودکار می‌بندد. داده‌های مرور حذف می‌شود. این داده‌ها می‌تواند شامل سابقه، تکمیل خودکار، و بارگیری‌ها شود.}one{‏اگر به‌مدت # دقیقه از Chromium استفاده نشود، سرپرست شما آن را به‌طور خودکار می‌بندد. داده‌های مرور حذف می‌شود. این داده‌ها می‌تواند شامل سابقه، تکمیل خودکار، و بارگیری‌ها شود.}other{‏اگر به‌مدت # دقیقه از Chromium استفاده نشود، سرپرست شما آن را به‌طور خودکار می‌بندد. داده‌های مرور حذف می‌شود. این داده‌ها می‌تواند شامل سابقه، تکمیل خودکار، و بارگیری‌ها شود.}}</translation>
 <translation id="1203500561924088507">بابت نصب از شما سپاس‌گزاریم. قبل‌از استفاده از <ph name="BUNDLE_NAME" />، باید مرورگر را بازراه‌اندازی کنید.</translation>
@@ -16,6 +17,7 @@
 <translation id="1414495520565016063">‏شما وارد سیستم Chromium شدید!</translation>
 <translation id="1524282610922162960">‏هم‌رسانی برگه Chromium</translation>
 <translation id="1553461853655228091">‏Chromium برای ایجاد نقشه سه‌بعدی محیط شما باید اجازه دسترسی به دوربین داشته باشد</translation>
+<translation id="1555506416658437797">ویرایش روش‌های پرداخت.</translation>
 <translation id="1607715478322902680">{COUNT,plural, =0{‏سرپرست سیستم لازم می‌داند برای اعمال به‌روزرسانی، Chromium را راه‌اندازی مجدد کنید}=1{‏سرپرست سیستم لازم می‌داند برای اعمال به‌روزرسانی، Chromium را راه‌اندازی مجدد کنید. پنجره ناشناس بازگشایی نمی‌شود.}one{‏سرپرست سیستم لازم می‌داند برای اعمال به‌روزرسانی، Chromium را راه‌اندازی مجدد کنید. # پنجره ناشناس بازگشایی نمی‌شود.}other{‏سرپرست سیستم لازم می‌داند برای اعمال به‌روزرسانی، Chromium را راه‌اندازی مجدد کنید. # پنجره ناشناس بازگشایی نمی‌شود.}}</translation>
 <translation id="1625909126243026060">‏مرور کنترل‌های اصلی امنیت و حریم خصوصی در Chromium</translation>
 <translation id="1632539827495546968">‏اگر می‌خواهید فقط یک‌بار از این حساب استفاده کنید، می‌توانید از <ph name="GUEST_LINK_BEGIN" />حالت مهمان<ph name="GUEST_LINK_END" /> در مرورگر Chromium استفاده کنید. اگر می‌خواهید برای شخص دیگری حساب اضافه کنید، به <ph name="DEVICE_TYPE" /> خود <ph name="LINK_BEGIN" />شخص جدیدی اضافه کنید<ph name="LINK_END" />.
@@ -91,6 +93,7 @@
 <translation id="3179665906251668410">‏باز کردن پیوند در پنجره &amp;ناشناس Chromium</translation>
 <translation id="3185330573522821672">‏سفارشی کردن نمایه جدید Chromium</translation>
 <translation id="3190315855212034486">‏اوه! Chromium خراب شده است. دوباره راه‌اندازی شود؟</translation>
+<translation id="3255926992597692024">‏Chromebook می‌خواهد تنظیمات تکمیل روش‌های پرداخت را اصلاح کند.</translation>
 <translation id="3258596308407688501">‏Chromium نمی‌تواند مسیر داده‌های خود را بخواند یا در آن بنویسد:
 <ph name="USER_DATA_DIRECTORY" /></translation>
 <translation id="3283186697780795848">‏Chromium نسخه <ph name="PRODUCT_VERSION" /> نصب شده است</translation>
@@ -134,6 +137,8 @@
 <translation id="4019629340646866719">‏ارائه ChromiumOS به‌کمک <ph name="BEGIN_LINK_CROS_OSS" />نرم‌افزارهای متن‌باز<ph name="END_LINK_CROS_OSS" /> تکمیلی مثل <ph name="BEGIN_LINK_LINUX_OSS" />محیط توسعه نرم‌افزار Linux<ph name="END_LINK_LINUX_OSS" /> ممکن شده است.</translation>
 <translation id="4036079820698952681">‏با گزارش <ph name="BEGIN_LINK" />تنظیمات کنونی<ph name="END_LINK" />، به بهتر شدن Chromium کمک کنید</translation>
 <translation id="4050175100176540509">بهبودهای امنیتی مهم و ویژگی‌های جدید در جدیدترین نسخه در دسترس است.</translation>
+<translation id="4050599136622776556">‏Chromium می‌خواهد روش‌های پرداخت را ویرایش کند.</translation>
+<translation id="4055805654398742145">مدیر گذرواژه</translation>
 <translation id="4148957013307229264">در حال نصب...</translation>
 <translation id="419998258129752635">‏<ph name="PAGE_TITLE" /> - ورود به سیستم شبکه - Chromium</translation>
 <translation id="421369550622382712">‏برنامه‌ها، بازی‌ها، افزونه‌ها و طرح‌های زمینه Chromium را کشف کنید.</translation>
@@ -196,6 +201,7 @@
 <translation id="5653831366781983928">‏لطفاً اکنون Chromium را بازراه‌اندازی کنید</translation>
 <translation id="5690427481109656848">Google LLC</translation>
 <translation id="5698481217667032250">‏نمایش Chromium به این زبان</translation>
+<translation id="585620188971323280">تنظیمات تکمیل روش‌های پرداخت را اصلاح کند.</translation>
 <translation id="5862307444128926510">‏به Chromium خوش آمدید</translation>
 <translation id="5883558403894052917">‏Chromium متوجه شده است که این موارد حاوی بدافزار هستند:</translation>
 <translation id="5895138241574237353">راه‌اندازی مجدد</translation>
@@ -246,6 +252,7 @@
 <translation id="6475912303565314141">‏این برنامه همچنین صفحه‌ای را که هنگام راه‌اندازی Chromium نشان داده می‌شود، کنترل می‌کند.</translation>
 <translation id="648319183876919572">«مرور ایمن پیشرفته» کارهای بیشتری برای محافظت از شما درمقابل وب‌سایت‌ها و بارگیری‌های خطرناک انجام می‌دهد</translation>
 <translation id="6510925080656968729">‏حذف نصب Chromium </translation>
+<translation id="6539122709674868420">‏اگر <ph name="TIMEOUT_DURATION" /> از Chromium استفاده نشود، سازمانتان آن را می‌بندد. داده‌های مرور حذف شد. این داده‌ها می‌تواند شامل سابقه، تکمیل خودکار، و بارگیری‌ها شود.</translation>
 <translation id="6542839706527980775">‏هرکدام از نمایه‌ها دارای اطلاعات Chromium مختص خودش است (مثلاً نشانک‌ها، سابقه، گذرواژه‌ها، و غیره)</translation>
 <translation id="656935081669708576">‏برای دیدن گذرواژه‌های نمایه Chromium دیگر، می‌توانید به آن نمایه بروید</translation>
 <translation id="6570579332384693436">‏برای رفع خطاهای املائی، Chromium نوشتاری را که در فیلد نوشتار تایپ می‌کنید، برای Google ارسال می‌کند</translation>
@@ -283,6 +290,7 @@
 <translation id="7025789849649390912">نصب متوقف شد.</translation>
 <translation id="705851970750939768">‏به‌روزرسانی Chromium</translation>
 <translation id="7067091210845072982">‏اگر تصویری توضیح مفیدی نداشته باشد، Chromium توضیحی برای شما ارائه خواهد کرد. برای ایجاد توضیحات، تصاویر به Google ارسال می‌شود.</translation>
+<translation id="7173822816570314652">‏اگر <ph name="TIMEOUT_DURATION" /> از Chromium استفاده نشود، سازمانتان داده‌های آن را حذف می‌کند. این داده‌ها می‌تواند شامل سابقه، تکمیل خودکار، و بارگیری‌ها شود.</translation>
 <translation id="718435575166326686">‏Chromium برای این سایت به اجازه دوربین نیاز دارد</translation>
 <translation id="7196312274710523067">‏Chromium راه‌اندازی نشد. دوباره امتحان کنید.</translation>
 <translation id="7197677400338048821">‏Chromium نمی‌تواند گذرواژه‌هایتان را بررسی کند. بعد از ۲۴ ساعت دوباره امتحان کنید.</translation>
@@ -336,6 +344,7 @@ Chromium قادر به بازیابی تنظیمات شما نیست.</translati
 <translation id="8248265253516264921">‏اگر تصویری توضیح مفیدی نداشته باشد، Chromium توضیحی برای شما ارائه خواهد کرد. برای ایجاد توضیحات، تصاویر به Google ارسال می‌شود. هروقت خواستید می‌توانید این گزینه را در تنظیمات خاموش کنید.</translation>
 <translation id="8266560134891435528">‏چون به سیستم وارد نشده‌اید، Chromium نمی‌تواند گذرواژه‌هایتان را بررسی کند</translation>
 <translation id="8290862415967981663">‏این فایل ممکن است خطرناک باشد، بنابراین Chromium آن را مسدود کرده است.</translation>
+<translation id="8318772038038596122">‏اگر <ph name="TIMEOUT_DURATION" /> از Chromium استفاده نشود، سازمانتان آن را می‌بندد.</translation>
 <translation id="8325404639443959713">‏با Chromium می‌توانید کارهای بیشتری انجام دهید</translation>
 <translation id="8330519371938183845">‏برای همگام‌سازی و شخصی‌سازی Chromium در همه دستگاه‌هایتان، به سیستم وارد شوید</translation>
 <translation id="8340674089072921962">‏<ph name="USER_EMAIL_ADDRESS" /> قبلاً از Chromium استفاده می‌کرد</translation>
@@ -354,6 +363,7 @@ Chromium قادر به بازیابی تنظیمات شما نیست.</translati
 <translation id="8608079656141766906">‏<ph name="BEGIN_BOLD" />نحوه استفاده ما از این داده‌ها:<ph name="END_BOLD" /> سایت‌ها می‌توانند بااستفاده از Chromium اطلاعاتی درباره علایقتان ذخیره کنند. برای مثال، اگر برای خرید کفش مخصوص ماراتون از سایتی بازدید کنید، ممکن است آن سایت علاقه شما را به‌صورت دونده ماراتون مشخص کند. بعداً، اگر برای ثبت‌نام در مسابقه‌ای به سایتی دیگر مراجعه کردید، آن سایت می‌تواند براساس علایقتان آگهی‌ای برای کفش مخصوص دویدن به شما نشان دهد.</translation>
 <translation id="8619360774459241877">‏درحال راه‌اندازی Chromium…</translation>
 <translation id="8621669128220841554">‏به دلیل خطای نامشخص، نصب ناموفق بود. لطفاً دوباره Chromium را بارگیری کنید.</translation>
+<translation id="867492205098279939">{NUM_DEVICES,plural, =0{‏یک افزونه Chromium به «دستگاه‌های میانای انسانی» دسترسی داشت}=1{‏یک افزونه Chromium به یک «دستگاه میانای انسانی» دسترسی دارد}one{‏یک افزونه Chromium به # «دستگاه میانای انسانی» دسترسی دارد}other{‏یک افزونه Chromium به # «دستگاه میانای انسانی» دسترسی دارد}}</translation>
 <translation id="8697124171261953979">‏این برنامه همچنین صفحه‌ای را که هنگام راه‌اندازی Chromium یا جستجو از Omnibox نشان داده می‌شود، کنترل می‌کند.</translation>
 <translation id="8704119203788522458">‏این Chromium شماست</translation>
 <translation id="8796602469536043152">‏Chromium به مجوز دسترسی به دوربین و میکروفون برای این سایت نیاز دارد</translation>
@@ -370,6 +380,7 @@ Chromium قادر به بازیابی تنظیمات شما نیست.</translati
 <translation id="9019929317751753759">‏برای ایمن‌تر کردن Chromium، افزونه زیر را که در <ph name="IDS_EXTENSION_WEB_STORE_TITLE" /> فهرست نشده است و ممکن است بدون اطلاع شما اضافه شده باشد، غیرفعال کردیم.</translation>
 <translation id="9022552996538154597">‏ورود به سیستم Chromium</translation>
 <translation id="907832235989677238">‏ورود به سیستم Chromium اگر فقط یک‌بار می‌خواهید به سیستم حساب وارد شوید، می‌توانید <ph name="GUEST_LINK_BEGIN" />به‌عنوان مهمان از دستگاه استفاده کنید<ph name="GUEST_LINK_END" />.</translation>
+<translation id="9078733879136747090">‏Chromium به‌طور خودکار بسته شد</translation>
 <translation id="9089354809943900324">‏نسخه Chromium قدیمی است</translation>
 <translation id="9093206154853821181">{0,plural, =1{‏Chromium یک ساعت دیگر راه‌اندازی مجدد می‌شود}one{‏Chromium # ساعت دیگر راه‌اندازی مجدد می‌شود}other{‏Chromium # ساعت دیگر راه‌اندازی مجدد می‌شود}}</translation>
 <translation id="9106612006984859720">‏برای دریافت به‌روزرسانی‌های آتی Chromium، باید Windows 10 یا بالاتر داشته باشید. این رایانه از Windows 8.1 استفاده می‌کند.</translation>

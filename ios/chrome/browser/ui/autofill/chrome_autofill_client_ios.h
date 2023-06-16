@@ -21,12 +21,13 @@
 #include "components/autofill/core/browser/ui/payments/card_name_fix_flow_controller_impl.h"
 #include "components/autofill/core/browser/ui/payments/card_unmask_prompt_controller_impl.h"
 #include "components/autofill/core/browser/ui/payments/card_unmask_prompt_options.h"
+#include "components/autofill/core/browser/ui/popup_item_ids.h"
 #include "components/autofill/core/browser/webdata/autofill_webdata_service.h"
 #import "components/autofill/ios/browser/autofill_client_ios_bridge.h"
 #include "components/infobars/core/infobar_manager.h"
 #include "components/password_manager/core/browser/password_manager.h"
 #include "components/prefs/pref_service.h"
-#include "components/sync/driver/sync_service.h"
+#include "components/sync/service/sync_service.h"
 #include "ios/chrome/browser/shared/model/browser_state/chrome_browser_state.h"
 
 @class UIViewController;
@@ -138,7 +139,7 @@ class ChromeAutofillClientIOS : public AutofillClient {
   void DidFillOrPreviewField(const std::u16string& autofilled_value,
                              const std::u16string& profile_full_name) override;
   bool IsContextSecure() const override;
-  void ExecuteCommand(int id) override;
+  void ExecuteCommand(PopupItemId popup_item_id) override;
   void OpenPromoCodeOfferDetailsURL(const GURL& url) override;
   FormInteractionsFlowId GetCurrentFormInteractionsFlowId() override;
   LogManager* GetLogManager() const override;

@@ -4,7 +4,8 @@
 
 package org.chromium.net;
 
-import static org.junit.Assert.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
+
 import static org.junit.Assert.assertTrue;
 
 import static org.chromium.net.CronetTestRule.getContext;
@@ -12,20 +13,19 @@ import static org.chromium.net.CronetTestRule.getContext;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import org.chromium.net.CronetTestRule.CronetTestFramework;
 import org.chromium.net.CronetTestRule.OnlyRunNativeCronet;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Tests that making a large number of requests do not lead to crashes.
@@ -33,19 +33,16 @@ import org.chromium.net.CronetTestRule.OnlyRunNativeCronet;
 @RunWith(AndroidJUnit4.class)
 public class CronetStressTest {
     @Rule
-    public final CronetTestRule mTestRule = new CronetTestRule();
-    private CronetTestFramework mTestFramework;
+    public final CronetTestRule mTestRule = CronetTestRule.withAutomaticEngineStartup();
 
     @Before
     public void setUp() throws Exception {
-        mTestFramework = mTestRule.startCronetTestFramework();
         assertTrue(NativeTestServer.startNativeTestServer(getContext()));
     }
 
     @After
     public void tearDown() throws Exception {
         NativeTestServer.shutdownNativeTestServer();
-        mTestFramework.mCronetEngine.shutdown();
     }
 
     @Test
@@ -64,8 +61,10 @@ public class CronetStressTest {
         try {
             for (int i = 0; i < kNumRequest; i++) {
                 TestUrlRequestCallback callback = new TestUrlRequestCallback(callbackExecutor);
-                UrlRequest.Builder builder = mTestFramework.mCronetEngine.newUrlRequestBuilder(
-                        NativeTestServer.getEchoAllHeadersURL(), callback, callback.getExecutor());
+                UrlRequest.Builder builder =
+                        mTestRule.getTestFramework().getEngine().newUrlRequestBuilder(
+                                NativeTestServer.getEchoAllHeadersURL(), callback,
+                                callback.getExecutor());
                 for (int j = 0; j < kNumRequestHeaders; j++) {
                     builder.addHeader("header" + j, Integer.toString(j));
                 }
@@ -83,7 +82,7 @@ public class CronetStressTest {
 
             for (TestUrlRequestCallback callback : callbacks) {
                 callback.blockForDone();
-                assertEquals(200, callback.mResponseInfo.getHttpStatusCode());
+                assertThat(callback.mResponseInfo.getHttpStatusCode()).isEqualTo(200);
             }
         } finally {
             callbackExecutor.shutdown();

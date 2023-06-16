@@ -93,11 +93,14 @@ typedef void (^PasswordSuggestionsAvailableCompletion)(
         url::Origin origin = url::Origin::Create(GURL(usernameAndRealm.realm));
         realm = SysUTF8ToNSString(password_manager::GetShownOrigin(origin));
       }
-      [results addObject:[FormSuggestion suggestionWithValue:username
-                                          displayDescription:realm
-                                                        icon:nil
-                                                  identifier:0
-                                              requiresReauth:YES]];
+      [results
+          addObject:[FormSuggestion suggestionWithValue:username
+                                     displayDescription:realm
+                                                   icon:nil
+                                            popupItemId:autofill::PopupItemId::
+                                                            kAutocompleteEntry
+                                      backendIdentifier:nil
+                                         requiresReauth:YES]];
     }
   }
 

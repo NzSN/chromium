@@ -168,6 +168,8 @@ TEST_F(ContentSettingBubbleModelTest, Cookies) {
 }
 
 TEST_F(ContentSettingBubbleModelTest, MediastreamMicAndCamera) {
+  WebContentsTester::For(web_contents())
+      ->NavigateAndCommit(GURL("https://www.example.com"));
   // Required to break dependency on BrowserMainLoop.
   MediaCaptureDevicesDispatcher::GetInstance()->
       DisableDeviceEnumerationForTesting();
@@ -513,6 +515,8 @@ TEST_F(ContentSettingBubbleModelTest, MediastreamContentBubbleMediaMenus) {
 }
 
 TEST_F(ContentSettingBubbleModelTest, MediastreamMic) {
+  WebContentsTester::For(web_contents())
+      ->NavigateAndCommit(GURL("https://www.example.com"));
   // Required to break dependency on BrowserMainLoop.
   MediaCaptureDevicesDispatcher::GetInstance()->
       DisableDeviceEnumerationForTesting();
@@ -588,6 +592,8 @@ TEST_F(ContentSettingBubbleModelTest, MediastreamMic) {
 }
 
 TEST_F(ContentSettingBubbleModelTest, MediastreamCamera) {
+  WebContentsTester::For(web_contents())
+      ->NavigateAndCommit(GURL("https://www.example.com"));
   // Required to break dependency on BrowserMainLoop.
   MediaCaptureDevicesDispatcher::GetInstance()->
       DisableDeviceEnumerationForTesting();
@@ -664,6 +670,8 @@ TEST_F(ContentSettingBubbleModelTest, MediastreamCamera) {
 }
 
 TEST_F(ContentSettingBubbleModelTest, AccumulateMediastreamMicAndCamera) {
+  WebContentsTester::For(web_contents())
+      ->NavigateAndCommit(GURL("https://www.example.com"));
   // Required to break dependency on BrowserMainLoop.
   MediaCaptureDevicesDispatcher::GetInstance()->
       DisableDeviceEnumerationForTesting();
@@ -740,8 +748,7 @@ TEST_F(ContentSettingBubbleModelTest, Geolocation) {
       std::make_unique<device::FakeGeolocationManager>();
   device::FakeGeolocationManager* geolocation_manager =
       fake_geolocation_manager.get();
-  TestingBrowserProcess::GetGlobal()->SetGeolocationManager(
-      std::move(fake_geolocation_manager));
+  device::GeolocationManager::SetInstance(std::move(fake_geolocation_manager));
 #endif  // BUILDFLAG(IS_MAC)
 
   WebContentsTester::For(web_contents())
@@ -1495,7 +1502,7 @@ TEST_F(ContentSettingBubbleModelTest, ValidUrl) {
   const ContentSettingBubbleModel::BubbleContent& bubble_content =
       content_setting_bubble_model->bubble_content();
 
-  EXPECT_TRUE(bubble_content.radio_group.user_managed);
+  EXPECT_TRUE(bubble_content.is_user_modifiable);
 }
 
 TEST_F(ContentSettingBubbleModelTest, InvalidUrl) {
@@ -1513,5 +1520,5 @@ TEST_F(ContentSettingBubbleModelTest, InvalidUrl) {
   const ContentSettingBubbleModel::BubbleContent& bubble_content =
       content_setting_bubble_model->bubble_content();
 
-  EXPECT_FALSE(bubble_content.radio_group.user_managed);
+  EXPECT_FALSE(bubble_content.is_user_modifiable);
 }

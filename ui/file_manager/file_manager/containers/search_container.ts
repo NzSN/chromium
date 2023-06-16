@@ -227,6 +227,8 @@ export class SearchContainer extends EventTarget {
 
     // The button that allows the user to clear the query.
     this.clearButton_ = this.searchBox_.querySelector('.clear') as HTMLElement;
+    // Hide clear button when created.
+    this.updateClearButton_('');
 
     // The list showing possible matches to the current query.
     this.autocompleteList_ =
@@ -364,8 +366,8 @@ export class SearchContainer extends EventTarget {
     }
     if (util.isSearchV2Enabled()) {
       if (search.status === PropStatus.STARTED && query) {
-        this.showOptions_(state);
-        this.showPathDisplay_();
+        this.showOptionsElement_(state);
+        this.showPathDisplayElement_();
       }
     }
   }
@@ -375,16 +377,20 @@ export class SearchContainer extends EventTarget {
    * to set the path of the currently selected element.
    */
   private handleSelectionState_(state: State) {
-    if (!this.pathDisplay_) {
+    const search = state.search;
+    if (!search || !search.query) {
       return;
+    }
+    if (!this.pathDisplay_) {
+      this.showPathDisplayElement_();
     }
     const path = this.getSelectedPath_(state);
     if (path) {
-      this.pathDisplay_.removeAttribute('hidden');
-      this.pathDisplay_.path = path;
+      this.pathDisplay_!.removeAttribute('hidden');
+      this.pathDisplay_!.path = path;
     } else {
-      this.pathDisplay_.path = '';
-      this.pathDisplay_.setAttribute('hidden', '');
+      this.pathDisplay_!.path = '';
+      this.pathDisplay_!.setAttribute('hidden', '');
     }
   }
 
@@ -410,7 +416,7 @@ export class SearchContainer extends EventTarget {
   /**
    * Hides the element that allows users to manipulate search options.
    */
-  private hideOptions_() {
+  private hideOptionsElement_() {
     if (this.searchOptions_) {
       this.searchOptions_.remove();
       this.searchOptions_ = null;
@@ -421,7 +427,7 @@ export class SearchContainer extends EventTarget {
    * Shows or creates the element that allows the user to manipulate search
    * options.
    */
-  private showOptions_(state: State) {
+  private showOptionsElement_(state: State) {
     let element = this.getSearchOptionsElement_();
     if (!element) {
       element = this.createSearchOptionsElement_(state);
@@ -429,14 +435,14 @@ export class SearchContainer extends EventTarget {
     element.hidden = false;
   }
 
-  private hidePathDisplay_() {
+  private hidePathDisplayElement_() {
     const element = this.getPathDisplayElement_();
     if (element) {
       element.hidden = true;
     }
   }
 
-  private showPathDisplay_() {
+  private showPathDisplayElement_() {
     let element = this.getPathDisplayElement_();
     if (!element) {
       element = this.createPathDisplayElement_();
@@ -581,6 +587,7 @@ export class SearchContainer extends EventTarget {
       if (!this.inputElement_.value) {
         if (event.key === 'Escape') {
           this.closeSearch();
+          this.searchButton_.focus();
         }
         if (event.key === 'Tab') {
           this.closeSearch();
@@ -627,16 +634,17 @@ export class SearchContainer extends EventTarget {
     // in the OPENING state, without ever getting to OPEN state.
     if (this.inputState_ === SearchInputState.CLOSED) {
       this.inputState_ = SearchInputState.OPENING;
-      this.inputElement_.disabled = false;
-      this.inputElement_.tabIndex = 0;
-      this.inputElement_.focus();
       this.inputElement_.addEventListener('transitionend', () => {
         this.inputState_ = SearchInputState.OPEN;
         this.searchWrapper_.removeAttribute('collapsed');
       }, {once: true, passive: true, capture: true});
+      this.inputElement_.disabled = false;
+      this.inputElement_.tabIndex = 0;
+      this.inputElement_.focus();
       this.searchWrapper_.classList.add('has-cursor', 'has-text');
       this.searchBox_.classList.add('has-cursor', 'has-text');
       this.searchButton_.tabIndex = -1;
+      this.updateClearButton_(this.getQuery());
     }
   }
 
@@ -649,21 +657,31 @@ export class SearchContainer extends EventTarget {
     // Do not initiate close transition if we are not open. This would leave us
     // in the CLOSING state, without ever getting to CLOSED state.
     if (this.inputState_ === SearchInputState.OPEN) {
-      this.hideOptions_();
-      this.hidePathDisplay_();
-      this.store_.dispatch(clearSearch());
       this.inputState_ = SearchInputState.CLOSING;
-      this.inputElement_.tabIndex = -1;
-      this.inputElement_.disabled = true;
-      this.inputElement_.blur();
       this.inputElement_.addEventListener('transitionend', () => {
         this.inputState_ = SearchInputState.CLOSED;
         this.searchWrapper_.setAttribute('collapsed', '');
       }, {once: true, passive: true, capture: true});
+      this.hideOptionsElement_();
+      this.hidePathDisplayElement_();
+      this.store_.dispatch(clearSearch());
+      this.inputElement_.tabIndex = -1;
+      this.inputElement_.disabled = true;
+      this.inputElement_.blur();
+      this.inputElement_.value = '';
       this.searchWrapper_.classList.remove('has-cursor', 'has-text');
       this.searchBox_.classList.remove('has-cursor', 'has-text');
       this.searchButton_.tabIndex = 0;
       this.currentOptions_ = getDefaultSearchOptions();
+    }
+  }
+
+  /**
+   * Updates the visibility of clear button.
+   */
+  private updateClearButton_(query: string) {
+    if (util.isSearchV2Enabled()) {
+      this.clearButton_.hidden = (query.length <= 0);
     }
   }
 
@@ -673,6 +691,7 @@ export class SearchContainer extends EventTarget {
    */
   private onQueryChanged_() {
     const query = this.inputElement_.value.trimStart();
+    this.updateClearButton_(query);
     this.dispatchEvent(new CustomEvent(SEARCH_QUERY_CHANGED, {
       bubbles: true,
       composed: true,

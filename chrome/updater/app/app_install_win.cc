@@ -251,7 +251,7 @@ class InstallProgressObserverIPC : public InstallProgressObserver {
     DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
     CHECK(observer_);
 
-    // TODO(crbug.com/1014591): handle `can_start_install`.
+    // TODO(crbug.com/1290331): handle `can_start_install`.
     PostClosure(base::BindOnce(&InstallProgressObserver::OnWaitingToInstall,
                                base::Unretained(observer_), app_id, app_name,
                                nullptr));
@@ -263,8 +263,6 @@ class InstallProgressObserverIPC : public InstallProgressObserver {
                     int pos) override {
     DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
     CHECK(observer_);
-
-    // TODO(crbug.com/1014594): implement progress.
     PostClosure(base::BindOnce(&InstallProgressObserver::OnInstalling,
                                base::Unretained(observer_), app_id, app_name,
                                time_remaining_ms, pos));
@@ -300,18 +298,30 @@ class InstallProgressObserverIPC : public InstallProgressObserver {
 
 void SetUsageStats(UpdaterScope scope,
                    const std::string& app_id,
-                   bool usage_stats_enabled) {
+                   absl::optional<bool> usage_stats) {
+  if (!usage_stats) {
+    return;
+  }
+
   const LONG result =
       base::win::RegKey(
           UpdaterScopeToHKeyRoot(scope),
-          base::StrCat({IsSystemInstall(scope) ? CLIENT_STATE_MEDIUM_KEY
-                                               : CLIENT_STATE_KEY,
-                        base::SysUTF8ToWide(app_id)})
-              .c_str(),
+          base::StrCat({CLIENT_STATE_KEY, base::SysUTF8ToWide(app_id)}).c_str(),
           Wow6432(KEY_WRITE))
-          .WriteValue(L"usagestats", usage_stats_enabled ? 1 : 0);
-  VLOG_IF(1, result != ERROR_SUCCESS)
-      << "Error writing usage stats for " << app_id << ":" << result;
+          .WriteValue(L"usagestats", usage_stats.value() ? 1 : 0);
+  if (result != ERROR_SUCCESS) {
+    VLOG(1) << "Error writing usage stats for " << app_id << ":" << result;
+    return;
+  }
+
+  if (IsSystemInstall(scope)) {
+    base::win::RegKey(
+        UpdaterScopeToHKeyRoot(scope),
+        base::StrCat({CLIENT_STATE_MEDIUM_KEY, base::SysUTF8ToWide(app_id)})
+            .c_str(),
+        Wow6432(KEY_WRITE))
+        .DeleteValue(L"usagestats");
+  }
 }
 
 // Implements installing a single application by invoking the code in
@@ -443,7 +453,6 @@ class AppInstallControllerImpl : public AppInstallController,
   const bool is_silent_install_ = false;
 };
 
-// TODO(crbug.com/1296931): fix the hardcoding of the application name.
 AppInstallControllerImpl::AppInstallControllerImpl(
     bool is_silent_install,
     scoped_refptr<UpdateService> update_service)
@@ -500,8 +509,9 @@ void AppInstallControllerImpl::DoInstallApp() {
   base::ThreadPool::PostTaskAndReply(
       FROM_HERE,
       base::BindOnce(&SetUsageStats, GetUpdaterScope(), app_id_,
-                     tag_args && tag_args->usage_stats_enable &&
-                         *tag_args->usage_stats_enable),
+                     tag_args && tag_args->usage_stats_enable
+                         ? absl::make_optional(*tag_args->usage_stats_enable)
+                         : absl::nullopt),
       base::BindOnce(
           &UpdateService::Install, update_service_, request,
           GetDecodedInstallDataFromAppArgs(app_id_),
@@ -598,9 +608,6 @@ void AppInstallControllerImpl::DoInstallAppOffline(
   base::Value::Dict install_settings_dict;
   install_settings_dict.Set(kInstallerVersion, installer_version);
 
-  // TODO(crbug.com/1286581): fine-tune installation behavior by serializing
-  // other related command line options, such as "/sessionid <sid>" into
-  // `install_settings`.
   base::CommandLine cmd_line = GetCommandLineLegacyCompatible();
   install_settings_dict.Set(kEnterpriseSwitch,
                             cmd_line.HasSwitch(kEnterpriseSwitch));
@@ -634,8 +641,9 @@ void AppInstallControllerImpl::DoInstallAppOffline(
   base::ThreadPool::PostTaskAndReply(
       FROM_HERE,
       base::BindOnce(&SetUsageStats, GetUpdaterScope(), app_id_,
-                     tag_args && tag_args->usage_stats_enable &&
-                         *tag_args->usage_stats_enable),
+                     tag_args && tag_args->usage_stats_enable
+                         ? absl::make_optional(*tag_args->usage_stats_enable)
+                         : absl::nullopt),
       base::BindOnce(
           &UpdateService::RegisterApp, update_service_, request,
           base::BindOnce(
@@ -673,16 +681,29 @@ void AppInstallControllerImpl::HandleOsNotSupported() {
   InstallComplete(UpdateService::Result::kInstallFailed);
 }
 
-// TODO(crbug.com/1218219) - propagate error code in case of errors.
 void AppInstallControllerImpl::InstallComplete(UpdateService::Result result) {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   VLOG(1) << __func__;
-  if (result == UpdateService::Result::kServiceFailed) {
+
+  // Create a best-effort `UpdateState` instance if one is not available because
+  // state change callbacks were never posted for this install. This happens if
+  // the execution path returns early, before it has reached the state machine
+  // of the component in the `update_client`.
+  if (!observer_completion_info_.has_value()) {
     UpdateService::UpdateState update_state;
     update_state.app_id = app_id_;
     update_state.state = UpdateService::UpdateState::State::kUpdateError;
-    update_state.error_category = UpdateService::ErrorCategory::kService;
-    update_state.error_code = -1;
+    update_state.error_code = static_cast<int>(result);
+    update_state.error_category = [result] {
+      switch (result) {
+        case UpdateService::Result::kUpdateCheckFailed:
+          return UpdateService::ErrorCategory::kUpdateCheck;
+        case UpdateService::Result::kInstallFailed:
+          return UpdateService::ErrorCategory::kInstall;
+        default:
+          return UpdateService::ErrorCategory::kService;
+      }
+    }();
     observer_completion_info_ = HandleInstallResult(update_state);
   }
   update_service_ = nullptr;
@@ -710,7 +731,6 @@ void AppInstallControllerImpl::StateChange(
       break;
 
     case UpdateService::UpdateState::State::kDownloading: {
-      // TODO(sorin): handle time remaining https://crbug.com/1014590.
       const auto pos = GetDownloadProgress(update_state.downloaded_bytes,
                                            update_state.total_bytes);
       install_progress_observer_ipc_->OnDownloading(app_id, app_name_, -1,
@@ -718,7 +738,7 @@ void AppInstallControllerImpl::StateChange(
     } break;
 
     case UpdateService::UpdateState::State::kInstalling: {
-      // TODO(crbug.com/1014591): handle the install cancellation.
+      // TODO(crbug.com/1290331): handle the install cancellation.
       bool can_start_install = false;
       install_progress_observer_ipc_->OnWaitingToInstall(app_id, app_name_,
                                                          &can_start_install);

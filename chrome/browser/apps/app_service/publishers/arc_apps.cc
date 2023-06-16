@@ -114,7 +114,8 @@ void OnArcAppIconCompletelyLoaded(apps::IconType icon_type,
 
       if (icon_effects != apps::IconEffects::kNone) {
         apps::ApplyIconEffects(
-            icon_effects, size_hint_in_dip, std::move(iv),
+            /*profile=*/nullptr, /*app_id=*/absl::nullopt, icon_effects,
+            size_hint_in_dip, std::move(iv),
             base::BindOnce(&UpdateIconImage, std::move(callback)));
         return;
       }
@@ -176,13 +177,23 @@ bool GetArcPermissionType(apps::PermissionType app_service_permission_type,
 
 apps::Permissions CreatePermissions(
     const base::flat_map<arc::mojom::AppPermission,
-                         arc::mojom::PermissionStatePtr>& new_permissions) {
+                         arc::mojom::PermissionStatePtr>& arc_permissions) {
   apps::Permissions permissions;
-  for (const auto& new_permission : new_permissions) {
+  for (const auto& [arc_permission_type, arc_permission_state] :
+       arc_permissions) {
+    apps::TriState value = arc_permission_state->granted
+                               ? apps::TriState::kAllow
+                               : apps::TriState::kBlock;
+    // Permissions in the one-time state will ask for permission again the next
+    // time they are used.
+    if (arc_permission_state->one_time) {
+      value = apps::TriState::kAsk;
+    }
+
     permissions.push_back(std::make_unique<apps::Permission>(
-        GetPermissionType(new_permission.first),
-        std::make_unique<apps::PermissionValue>(new_permission.second->granted),
-        new_permission.second->managed));
+        GetPermissionType(arc_permission_type),
+        std::make_unique<apps::PermissionValue>(value),
+        arc_permission_state->managed, arc_permission_state->details));
   }
   return permissions;
 }
@@ -981,8 +992,15 @@ void ArcApps::OpenNativeSettings(const std::string& app_id) {
                << ". App is not found.";
     return;
   }
-  arc::ShowPackageInfo(app_info->package_name,
-                       arc::mojom::ShowPackageInfoPage::MAIN,
+  if (app_info->package_name.empty()) {
+    LOG(ERROR) << "Cannot open native settings for " << app_id
+               << ". Package name is empty.";
+    return;
+  }
+  const auto page = arc::IsReadOnlyPermissionsEnabled()
+                        ? arc::mojom::ShowPackageInfoPage::MANAGE_PERMISSIONS
+                        : arc::mojom::ShowPackageInfoPage::MAIN;
+  arc::ShowPackageInfo(app_info->package_name, page,
                        display::Screen::GetScreen()->GetPrimaryDisplay().id());
 }
 
@@ -1348,8 +1366,9 @@ void ArcApps::LoadPlayStoreIcon(apps::IconType icon_type,
   int resource_id = (size_hint_in_px <= 32) ? IDR_ARC_SUPPORT_ICON_32_PNG
                                             : IDR_ARC_SUPPORT_ICON_192_PNG;
   constexpr bool is_placeholder_icon = false;
-  LoadIconFromResource(icon_type, size_hint_in_dip, resource_id,
-                       is_placeholder_icon, icon_effects, std::move(callback));
+  LoadIconFromResource(/*profile=*/nullptr, /*app_id=*/absl::nullopt, icon_type,
+                       size_hint_in_dip, resource_id, is_placeholder_icon,
+                       icon_effects, std::move(callback));
 }
 
 AppPtr ArcApps::CreateApp(ArcAppListPrefs* prefs,

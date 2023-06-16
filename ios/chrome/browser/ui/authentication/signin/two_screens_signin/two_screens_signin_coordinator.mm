@@ -9,13 +9,14 @@
 #import "base/notreached.h"
 #import "base/strings/sys_string_conversions.h"
 #import "components/signin/public/identity_manager/identity_manager.h"
-#import "ios/chrome/browser/main/browser.h"
+#import "ios/chrome/browser/shared/model/browser/browser.h"
 #import "ios/chrome/browser/shared/model/browser_state/chrome_browser_state.h"
 #import "ios/chrome/browser/signin/authentication_service.h"
 #import "ios/chrome/browser/signin/authentication_service_factory.h"
 #import "ios/chrome/browser/ui/authentication/signin/signin_coordinator+protected.h"
 #import "ios/chrome/browser/ui/authentication/signin/signin_sync_screen_provider.h"
 #import "ios/chrome/browser/ui/first_run/first_run_util.h"
+#import "ios/chrome/browser/ui/first_run/history_sync/history_sync_screen_coordinator.h"
 #import "ios/chrome/browser/ui/first_run/signin/signin_screen_coordinator.h"
 #import "ios/chrome/browser/ui/first_run/tangible_sync/tangible_sync_screen_coordinator.h"
 #import "ios/chrome/browser/ui/screen/screen_provider.h"
@@ -141,6 +142,12 @@
                                    browser:self.browser
                                   firstRun:NO
                                   delegate:self];
+    case kHistorySync:
+      return [[HistorySyncScreenCoordinator alloc]
+          initWithBaseNavigationController:_navigationController
+                                   browser:self.browser
+                                  firstRun:NO
+                                  delegate:self];
     case kDefaultBrowserPromo:
     case kStepsCompleted:
       break;
@@ -152,9 +159,12 @@
 // SigninCompletionInfo object that includes the given `identity`.
 - (void)finishWithResult:(SigninCoordinatorResult)result
                 identity:(id<SystemIdentity>)identity {
-  CHECK(_childCoordinator) << base::SysNSStringToUTF8([self description]);
-  [_childCoordinator stop];
-  _childCoordinator = nil;
+  // When this coordinator is interrupted, `_childCoordinator` needs to be
+  // stopped here.
+  if (_childCoordinator) {
+    [_childCoordinator stop];
+    _childCoordinator = nil;
+  }
   _navigationController = nil;
   _screenProvider = nil;
   SigninCompletionInfo* completionInfo =
@@ -183,6 +193,8 @@
 - (void)interruptWithAction:(SigninCoordinatorInterruptAction)action
                  completion:(ProceduralBlock)completion {
   __weak __typeof(self) weakSelf = self;
+  __weak __typeof(_navigationController) weakNavigationController =
+      _navigationController;
   ProceduralBlock finishCompletion = ^() {
     [weakSelf finishWithResult:SigninCoordinatorResultInterrupted identity:nil];
     if (completion) {
@@ -195,6 +207,9 @@
       [_childCoordinator
           interruptWithAction:SigninCoordinatorInterruptActionNoDismiss
                    completion:^{
+                     [weakNavigationController.presentingViewController
+                         dismissViewControllerAnimated:NO
+                                            completion:nil];
                      finishCompletion();
                    }];
       return;
@@ -211,17 +226,17 @@
 
   // Interrupt the child coordinator UI first before dismissing the new
   // sign-in navigation controller.
-  __weak __typeof(_navigationController) weakNavigationController =
-      _navigationController;
   [_childCoordinator
       interruptWithAction:
           SigninCoordinatorInterruptActionDismissWithoutAnimation
                completion:^{
-                 if (weakNavigationController) {
-                   [weakNavigationController.presentingViewController
+                 UIViewController* presentingViewController =
+                     weakNavigationController.presentingViewController;
+                 if (presentingViewController) {
+                   [presentingViewController
                        dismissViewControllerAnimated:animated
                                           completion:finishCompletion];
-                 } else if (finishCompletion) {
+                 } else {
                    finishCompletion();
                  }
                }];

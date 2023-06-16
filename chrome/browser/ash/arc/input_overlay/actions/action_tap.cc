@@ -9,7 +9,9 @@
 #include "chrome/browser/ash/arc/input_overlay/actions/input_element.h"
 #include "chrome/browser/ash/arc/input_overlay/constants.h"
 #include "chrome/browser/ash/arc/input_overlay/touch_id_manager.h"
+#include "chrome/browser/ash/arc/input_overlay/touch_injector.h"
 #include "chrome/browser/ash/arc/input_overlay/ui/action_label.h"
+#include "chrome/browser/ash/arc/input_overlay/ui/ui_utils.h"
 #include "chrome/browser/ash/arc/input_overlay/util.h"
 #include "ui/aura/window.h"
 #include "ui/events/base_event_utils.h"
@@ -66,14 +68,8 @@ class ActionTap::ActionTapView : public ActionView {
 
     if (labels_.empty()) {
       // Create new action label when initializing.
-      TapLabelPosition position = allow_reposition_
-                                      ? TapLabelPosition::kNone
-                                      : (action_->on_left_or_middle_side()
-                                             ? TapLabelPosition::kBottomRight
-                                             : TapLabelPosition::kBottomLeft);
       labels_ = ActionLabel::Show(this, ActionType::TAP, *input_binding,
-                                  action_->GetUIRadius(), allow_reposition_,
-                                  position);
+                                  TapLabelPosition::kNone);
     } else if (!IsInputBound(*input_binding)) {
       // Action label exists but without any bindings.
       labels_[0]->SetTextActionLabel(
@@ -128,15 +124,6 @@ class ActionTap::ActionTapView : public ActionView {
                        std::move(input_element));
   }
 
-  void OnMenuEntryPressed() override {
-    display_overlay_controller_->AddActionEditMenu(this, ActionType::TAP);
-    DCHECK(menu_entry_);
-    if (!menu_entry_) {
-      return;
-    }
-    menu_entry_->RequestFocus();
-  }
-
   void AddTouchPoint() override {
     ActionView::AddTouchPoint(ActionType::TAP);
     SetSize(GetBoundingBoxOfChildren(this));
@@ -154,13 +141,7 @@ class ActionTap::ActionTapView : public ActionView {
 
   void ChildPreferredSizeChanged(View* child) override {
     DCHECK_EQ(1u, labels_.size());
-    if (allow_reposition_) {
-      MayUpdateLabelPosition(false);
-    } else {
-      int radius = action_->GetUIRadius();
-      int width = std::max(radius * 2, GetBoundingBoxOfChildren(this).width());
-      SetSize(gfx::Size(width, radius * 2));
-    }
+    MayUpdateLabelPosition(false);
     SetPositionFromCenterPosition(action_->GetUICenterPosition());
   }
 
@@ -306,6 +287,10 @@ void ActionTap::UnbindInput(const InputElement& input_element) {
     action_view_->set_unbind_label_index(0);
   }
   PostUnbindInputProcess();
+}
+
+ActionType ActionTap::GetType() {
+  return ActionType::TAP;
 }
 
 bool ActionTap::RewriteKeyEvent(const ui::KeyEvent* key_event,

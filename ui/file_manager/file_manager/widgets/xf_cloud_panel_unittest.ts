@@ -6,7 +6,7 @@ import {assertEquals, assertNotEquals} from 'chrome://webui-test/chromeos/chai_a
 
 import {waitUntil} from '../common/js/test_error_reporting.js';
 
-import {XfCloudPanel} from './xf_cloud_panel.js';
+import {CloudPanelType, XfCloudPanel} from './xf_cloud_panel.js';
 
 /**
  * Creates new <xf-cloud-panel> for each test.
@@ -48,7 +48,6 @@ async function waitForStyles(
     if (!styleMap.has(tag) || !styleMap.get(tag)) {
       return false;
     }
-    console.log('waitForStyles', styleMap.get(tag)!.toString());
     return styleMap.get(tag)!.toString() === want;
   });
 }
@@ -180,5 +179,121 @@ export async function testWhenPercentage100OnlyDoneStateShows(
   // showing.
   await waitForStyles(progressStateElement, 'display', 'none');
   await waitForStyles(progressFinishedElement, 'display', 'flex');
+  done();
+}
+
+/**
+ * Tests that when the offline type attribute is supplied, the other states
+ * should all be hidden.
+ */
+export async function testWhenOfflineTypeAttributeInUseOtherStatesHidden(
+    done: () => void) {
+  const element = getCloudPanelElement();
+  const progressStateElement =
+      await getElement<HTMLDivElement>(element.shadowRoot!, '#progress-state');
+  const progressFinishedElement = await getElement<HTMLDivElement>(
+      element.shadowRoot!, '#progress-finished');
+  const progressOfflineElement = await getElement<HTMLDivElement>(
+      element.shadowRoot!, '#progress-offline');
+
+  // When no attributes have been set, no div should be visible.
+  await waitForStyles(progressStateElement, 'display', 'none');
+  await waitForStyles(progressFinishedElement, 'display', 'none');
+  await waitForStyles(progressOfflineElement, 'display', 'none');
+
+  // Update the items to 3 and total percentage to 50%.
+  element.setAttribute('items', '3');
+  element.setAttribute('percentage', '50');
+
+  // Ensure only the in progress element is visible.
+  await waitForStyles(progressStateElement, 'display', 'block');
+  await waitForStyles(progressFinishedElement, 'display', 'none');
+  await waitForStyles(progressOfflineElement, 'display', 'none');
+
+  // Update the type to be offline.
+  element.setAttribute('type', 'offline');
+
+  // Ensure the only visible div is the offline one.
+  await waitForStyles(progressStateElement, 'display', 'none');
+  await waitForStyles(progressFinishedElement, 'display', 'none');
+  await waitForStyles(progressOfflineElement, 'display', 'flex');
+  done();
+}
+
+/**
+ * Tests that when the not_enough_space type attribute is supplied, the other
+ * states should all be hidden.
+ */
+export async function testWhenNotEnoughSpaceTypeAttributeInUseOtherStatesHidden(
+    done: () => void) {
+  const element = getCloudPanelElement();
+  const progressStateElement =
+      await getElement<HTMLDivElement>(element.shadowRoot!, '#progress-state');
+  const progressFinishedElement = await getElement<HTMLDivElement>(
+      element.shadowRoot!, '#progress-finished');
+  const progressOfflineElement = await getElement<HTMLDivElement>(
+      element.shadowRoot!, '#progress-offline');
+  const progressNotEnoughSpaceElement = await getElement<HTMLDivElement>(
+      element.shadowRoot!, '#progress-not-enough-space');
+
+  // When no attributes have been set, no div should be visible.
+  await waitForStyles(progressStateElement, 'display', 'none');
+  await waitForStyles(progressFinishedElement, 'display', 'none');
+  await waitForStyles(progressOfflineElement, 'display', 'none');
+  await waitForStyles(progressNotEnoughSpaceElement, 'display', 'none');
+
+  // Update the items to 3 and total percentage to 50%.
+  element.setAttribute('items', '3');
+  element.setAttribute('percentage', '50');
+
+  // Ensure only the in progress element is visible.
+  await waitForStyles(progressStateElement, 'display', 'block');
+  await waitForStyles(progressFinishedElement, 'display', 'none');
+  await waitForStyles(progressOfflineElement, 'display', 'none');
+  await waitForStyles(progressNotEnoughSpaceElement, 'display', 'none');
+
+  // Update the type to be offline.
+  element.setAttribute('type', 'offline');
+
+  // Ensure the only visible div is the offline one.
+  await waitForStyles(progressStateElement, 'display', 'none');
+  await waitForStyles(progressFinishedElement, 'display', 'none');
+  await waitForStyles(progressOfflineElement, 'display', 'flex');
+  await waitForStyles(progressNotEnoughSpaceElement, 'display', 'none');
+
+  // Update the type to be not_enough_space.
+  element.setAttribute('type', 'not_enough_space');
+
+  // Ensure the only visible div is the not_enough_space one.
+  await waitForStyles(progressStateElement, 'display', 'none');
+  await waitForStyles(progressFinishedElement, 'display', 'none');
+  await waitForStyles(progressOfflineElement, 'display', 'none');
+  await waitForStyles(progressNotEnoughSpaceElement, 'display', 'flex');
+
+  done();
+}
+
+/**
+ * Tests that only accepted cloud panel types are valid values for the `type`
+ * attribute.
+ */
+export async function testOnlyAcceptedTypesUpdateTypeProperty(
+    done: () => void) {
+  const element = getCloudPanelElement();
+
+  // The `type` attribute should initially be undefined.
+  assertEquals(element.type, undefined);
+
+  // Setting it to a valid value should update the underlying type.
+  element.setAttribute('type', 'not_enough_space');
+  await waitForAttributeValue(element, 'type', CloudPanelType.NOT_ENOUGH_SPACE);
+
+  // Setting it to some random value will update the HTML elements type
+  // attribute but the actual elements `type` property will get set to null as
+  // it is not an acceptable value.
+  element.setAttribute('type', 'non-existant-type');
+  await waitForAttributeValue(element, 'type', 'non-existant-type');
+  assertEquals(element.type, null);
+
   done();
 }

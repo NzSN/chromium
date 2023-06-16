@@ -191,6 +191,7 @@ component("capture_lib") {
       "video/mac/video_capture_device_decklink_mac.mm",
       "video/mac/video_capture_device_factory_mac.h",
       "video/mac/video_capture_device_factory_mac.mm",
+      "video/mac/video_capture_device_frame_receiver.h",
       "video/mac/video_capture_device_mac.h",
       "video/mac/video_capture_device_mac.mm",
       "video/mac/video_capture_metrics_mac.h",
@@ -200,6 +201,7 @@ component("capture_lib") {
       "//components/crash/core/common:crash_key",
       "//third_party/decklink",
     ]
+    configs += [ "//build/config/compiler:enable_arc" ]
     frameworks = [
       "AVFoundation.framework",
       "CoreFoundation.framework",
@@ -269,6 +271,14 @@ component("capture_lib") {
       "video/linux/video_capture_device_factory_v4l2.h",
       "video/linux/video_capture_device_linux.cc",
       "video/linux/video_capture_device_linux.h",
+    ]
+    deps += [ "//gpu/command_buffer/client" ]
+  }
+
+  if (is_linux) {
+    sources += [
+      "video/linux/video_capture_gpu_memory_buffer_manager.cc",
+      "video/linux/video_capture_gpu_memory_buffer_manager.h",
     ]
   }
 
@@ -500,6 +510,7 @@ test("capture_unittests") {
       "video/mac/video_capture_device_mac_unittest.mm",
       "video/mac/video_capture_metrics_mac_unittest.mm",
     ]
+    configs += [ "//build/config/compiler:enable_arc" ]
     frameworks = [
       "AVFoundation.framework",
       "CoreMedia.framework",

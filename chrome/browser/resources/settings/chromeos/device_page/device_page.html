@@ -23,7 +23,7 @@
           role-description="$i18n{subpageArrowRoleDescription}"></cr-link-row>
     </template>
     <template is="dom-if"
-        if="[[showPerDeviceMouseRow_(hasMouse_,
+        if="[[showPerDeviceMouseRow_(mice,
                                      isDeviceSettingsSplitEnabled_)]]">
       <cr-link-row class="hr" id="perDeviceMouseRow" label="$i18n{mouseTitle}"
           on-click="onPerDeviceMouseClick_" aria-label="$i18n{mouseTitle}"
@@ -31,7 +31,7 @@
       </cr-link-row>
     </template>
     <template is="dom-if"
-        if="[[showPerDeviceTouchpadRow_(hasTouchpad_,
+        if="[[showPerDeviceTouchpadRow_(touchpads,
                                         isDeviceSettingsSplitEnabled_)]]">
       <cr-link-row class="hr" id="perDeviceTouchpadRow"
           aria-label="$i18n{touchpadTitle}"
@@ -40,7 +40,7 @@
       </cr-link-row>
     </template>
     <template is="dom-if"
-        if="[[showPerDevicePointingStickRow_(hasPointingStick_,
+        if="[[showPerDevicePointingStickRow_(pointingSticks,
                                              isDeviceSettingsSplitEnabled_)]]">
       <cr-link-row class="hr" id="perDevicePointingStickRow"
           aria-label="$i18n{pointingStickTitle}"
@@ -99,7 +99,6 @@
   <template is="dom-if" route-path="/per-device-mouse">
     <os-settings-subpage page-title="$i18n{mouseTitle}">
       <settings-per-device-mouse
-          is-device-settings-split-enabled="[[isDeviceSettingsSplitEnabled_]]"
           mice="[[mice]]"
           mouse-policies="[[mousePolicies]]">
       </settings-per-device-mouse>
@@ -109,7 +108,6 @@
     <os-settings-subpage page-title="$i18n{keyboardTitle}">
       <settings-per-device-keyboard
           prefs="{{prefs}}"
-          is-device-settings-split-enabled="[[isDeviceSettingsSplitEnabled_]]"
           keyboards="[[keyboards]]"
           keyboard-policies="[[keyboardPolicies]]">
       </settings-per-device-keyboard>
@@ -118,7 +116,6 @@
   <template is="dom-if" route-path="/per-device-touchpad">
     <os-settings-subpage page-title="$i18n{touchpadTitle}">
       <settings-per-device-touchpad
-          is-device-settings-split-enabled="[[isDeviceSettingsSplitEnabled_]]"
           touchpads="[[touchpads]]">
       </settings-per-device-touchpad>
     </os-settings-subpage>
@@ -126,7 +123,6 @@
   <template is="dom-if" route-path="/per-device-pointing-stick">
     <os-settings-subpage page-title="$i18n{pointingStickTitle}">
       <settings-per-device-pointing-stick
-          is-device-settings-split-enabled="[[isDeviceSettingsSplitEnabled_]]"
           pointing-sticks="[[pointingSticks]]">
       </settings-per-device-pointing-stick>
     </os-settings-subpage>
@@ -149,13 +145,13 @@
   </template>
   <template is="dom-if" route-path="/audio">
     <os-settings-subpage page-title="$i18n{audioTitle}">
-      <settings-audio show-audio-info="[[showAudioInfo_]]"></settings-audio>
+      <settings-audio prefs="{{prefs}}" show-audio-info="[[showAudioInfo_]]">
+      </settings-audio>
     </os-settings-subpage>
   </template>
   <template is="dom-if" route-path="/storage">
     <os-settings-subpage page-title="$i18n{storageTitle}">
       <settings-storage prefs="{{prefs}}"
-          show-crostini="[[showCrostini]]"
           android-enabled="[[androidEnabled_]]">
       </settings-storage>
     </os-settings-subpage>

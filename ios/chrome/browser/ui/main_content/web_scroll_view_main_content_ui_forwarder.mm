@@ -7,9 +7,9 @@
 #import <memory>
 
 #import "base/check.h"
+#import "ios/chrome/browser/shared/model/web_state_list/web_state_list.h"
+#import "ios/chrome/browser/shared/model/web_state_list/web_state_list_observer_bridge.h"
 #import "ios/chrome/browser/ui/main_content/main_content_ui_state.h"
-#import "ios/chrome/browser/web_state_list/web_state_list.h"
-#import "ios/chrome/browser/web_state_list/web_state_list_observer_bridge.h"
 #import "ios/web/public/navigation/navigation_context.h"
 #import "ios/web/public/ui/crw_web_view_proxy.h"
 #import "ios/web/public/ui/crw_web_view_scroll_view_proxy.h"
@@ -179,12 +179,20 @@ void UpdateStateWithProxy(MainContentUIStateUpdater* updater,
 
 #pragma mark - WebStateListObserving
 
-- (void)webStateList:(WebStateList*)webStateList
-    didReplaceWebState:(web::WebState*)oldWebState
-          withWebState:(web::WebState*)newWebState
-               atIndex:(int)atIndex {
-  if (newWebState == webStateList->GetActiveWebState())
-    self.webState = newWebState;
+- (void)didChangeWebStateList:(WebStateList*)webStateList
+                       change:(const WebStateListChange&)change
+                    selection:(const WebStateSelection&)selection {
+  switch (change.type()) {
+    case WebStateListChange::Type::kReplace: {
+      const WebStateListChangeReplace& replaceChange =
+          change.As<WebStateListChangeReplace>();
+      web::WebState* insertedWebState = replaceChange.inserted_web_state();
+      if (insertedWebState == webStateList->GetActiveWebState()) {
+        self.webState = insertedWebState;
+      }
+      break;
+    }
+  }
 }
 
 - (void)webStateList:(WebStateList*)webStateList

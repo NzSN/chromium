@@ -183,7 +183,7 @@ class ShortcutMenuHandlingSubManagerTestBase : public WebAppTest {
   WebAppProvider& provider() { return *provider_; }
 
  private:
-  raw_ptr<FakeWebAppProvider> provider_;
+  raw_ptr<FakeWebAppProvider, DanglingUntriaged> provider_;
   std::unique_ptr<OsIntegrationTestOverrideImpl::BlockingRegistration>
       test_override_;
 };
@@ -417,6 +417,32 @@ TEST_P(ShortcutMenuHandlingSubManagerExecuteTest, InstallWritesCorrectData) {
         OsIntegrationTestOverrideImpl::Get()->GetIconColorsForShortcutsMenu(
             app_user_model_id),
         testing::ElementsAreArray(colors));
+#else
+    ASSERT_FALSE(
+        OsIntegrationTestOverrideImpl::Get()->AreShortcutsMenuRegistered());
+#endif
+  } else {
+    ASSERT_FALSE(os_integration_state.has_shortcut_menus());
+  }
+}
+
+TEST_P(ShortcutMenuHandlingSubManagerExecuteTest,
+       EmptyDataDoesNotRegisterShortcutsMenu) {
+  const AppId& app_id =
+      InstallWebAppWithShortcutMenuIcons(ShortcutsMenuIconBitmaps());
+
+  auto state =
+      provider().registrar_unsafe().GetAppCurrentOsIntegrationState(app_id);
+  ASSERT_TRUE(state.has_value());
+  const proto::WebAppOsIntegrationState& os_integration_state = state.value();
+
+  if (AreSubManagersExecuteEnabled()) {
+#if BUILDFLAG(IS_WIN)
+    const std::wstring app_user_model_id =
+        web_app::GenerateAppUserModelId(profile()->GetPath(), app_id);
+    ASSERT_FALSE(
+        OsIntegrationTestOverrideImpl::Get()->IsShortcutsMenuRegisteredForApp(
+            app_user_model_id));
 #else
     ASSERT_FALSE(
         OsIntegrationTestOverrideImpl::Get()->AreShortcutsMenuRegistered());

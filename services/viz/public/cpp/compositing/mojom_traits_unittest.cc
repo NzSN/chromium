@@ -1287,8 +1287,7 @@ TEST_F(StructTraitsTest, YUVDrawQuad) {
   const gfx::ProtectedVideoType protected_video_type =
       gfx::ProtectedVideoType::kSoftwareProtected;
   gfx::HDRMetadata hdr_metadata = gfx::HDRMetadata();
-  hdr_metadata.max_content_light_level = 1000;
-  hdr_metadata.max_frame_average_light_level = 100;
+  hdr_metadata.cta_861_3 = gfx::HdrMetadataCta861_3(1000, 100);
 
   SharedQuadState* sqs = render_pass->CreateAndAppendSharedQuadState();
   YUVVideoDrawQuad* quad =
@@ -1444,8 +1443,9 @@ TEST_F(StructTraitsTest, CopyOutputResult_Texture) {
             CopyOutputResult::Destination::kNativeTextures);
   EXPECT_EQ(output->rect(), result_rect);
   ASSERT_NE(output->GetTextureResult(), nullptr);
-  EXPECT_EQ(output->GetTextureResult()->planes[0].mailbox, mailbox);
-  EXPECT_EQ(output->GetTextureResult()->planes[0].sync_token, sync_token);
+  EXPECT_EQ(output->GetTextureResult()->mailbox_holders[0].mailbox, mailbox);
+  EXPECT_EQ(output->GetTextureResult()->mailbox_holders[0].sync_token,
+            sync_token);
   EXPECT_EQ(output->GetTextureResult()->color_space, result_color_space);
 
   CopyOutputResult::ReleaseCallbacks out_callbacks =

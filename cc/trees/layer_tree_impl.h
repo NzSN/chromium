@@ -808,17 +808,6 @@ class CC_EXPORT LayerTreeImpl {
   // output of the current frame.
   bool HasViewTransitionSaveRequest() const;
 
-  void ClearVisualUpdateDurations();
-  void SetVisualUpdateDurations(
-      base::TimeDelta previous_surfaces_visual_update_duration,
-      base::TimeDelta visual_update_duration);
-  base::TimeDelta previous_surfaces_visual_update_duration() const {
-    return previous_surfaces_visual_update_duration_;
-  }
-  base::TimeDelta visual_update_duration() const {
-    return visual_update_duration_;
-  }
-
  protected:
   float ClampPageScaleFactorToLimits(float page_scale_factor) const;
   void PushPageScaleFactorAndLimits(const float* page_scale_factor,
@@ -848,7 +837,7 @@ class CC_EXPORT LayerTreeImpl {
   int source_frame_number_;
   uint64_t trace_id_ = 0;
   int is_first_frame_after_commit_tracker_;
-  raw_ptr<HeadsUpDisplayLayerImpl> hud_layer_;
+  raw_ptr<HeadsUpDisplayLayerImpl, DanglingUntriaged> hud_layer_;
   PropertyTrees property_trees_;
   SkColor4f background_color_;
 

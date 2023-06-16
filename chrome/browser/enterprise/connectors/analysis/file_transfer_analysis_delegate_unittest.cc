@@ -175,7 +175,7 @@ class ScopedSetDMToken {
     SetDMTokenForTesting(dm_token);
   }
   ~ScopedSetDMToken() {
-    SetDMTokenForTesting(policy::DMToken::CreateEmptyTokenForTesting());
+    SetDMTokenForTesting(policy::DMToken::CreateEmptyToken());
   }
 };
 
@@ -354,8 +354,8 @@ INSTANTIATE_TEST_SUITE_P(,
 
 TEST_P(FileTransferAnalysisDelegateIsEnabledTest, Enabled) {
   ScopedSetDMToken scoped_dm_token(
-      GetTokenValid() ? policy::DMToken::CreateValidTokenForTesting(kDmToken)
-                      : policy::DMToken::CreateInvalidTokenForTesting());
+      GetTokenValid() ? policy::DMToken::CreateValidToken(kDmToken)
+                      : policy::DMToken::CreateInvalidToken());
   switch (GetPrefState()) {
     case NO_PREF:
       break;
@@ -405,8 +405,7 @@ using FileTransferAnalysisDelegateIsEnabledTestSameFileSystem = BaseTest;
 // Test for FileSystemURL that's not registered with a volume.
 TEST_F(FileTransferAnalysisDelegateIsEnabledTestSameFileSystem,
        DlpMalwareDisabledForSameFileSystem) {
-  ScopedSetDMToken scoped_dm_token(
-      policy::DMToken::CreateValidTokenForTesting(kDmToken));
+  ScopedSetDMToken scoped_dm_token(policy::DMToken::CreateValidToken(kDmToken));
   safe_browsing::SetAnalysisConnector(profile_->GetPrefs(), FILE_TRANSFER,
                                       kBlockingScansForDlpAndMalware);
 
@@ -424,8 +423,7 @@ using FileTransferAnalysisDelegateIsEnabledTestMultiple = BaseTest;
 
 // Test using multiple source urls.
 TEST_F(FileTransferAnalysisDelegateIsEnabledTestMultiple, Test) {
-  ScopedSetDMToken scoped_dm_token(
-      policy::DMToken::CreateValidTokenForTesting(kDmToken));
+  ScopedSetDMToken scoped_dm_token(policy::DMToken::CreateValidToken(kDmToken));
 
   safe_browsing::SetAnalysisConnector(profile_->GetPrefs(), FILE_TRANSFER,
                                       R"({
@@ -483,8 +481,7 @@ class FileTransferAnalysisDelegateIsEnabledParamTest
 
 TEST_P(FileTransferAnalysisDelegateIsEnabledParamTest,
        DlpAndMalwareDisabledForSameVolume) {
-  ScopedSetDMToken scoped_dm_token(
-      policy::DMToken::CreateValidTokenForTesting(kDmToken));
+  ScopedSetDMToken scoped_dm_token(policy::DMToken::CreateValidToken(kDmToken));
 
   VolumeInfo source_volume = GetParam();
 
@@ -503,8 +500,7 @@ TEST_P(FileTransferAnalysisDelegateIsEnabledParamTest,
 
 TEST_P(FileTransferAnalysisDelegateIsEnabledParamTest,
        DlpDisabledByPatternInSource) {
-  ScopedSetDMToken scoped_dm_token(
-      policy::DMToken::CreateValidTokenForTesting(kDmToken));
+  ScopedSetDMToken scoped_dm_token(policy::DMToken::CreateValidToken(kDmToken));
 
   VolumeInfo source_volume = GetParam();
 
@@ -559,8 +555,7 @@ TEST_P(FileTransferAnalysisDelegateIsEnabledParamTest,
 
 TEST_P(FileTransferAnalysisDelegateIsEnabledParamTest,
        DlpDisabledByPatternInDestination) {
-  ScopedSetDMToken scoped_dm_token(
-      policy::DMToken::CreateValidTokenForTesting(kDmToken));
+  ScopedSetDMToken scoped_dm_token(policy::DMToken::CreateValidToken(kDmToken));
 
   VolumeInfo dest_volume = GetParam();
 
@@ -615,8 +610,7 @@ TEST_P(FileTransferAnalysisDelegateIsEnabledParamTest,
 
 TEST_P(FileTransferAnalysisDelegateIsEnabledParamTest,
        MalwareEnabledWithPatternInSource) {
-  ScopedSetDMToken scoped_dm_token(
-      policy::DMToken::CreateValidTokenForTesting(kDmToken));
+  ScopedSetDMToken scoped_dm_token(policy::DMToken::CreateValidToken(kDmToken));
 
   VolumeInfo source_volume = GetParam();
 
@@ -655,8 +649,7 @@ TEST_P(FileTransferAnalysisDelegateIsEnabledParamTest,
 
 TEST_P(FileTransferAnalysisDelegateIsEnabledParamTest,
        MalwareEnabledWithPatternsInDestination) {
-  ScopedSetDMToken scoped_dm_token(
-      policy::DMToken::CreateValidTokenForTesting(kDmToken));
+  ScopedSetDMToken scoped_dm_token(policy::DMToken::CreateValidToken(kDmToken));
 
   VolumeInfo dest_volume = GetParam();
 
@@ -720,18 +713,16 @@ class FileTransferAnalysisDelegateAuditOnlyTest : public BaseTest {
         ->SetTestingFactory(
             profile_, base::BindRepeating(
                           &safe_browsing::BuildSafeBrowsingPrivateEventRouter));
-    enterprise_connectors::RealtimeReportingClientFactory::GetInstance()
-        ->SetTestingFactory(
-            profile_,
-            base::BindRepeating(&safe_browsing::BuildRealtimeReportingClient));
-    enterprise_connectors::RealtimeReportingClientFactory::GetForProfile(
-        profile())
+    RealtimeReportingClientFactory::GetInstance()->SetTestingFactory(
+        profile_,
+        base::BindRepeating(&safe_browsing::BuildRealtimeReportingClient));
+    RealtimeReportingClientFactory::GetForProfile(profile())
         ->SetBrowserCloudPolicyClientForTesting(cloud_policy_client_.get());
     identity_test_environment_ =
         std::make_unique<signin::IdentityTestEnvironment>();
     identity_test_environment_->MakePrimaryAccountAvailable(
         kUserName, signin::ConsentLevel::kSync);
-    extensions::SafeBrowsingPrivateEventRouterFactory::GetForProfile(profile())
+    RealtimeReportingClientFactory::GetForProfile(profile())
         ->SetIdentityManagerForTesting(
             identity_test_environment_->identity_manager());
 
@@ -753,8 +744,7 @@ class FileTransferAnalysisDelegateAuditOnlyTest : public BaseTest {
 
   void TearDown() override {
     // Needs to be called before destructor of cloud_policy_client_.
-    enterprise_connectors::RealtimeReportingClientFactory::GetForProfile(
-        profile())
+    RealtimeReportingClientFactory::GetForProfile(profile())
         ->SetBrowserCloudPolicyClientForTesting(nullptr);
 
     BaseTest::TearDown();
@@ -775,10 +765,8 @@ class FileTransferAnalysisDelegateAuditOnlyTest : public BaseTest {
     EXPECT_TRUE(future.Wait());
   }
 
-  enterprise_connectors::AnalysisSettings GetSettings() {
-    auto* service =
-        enterprise_connectors::ConnectorsServiceFactory::GetForBrowserContext(
-            profile());
+  AnalysisSettings GetSettings() {
+    auto* service = ConnectorsServiceFactory::GetForBrowserContext(profile());
     // If the corresponding Connector policy isn't set, no scans can be
     // performed.
     EXPECT_TRUE(service);
@@ -888,7 +876,7 @@ class FileTransferAnalysisDelegateAuditOnlyTest : public BaseTest {
   std::unique_ptr<signin::IdentityTestEnvironment> identity_test_environment_;
 
   ScopedSetDMToken scoped_dm_token_{
-      policy::DMToken::CreateValidTokenForTesting(kDmToken)};
+      policy::DMToken::CreateValidToken(kDmToken)};
 
   // Paths in this map will be consider to have failed deep scan checks.
   // The actual failure response is given for each path.
@@ -1418,8 +1406,7 @@ TEST_F(FileTransferAnalysisDelegateAuditOnlyTest, DirectoryTreeSomeBlocked) {
 
   std::vector<std::string> expected_filenames;
   std::vector<std::string> expected_shas;
-  std::vector<enterprise_connectors::ContentAnalysisResponse::Result>
-      expected_dlp_verdicts;
+  std::vector<ContentAnalysisResponse::Result> expected_dlp_verdicts;
   std::vector<std::string> expected_results;
   std::vector<std::string> expected_scan_ids;
 

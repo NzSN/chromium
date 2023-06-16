@@ -49,9 +49,6 @@
 
 @implementation PrimaryToolbarViewController
 
-@synthesize delegate = _delegate;
-@synthesize isNTP = _isNTP;
-@synthesize previousFullscreenProgress = _previousFullscreenProgress;
 @dynamic view;
 
 #pragma mark - Public
@@ -169,31 +166,16 @@
   // set to topLayoutGuide after the view creation on iOS 10.
   [self.view setUp];
 
-  self.view.locationBarHeight.constant =
-      [self locationBarHeightForFullscreenProgress:1];
-  self.view.locationBarContainer.layer.cornerRadius =
-      self.view.locationBarHeight.constant / 2;
+  [self.layoutGuideCenter referenceView:self.view.locationBarContainer
+                              underName:kOmniboxGuide];
   self.view.locationBarBottomConstraint.constant =
       [self verticalMarginForLocationBarForFullscreenProgress:1];
-
-  [self.view.collapsedToolbarButton addTarget:self
-                                       action:@selector(exitFullscreen)
-                             forControlEvents:UIControlEventTouchUpInside];
-  UIHoverGestureRecognizer* hoverGestureRecognizer =
-      [[UIHoverGestureRecognizer alloc]
-          initWithTarget:self
-                  action:@selector(exitFullscreen)];
-  [self.view.collapsedToolbarButton
-      addGestureRecognizer:hoverGestureRecognizer];
-}
-
-- (void)viewDidLoad {
-  [super viewDidLoad];
-  [self updateLayoutForPreviousTraitCollection:nil];
 }
 
 - (void)didMoveToParentViewController:(UIViewController*)parent {
   [super didMoveToParentViewController:parent];
+  // TODO(crbug.com/1450530): Remove once all usage of kOmniboxGuide has moved
+  // to LayoutGuideCenter.
   UIView* omniboxView = self.view.locationBarContainer;
   [NamedGuide guideWithName:kOmniboxGuide view:omniboxView].constrainedView =
       omniboxView;
@@ -201,7 +183,15 @@
 
 - (void)traitCollectionDidChange:(UITraitCollection*)previousTraitCollection {
   [super traitCollectionDidChange:previousTraitCollection];
-  [self updateLayoutForPreviousTraitCollection:previousTraitCollection];
+  self.view.locationBarBottomConstraint.constant =
+      [self verticalMarginForLocationBarForFullscreenProgress:
+                self.previousFullscreenProgress];
+
+  if (!ShowThumbStripInTraitCollection(self.traitCollection)) {
+    self.view.topCornersRounded = NO;
+  }
+  [self.delegate
+      viewControllerTraitCollectionDidChange:previousTraitCollection];
 }
 
 #pragma mark - UIResponder
@@ -227,7 +217,7 @@
     (UIViewController*)locationBarViewController {
   [self addChildViewController:locationBarViewController];
   [locationBarViewController didMoveToParentViewController:self];
-  self.view.locationBarView = locationBarViewController.view;
+  [self.view setLocationBarView:locationBarViewController.view];
 }
 
 - (void)setIsNTP:(BOOL)isNTP {
@@ -262,38 +252,16 @@
 #pragma mark - FullscreenUIElement
 
 - (void)updateForFullscreenProgress:(CGFloat)progress {
+  [super updateForFullscreenProgress:progress];
+
+  self.previousFullscreenProgress = progress;
+
   CGFloat alphaValue = fmax(progress * 2 - 1, 0);
   self.view.leadingStackView.alpha = alphaValue;
   self.view.trailingStackView.alpha = alphaValue;
-  self.view.locationBarHeight.constant =
-      [self locationBarHeightForFullscreenProgress:progress];
-  self.view.locationBarContainer.layer.cornerRadius =
-      self.view.locationBarHeight.constant / 2;
+
   self.view.locationBarBottomConstraint.constant =
       [self verticalMarginForLocationBarForFullscreenProgress:progress];
-  self.previousFullscreenProgress = progress;
-
-  self.view.collapsedToolbarButton.hidden = progress > 0.05;
-
-  self.view.locationBarContainer.backgroundColor =
-      [self.buttonFactory.toolbarConfiguration
-          locationBarBackgroundColorWithVisibility:alphaValue];
-}
-
-- (void)updateForFullscreenEnabled:(BOOL)enabled {
-  if (!enabled)
-    [self updateForFullscreenProgress:1.0];
-}
-
-- (void)animateFullscreenWithAnimator:(FullscreenAnimator*)animator {
-  CGFloat finalProgress = animator.finalProgress;
-  // Using the animator doesn't work as the animation doesn't trigger a relayout
-  // of the constraints (see crbug.com/978462, crbug.com/950994).
-  [UIView animateWithDuration:animator.duration
-                   animations:^{
-                     [self updateForFullscreenProgress:finalProgress];
-                     [self.view layoutIfNeeded];
-                   }];
 }
 
 #pragma mark - ToolbarAnimatee
@@ -337,40 +305,9 @@
 
 #pragma mark - Private
 
-- (void)updateLayoutForPreviousTraitCollection:
-    (UITraitCollection*)previousTraitCollection {
-  [self.delegate
-      viewControllerTraitCollectionDidChange:previousTraitCollection];
-  self.view.locationBarBottomConstraint.constant =
-      [self verticalMarginForLocationBarForFullscreenProgress:
-                self.previousFullscreenProgress];
-  if (previousTraitCollection.preferredContentSizeCategory !=
-      self.traitCollection.preferredContentSizeCategory) {
-    self.view.locationBarHeight.constant = [self
-        locationBarHeightForFullscreenProgress:self.previousFullscreenProgress];
-    self.view.locationBarContainer.layer.cornerRadius =
-        self.view.locationBarHeight.constant / 2;
-  }
-  if (!ShowThumbStripInTraitCollection(self.traitCollection)) {
-    self.view.topCornersRounded = NO;
-  }
-}
-
 - (CGFloat)clampedFontSizeMultiplier {
   return ToolbarClampedFontSizeMultiplier(
       self.traitCollection.preferredContentSizeCategory);
-}
-
-// Returns the desired height of the location bar, based on the fullscreen
-// `progress`.
-- (CGFloat)locationBarHeightForFullscreenProgress:(CGFloat)progress {
-  CGFloat expandedHeight =
-      LocationBarHeight(self.traitCollection.preferredContentSizeCategory);
-  CGFloat collapsedHeight =
-      ToolbarCollapsedHeight(self.traitCollection.preferredContentSizeCategory);
-  CGFloat expandedCollapsedDelta = expandedHeight - collapsedHeight;
-
-  return AlignValueToPixel(collapsedHeight + expandedCollapsedDelta * progress);
 }
 
 // Returns the vertical margin to the location bar based on fullscreen
@@ -395,11 +332,6 @@
   [NSLayoutConstraint
       deactivateConstraints:self.view.contractedNoMarginConstraints];
   [NSLayoutConstraint deactivateConstraints:self.view.expandedConstraints];
-}
-
-// Exits fullscreen.
-- (void)exitFullscreen {
-  [self.delegate exitFullscreen];
 }
 
 @end

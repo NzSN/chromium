@@ -11,6 +11,7 @@
 #include "components/viz/common/surfaces/frame_sink_id_allocator.h"
 #include "content/browser/renderer_host/browser_compositor_ios.h"
 #include "content/browser/renderer_host/input/motion_event_web.h"
+#include "content/browser/renderer_host/input/synthetic_gesture_target_ios.h"
 #include "content/browser/renderer_host/input/web_input_event_builders_ios.h"
 #include "content/browser/renderer_host/render_widget_host_impl.h"
 #include "content/browser/renderer_host/render_widget_host_input_event_router.h"
@@ -23,6 +24,26 @@
 #include "ui/base/ime/text_input_mode.h"
 #include "ui/base/ime/text_input_type.h"
 #include "ui/events/gesture_detection/gesture_provider_config_helper.h"
+
+// Used for settng the requested renderer size when testing.
+constexpr int kDefaultWidthForTesting = 800;
+constexpr int kDefaultHeightForTesting = 600;
+
+@interface UIApplication (Testing)
+- (BOOL)isRunningTests;
+@end
+
+@implementation UIApplication (Testing)
+- (BOOL)isRunningTests {
+  return NO;
+}
+@end
+
+namespace {
+bool IsTesting() {
+  return [[UIApplication sharedApplication] isRunningTests];
+}
+}  // namespace
 
 // TODO(dtapuska): Change this to be UITextInput and handle the other
 // events to implement the composition and selection ranges.
@@ -173,7 +194,7 @@
 
 - (BOOL)becomeFirstResponder {
   BOOL result = [super becomeFirstResponder];
-  if (result) {
+  if (result || _view->CanBecomeFirstResponderForTesting()) {
     _view->OnFirstResponderChanged();
   }
   return result;
@@ -181,7 +202,7 @@
 
 - (BOOL)resignFirstResponder {
   BOOL result = [super resignFirstResponder];
-  if (result) {
+  if (result || _view->CanResignFirstResponderForTesting()) {
     _view->OnFirstResponderChanged();
   }
   return result;
@@ -252,6 +273,11 @@ RenderWidgetHostViewIOS::RenderWidgetHostViewIOS(RenderWidgetHost* widget)
       ui_view_->view_.get(), this, host()->is_hidden(),
       host()->GetFrameSinkId());
 
+  if (IsTesting()) {
+    browser_compositor_->UpdateSurfaceFromUIView(
+        gfx::Size(kDefaultWidthForTesting, kDefaultHeightForTesting));
+  }
+
   CHECK(host()->GetFrameSinkId().is_valid());
 
   // Let the page-level input event router know about our surface ID
@@ -274,8 +300,30 @@ void RenderWidgetHostViewIOS::Destroy() {
   if (text_input_manager_) {
     text_input_manager_->RemoveObserver(this);
   }
+  browser_compositor_.reset();
+  // Call this before the derived class is destroyed so that virtual function
+  // calls back into `this` still work.
+  NotifyObserversAboutShutdown();
   RenderWidgetHostViewBase::Destroy();
   delete this;
+}
+
+bool RenderWidgetHostViewIOS::IsSurfaceAvailableForCopy() {
+  return browser_compositor_->GetDelegatedFrameHost()
+      ->CanCopyFromCompositingSurface();
+}
+
+void RenderWidgetHostViewIOS::CopyFromSurface(
+    const gfx::Rect& src_rect,
+    const gfx::Size& dst_size,
+    base::OnceCallback<void(const SkBitmap&)> callback) {
+  base::WeakPtr<RenderWidgetHostImpl> popup_host;
+  base::WeakPtr<DelegatedFrameHost> popup_frame_host;
+  RenderWidgetHostViewBase::CopyMainAndPopupFromSurface(
+      host()->GetWeakPtr(),
+      browser_compositor_->GetDelegatedFrameHost()->GetWeakPtr(), popup_host,
+      popup_frame_host, src_rect, dst_size, GetDeviceScaleFactor(),
+      std::move(callback));
 }
 
 void RenderWidgetHostViewIOS::InitAsChild(gfx::NativeView parent_view) {}
@@ -304,7 +352,9 @@ bool RenderWidgetHostViewIOS::HasFocus() {
 }
 
 gfx::Rect RenderWidgetHostViewIOS::GetViewBounds() {
-  return gfx::Rect([ui_view_->view_ bounds]);
+  return IsTesting()
+             ? gfx::Rect(kDefaultWidthForTesting, kDefaultHeightForTesting)
+             : gfx::Rect([ui_view_->view_ bounds]);
 }
 blink::mojom::PointerLockResult RenderWidgetHostViewIOS::LockMouse(bool) {
   return {};
@@ -325,9 +375,12 @@ void RenderWidgetHostViewIOS::EnsureSurfaceSynchronizedForWebTest() {
 
 void RenderWidgetHostViewIOS::TakeFallbackContentFrom(
     RenderWidgetHostView* view) {}
+
 std::unique_ptr<SyntheticGestureTarget>
 RenderWidgetHostViewIOS::CreateSyntheticGestureTarget() {
-  return nullptr;
+  RenderWidgetHostImpl* host =
+      RenderWidgetHostImpl::From(GetRenderWidgetHost());
+  return std::make_unique<SyntheticGestureTargetIOS>(host);
 }
 
 const viz::LocalSurfaceId& RenderWidgetHostViewIOS::GetLocalSurfaceId() const {
@@ -357,10 +410,25 @@ void RenderWidgetHostViewIOS::InitAsPopup(
     const gfx::Rect& anchor_rect) {}
 void RenderWidgetHostViewIOS::UpdateCursor(const ui::Cursor& cursor) {}
 void RenderWidgetHostViewIOS::SetIsLoading(bool is_loading) {}
-void RenderWidgetHostViewIOS::RenderProcessGone() {}
+
+void RenderWidgetHostViewIOS::RenderProcessGone() {
+  Destroy();
+}
 
 void RenderWidgetHostViewIOS::ShowWithVisibility(
     PageVisibilityState page_visibility) {
+  if (IsTesting() && !is_visible_) {
+    // There is some circularity in how UpdateScreenInfo works. The base class
+    // sets up some state needed by the browser compositor. The base class also
+    // depends on an update from the browser compositor. In practice this is a
+    // non issue because the function is called many times and values converge,
+    // but this is not necessarily the case in tests. This could be resolved
+    // by rewriting UpdateScreenInfo to interleave the work (see the mac
+    // implementation, eg), but for now we will simply may another call to the
+    // base class.
+    RenderWidgetHostViewBase::UpdateScreenInfo();
+    UpdateScreenInfo();
+  }
   is_visible_ = true;
   browser_compositor_->SetViewVisible(is_visible_);
   OnShowWithPageVisibility(page_visibility);
@@ -391,8 +459,20 @@ bool RenderWidgetHostViewIOS::IsShowing() {
 }
 
 gfx::Rect RenderWidgetHostViewIOS::GetBoundsInRootWindow() {
-  return gfx::Rect([ui_view_->view_ bounds]);
+  return IsTesting()
+             ? gfx::Rect(kDefaultWidthForTesting, kDefaultHeightForTesting)
+             : gfx::Rect([ui_view_->view_ bounds]);
 }
+
+gfx::Size RenderWidgetHostViewIOS::GetRequestedRendererSize() {
+  // When testing, we will not have a windowScene and, as a consequence, we will
+  // not have an intrinsic renderer size. This will cause tests to fail, though,
+  // so we will instead set a default size.
+  return !IsTesting()
+             ? browser_compositor_->GetRendererSize()
+             : gfx::Size(kDefaultWidthForTesting, kDefaultHeightForTesting);
+}
+
 absl::optional<DisplayFeature> RenderWidgetHostViewIOS::GetDisplayFeature() {
   return absl::nullopt;
 }
@@ -441,8 +521,7 @@ RenderWidgetHostViewIOS::CollectSurfaceIdsForEviction() {
 }
 
 void RenderWidgetHostViewIOS::UpdateScreenInfo() {
-  browser_compositor_->UpdateSurfaceFromUIView(
-      gfx::Rect([ui_view_->view_ bounds]).size());
+  browser_compositor_->UpdateSurfaceFromUIView(GetViewBounds().size());
   RenderWidgetHostViewBase::UpdateScreenInfo();
 }
 
@@ -599,6 +678,30 @@ void RenderWidgetHostViewIOS::SendGestureEvent(
     const blink::WebGestureEvent& event) {
   ui::LatencyInfo latency_info =
       ui::WebInputEventTraits::CreateLatencyInfoForWebGestureEvent(event);
+  InjectGestureEvent(event, latency_info);
+}
+
+void RenderWidgetHostViewIOS::InjectTouchEvent(
+    const blink::WebTouchEvent& event,
+    const ui::LatencyInfo& latency_info) {
+  ui::FilteredGestureProvider::TouchHandlingResult result =
+      gesture_provider_.OnTouchEvent(MotionEventWeb(event));
+  if (!result.succeeded) {
+    return;
+  }
+
+  if (ShouldRouteEvents()) {
+    blink::WebTouchEvent touch_event(event);
+    host()->delegate()->GetInputEventRouter()->RouteTouchEvent(
+        this, &touch_event, latency_info);
+  } else {
+    host()->ForwardTouchEventWithLatencyInfo(event, latency_info);
+  }
+}
+
+void RenderWidgetHostViewIOS::InjectGestureEvent(
+    const blink::WebGestureEvent& event,
+    const ui::LatencyInfo& latency_info) {
   if (ShouldRouteEvents()) {
     blink::WebGestureEvent gesture_event(event);
     host()->delegate()->GetInputEventRouter()->RouteGestureEvent(
@@ -606,6 +709,26 @@ void RenderWidgetHostViewIOS::SendGestureEvent(
   } else {
     host()->ForwardGestureEventWithLatencyInfo(event, latency_info);
   }
+}
+
+void RenderWidgetHostViewIOS::InjectMouseEvent(
+    const blink::WebMouseEvent& web_mouse,
+    const ui::LatencyInfo& latency_info) {
+  NOTIMPLEMENTED();
+}
+
+void RenderWidgetHostViewIOS::InjectMouseWheelEvent(
+    const blink::WebMouseWheelEvent& web_wheel,
+    const ui::LatencyInfo& latency_info) {
+  NOTIMPLEMENTED();
+}
+
+bool RenderWidgetHostViewIOS::CanBecomeFirstResponderForTesting() const {
+  return IsTesting() && !is_first_responder_ && is_getting_focus_;
+}
+
+bool RenderWidgetHostViewIOS::CanResignFirstResponderForTesting() const {
+  return IsTesting() && is_first_responder_;
 }
 
 void RenderWidgetHostViewIOS::UpdateNativeViewTree(gfx::NativeView view) {
@@ -650,7 +773,9 @@ RenderWidgetHostImpl* RenderWidgetHostViewIOS::GetActiveWidget() {
 
 void RenderWidgetHostViewIOS::OnFirstResponderChanged() {
   bool is_first_responder = [ui_view_->view_ isFirstResponder] ||
-                            [[ui_view_->view_ textInput] isFirstResponder];
+                            [[ui_view_->view_ textInput] isFirstResponder] ||
+                            (IsTesting() && is_getting_focus_);
+
   if (is_first_responder_ == is_first_responder) {
     return;
   }

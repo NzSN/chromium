@@ -366,6 +366,7 @@ void ShowWebAppDetailedInstallDialog(
                 delegate->OnCancel();
               },
               base::Unretained(delegate_ptr)))
+          .OverrideDefaultButton(ui::DialogButton::DIALOG_BUTTON_CANCEL)
           .Build();
 
   auto dialog = views::BubbleDialogModelHost::CreateModal(
@@ -421,8 +422,8 @@ WebAppDetailedInstallDialogDelegate::~WebAppDetailedInstallDialogDelegate() {
 void WebAppDetailedInstallDialogDelegate::OnAccept() {
   base::RecordAction(base::UserMetricsAction("WebAppDetailedInstallAccepted"));
   if (iph_state_ == chrome::PwaInProductHelpState::kShown) {
-    web_app::AppId app_id = web_app::GenerateAppId(install_info_->manifest_id,
-                                                   install_info_->start_url);
+    web_app::AppId app_id =
+        web_app::GenerateAppIdFromManifestId(install_info_->manifest_id);
     web_app::RecordInstallIphInstalled(prefs_, app_id);
     tracker_->NotifyEvent(feature_engagement::events::kDesktopPwaInstalled);
   }
@@ -436,8 +437,8 @@ void WebAppDetailedInstallDialogDelegate::OnCancel() {
 
   base::RecordAction(base::UserMetricsAction("WebAppDetailedInstallCancelled"));
   if (iph_state_ == chrome::PwaInProductHelpState::kShown && install_info_) {
-    web_app::AppId app_id = web_app::GenerateAppId(install_info_->manifest_id,
-                                                   install_info_->start_url);
+    web_app::AppId app_id =
+        web_app::GenerateAppIdFromManifestId(install_info_->manifest_id);
     web_app::RecordInstallIphIgnored(prefs_, app_id, base::Time::Now());
   }
 

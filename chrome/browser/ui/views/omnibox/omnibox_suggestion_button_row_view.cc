@@ -44,6 +44,7 @@
 #include "ui/views/layout/flex_layout.h"
 #include "ui/views/painter.h"
 #include "ui/views/view_class_properties.h"
+#include "ui/views/view_utils.h"
 
 class OmniboxSuggestionRowButton : public views::MdTextButton {
  public:
@@ -64,7 +65,7 @@ class OmniboxSuggestionRowButton : public views::MdTextButton {
     if (base::FeatureList::IsEnabled(omnibox::kCr2023ActionChips) ||
         features::GetChromeRefresh2023Level() ==
             features::ChromeRefresh2023Level::kLevel2) {
-      SetImageLabelSpacing(4);
+      SetImageLabelSpacing(8);
       SetCustomPadding(ChromeLayoutProvider::Get()->GetInsetsMetric(
           INSETS_OMNIBOX_PILL_BUTTON));
       SetCornerRadius(GetLayoutConstant(TOOLBAR_CORNER_RADIUS));
@@ -83,10 +84,12 @@ class OmniboxSuggestionRowButton : public views::MdTextButton {
     ink_drop->GetInkDrop()->SetHoverHighlightFadeDuration(base::TimeDelta());
 
     auto* const focus_ring = views::FocusRing::Get(this);
-    focus_ring->SetHasFocusPredicate([=](View* view) {
-      return view->GetVisible() &&
-             popup_contents_view_->GetSelection() == selection_;
-    });
+    focus_ring->SetHasFocusPredicate(base::BindRepeating([](const View* view) {
+      const auto* v = views::AsViewClass<OmniboxSuggestionRowButton>(view);
+      CHECK(v);
+      return v->GetVisible() &&
+             v->popup_contents_view_->GetSelection() == v->selection_;
+    }));
     focus_ring->SetColorId(kColorOmniboxResultsFocusIndicator);
   }
 
@@ -169,13 +172,17 @@ OmniboxSuggestionButtonRowView::OmniboxSuggestionButtonRowView(
     : popup_contents_view_(popup_contents_view),
       model_(model),
       model_index_(model_index) {
+  int left_margin = OmniboxMatchCellView::GetTextIndent();
+  // +4 for the focus bar width, which shifts the suggest text but isn't
+  // included in `GetTextIndent()`.
+  if (OmniboxFieldTrial::IsCr23LayoutEnabled())
+    left_margin += 4;
   int bottom_margin = ChromeLayoutProvider::Get()->GetDistanceMetric(
       DISTANCE_OMNIBOX_CELL_VERTICAL_PADDING);
   SetLayoutManager(std::make_unique<views::FlexLayout>())
       ->SetCrossAxisAlignment(views::LayoutAlignment::kStart)
       .SetCollapseMargins(true)
-      .SetInteriorMargin(gfx::Insets::TLBR(
-          0, OmniboxMatchCellView::GetTextIndent(), bottom_margin, 0))
+      .SetInteriorMargin(gfx::Insets::TLBR(0, left_margin, bottom_margin, 0))
       .SetDefault(
           views::kMarginsKey,
           gfx::Insets::VH(0, ChromeLayoutProvider::Get()->GetDistanceMetric(
@@ -186,11 +193,12 @@ OmniboxSuggestionButtonRowView::OmniboxSuggestionButtonRowView(
 void OmniboxSuggestionButtonRowView::BuildViews() {
   // Clear and reset existing views.
   {
-    RemoveAllChildViews();
-    keyword_button_ = nullptr;
-    tab_switch_button_ = nullptr;
-    action_buttons_.clear();
+    // Reset all raw_ptr instances first to avoid dangling.
     previous_active_button_ = nullptr;
+    keyword_button_ = nullptr;
+    action_buttons_.clear();
+
+    RemoveAllChildViews();
   }
 
   // For all of these buttons, the visibility set from UpdateFromModel().
@@ -205,17 +213,6 @@ void OmniboxSuggestionButtonRowView::BuildViews() {
       std::u16string(), vector_icons::kSearchIcon, popup_contents_view_,
       OmniboxPopupSelection(model_index_,
                             OmniboxPopupSelection::KEYWORD_MODE)));
-  tab_switch_button_ =
-      AddChildView(std::make_unique<OmniboxSuggestionRowButton>(
-          base::BindRepeating(&OmniboxSuggestionButtonRowView::ButtonPressed,
-                              base::Unretained(this),
-                              OmniboxPopupSelection::FOCUSED_BUTTON_TAB_SWITCH),
-          l10n_util::GetStringUTF16(IDS_OMNIBOX_TAB_SUGGEST_HINT),
-          omnibox::kSwitchIcon, popup_contents_view_,
-          OmniboxPopupSelection(
-              model_index_, OmniboxPopupSelection::FOCUSED_BUTTON_TAB_SWITCH)));
-  tab_switch_button_->SetAccessibleName(
-      l10n_util::GetStringUTF16(IDS_ACC_TAB_SWITCH_BUTTON));
 
   if (!HasMatch()) {
     // Skip remaining code that depends on `match()`.
@@ -266,9 +263,6 @@ void OmniboxSuggestionButtonRowView::UpdateFromModel() {
         l10n_util::GetStringFUTF16(IDS_ACC_KEYWORD_MODE, names.short_name));
   }
 
-  SetPillButtonVisibility(tab_switch_button_,
-                          OmniboxPopupSelection::FOCUSED_BUTTON_TAB_SWITCH);
-
   for (const auto& action_button : action_buttons_) {
     SetPillButtonVisibility(action_button,
                             OmniboxPopupSelection::FOCUSED_BUTTON_ACTION);
@@ -284,7 +278,7 @@ void OmniboxSuggestionButtonRowView::UpdateFromModel() {
   }
 
   bool is_any_button_visible =
-      keyword_button_->GetVisible() || tab_switch_button_->GetVisible() ||
+      keyword_button_->GetVisible() ||
       base::ranges::any_of(action_buttons_, [](const auto& action_button) {
         return action_button->GetVisible();
       });
@@ -308,7 +302,6 @@ void OmniboxSuggestionButtonRowView::SelectionStateChanged() {
 void OmniboxSuggestionButtonRowView::SetThemeState(
     OmniboxPartState theme_state) {
   keyword_button_->SetThemeState(theme_state);
-  tab_switch_button_->SetThemeState(theme_state);
   for (const auto& action_button : action_buttons_) {
     action_button->SetThemeState(theme_state);
   }
@@ -317,7 +310,6 @@ void OmniboxSuggestionButtonRowView::SetThemeState(
 views::Button* OmniboxSuggestionButtonRowView::GetActiveButton() const {
   std::vector<OmniboxSuggestionRowButton*> buttons{
       keyword_button_,
-      tab_switch_button_,
   };
   buttons.insert(buttons.end(), action_buttons_.begin(), action_buttons_.end());
 

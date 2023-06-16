@@ -52,10 +52,11 @@ class PermissionHatsTriggerHelper {
         permissions::PermissionPromptDispositionReason
             prompt_disposition_reason,
         permissions::PermissionRequestGestureType gesture_type,
-        std::string channel,
-        std::string survey_display_time,
+        const std::string& channel,
+        const std::string& survey_display_time,
         absl::optional<base::TimeDelta> prompt_display_duration,
-        OneTimePermissionPromptsDecidedBucket one_time_prompts_decided_bucket);
+        OneTimePermissionPromptsDecidedBucket one_time_prompts_decided_bucket,
+        absl::optional<GURL> gurl);
     PromptParametersForHaTS(const PromptParametersForHaTS& other);
     ~PromptParametersForHaTS();
 
@@ -68,6 +69,7 @@ class PermissionHatsTriggerHelper {
     std::string survey_display_time;
     absl::optional<base::TimeDelta> prompt_display_duration;
     OneTimePermissionPromptsDecidedBucket one_time_prompts_decided_bucket;
+    std::string url;
   };
 
   struct SurveyProductSpecificData {
@@ -93,7 +95,8 @@ class PermissionHatsTriggerHelper {
   static void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry);
 
   static bool ArePromptTriggerCriteriaSatisfied(
-      PromptParametersForHaTS prompt_parameters);
+      PromptParametersForHaTS prompt_parameters,
+      const std::string& trigger_name_base);
 
   static OneTimePermissionPromptsDecidedBucket GetOneTimePromptsDecidedBucket(
       PrefService* pref_service);
@@ -108,6 +111,22 @@ class PermissionHatsTriggerHelper {
   // have decided.
   static std::string GetOneTimePromptsDecidedBucketString(
       OneTimePermissionPromptsDecidedBucket bucket);
+
+  // Returns a vector containing pairs of <trigger_name, trigger_id>
+  // The trigger_name is a unique name used by the HaTS service integration, and
+  // the trigger_id is an ID that specifies a survey in the Listnr backend.
+  static std::vector<std::pair<std::string, std::string>>&
+  GetPermissionPromptTriggerIdPairs(const std::string& trigger_name_base);
+
+  // Returns the trigger name and probability corresponding to a specific
+  // request type. Returns empty value if there is a configuration error or the
+  // passed request type is not configured.
+  static absl::optional<std::pair<std::string, double>>
+  GetPermissionPromptTriggerNameAndProbabilityForRequestType(
+      const std::string& trigger_name_base,
+      const std::string& request_type);
+
+  static void SetIsTest();
 };
 
 }  // namespace permissions

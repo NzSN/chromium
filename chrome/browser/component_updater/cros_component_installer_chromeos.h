@@ -173,6 +173,9 @@ class CrOSComponentInstaller : public CrOSComponentManager {
             UpdatePolicy update_policy,
             LoadCallback load_callback) override;
   bool Unload(const std::string& name) override;
+  void GetVersion(const std::string& name,
+                  base::OnceCallback<void(const base::Version&)>
+                      version_callback) const override;
   void RegisterCompatiblePath(const std::string& name,
                               const base::FilePath& path) override;
   void RegisterInstalled() override;
@@ -207,9 +210,6 @@ class CrOSComponentInstaller : public CrOSComponentManager {
   // Removes the load cache entry for `component_name`. Currently this is done
   // to avoid dispatching loads for old component versions. This can occur when
   // the old version has loaded successfully and is now in the load cache.
-  // TODO(crbug.com/1352867): The load cache is an implementation detail and
-  // should not be exposed in the public API for this class. Remove this once we
-  // have a more comprehensive solution for all CrOS components.
   void RemoveLoadCacheEntry(const std::string& component_name);
 
   // Test-only method for introspection.
@@ -260,6 +260,12 @@ class CrOSComponentInstaller : public CrOSComponentManager {
   void FinishLoad(LoadCallback load_callback,
                   const std::string& name,
                   absl::optional<base::FilePath> result);
+
+  // Calls `version_callback` and pass in the parameter `result` (component
+  // version).
+  void FinishGetVersion(
+      base::OnceCallback<void(const base::Version&)> version_callback,
+      absl::optional<std::string> result) const;
 
   // Registers component |configs| to be updated.
   void RegisterN(const std::vector<ComponentConfig>& configs);

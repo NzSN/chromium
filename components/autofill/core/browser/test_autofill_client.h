@@ -43,6 +43,7 @@
 #include "components/autofill/core/browser/test_personal_data_manager.h"
 #include "components/autofill/core/browser/ui/mock_fast_checkout_client.h"
 #include "components/autofill/core/browser/ui/payments/card_unmask_prompt_options.h"
+#include "components/autofill/core/browser/ui/popup_item_ids.h"
 #include "components/autofill/core/browser/ui/popup_types.h"
 #include "components/autofill/core/browser/webdata/autofill_webdata_service.h"
 #include "components/autofill/core/common/autofill_features.h"
@@ -166,6 +167,12 @@ class TestAutofillClientTemplate : public T {
   }
 
   FormDataImporter* GetFormDataImporter() override {
+    if (!form_data_importer_) {
+      set_test_form_data_importer(std::make_unique<FormDataImporter>(
+          /*client=*/this, /*payments_client=*/nullptr,
+          /*personal_data_manager=*/nullptr, /*app_locale=*/"en-US"));
+    }
+
     return form_data_importer_.get();
   }
 
@@ -411,6 +418,14 @@ class TestAutofillClientTemplate : public T {
     autofill_error_dialog_context_ = context;
   }
 
+  void CloseAutofillProgressDialog(
+      bool show_confirmation_before_closing,
+      base::OnceClosure no_user_perceived_authentication_callback) override {
+    if (no_user_perceived_authentication_callback) {
+      std::move(no_user_perceived_authentication_callback).Run();
+    }
+  }
+
   bool IsAutocompleteEnabled() const override { return true; }
 
   bool IsPasswordManagerEnabled() override { return true; }
@@ -432,7 +447,7 @@ class TestAutofillClientTemplate : public T {
     return form_origin_.SchemeIs("https");
   }
 
-  void ExecuteCommand(int id) override {}
+  void ExecuteCommand(PopupItemId popup_item_id) override {}
 
   void OpenPromoCodeOfferDetailsURL(const GURL& url) override {}
 

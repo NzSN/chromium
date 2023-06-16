@@ -24,6 +24,8 @@
 #include "gpu/ipc/common/gpu_client_ids.h"
 #include "gpu/vulkan/buildflags.h"
 #include "skia/buildflags.h"
+#include "third_party/skia/include/gpu/graphite/Context.h"
+#include "third_party/skia/include/gpu/mock/GrMockTypes.h"
 #include "ui/gl/gl_bindings.h"
 #include "ui/gl/gl_context.h"
 #include "ui/gl/gl_share_group.h"
@@ -42,10 +44,6 @@
 
 #if BUILDFLAG(IS_FUCHSIA)
 #include "gpu/vulkan/fuchsia/vulkan_fuchsia_ext.h"
-#endif
-
-#if BUILDFLAG(ENABLE_SKIA_GRAPHITE)
-#include "third_party/skia/include/gpu/graphite/Context.h"
 #endif
 
 #if BUILDFLAG(SKIA_USE_METAL)
@@ -254,8 +252,8 @@ bool SharedContextState::InitializeSkia(
   crash_key.Set(
       base::StringPrintf("%u", static_cast<uint32_t>(gr_context_type_)));
 
-  if (gpu_preferences.gr_context_type == GrContextType::kGraphiteDawn ||
-      gpu_preferences.gr_context_type == GrContextType::kGraphiteMetal) {
+  if (gr_context_type_ == GrContextType::kGraphiteDawn ||
+      gr_context_type_ == GrContextType::kGraphiteMetal) {
     return InitializeGraphite(gpu_preferences);
   }
 
@@ -369,10 +367,8 @@ bool SharedContextState::InitializeGanesh(
 
 bool SharedContextState::InitializeGraphite(
     const GpuPreferences& gpu_preferences) {
-#if BUILDFLAG(ENABLE_SKIA_GRAPHITE)
-  skgpu::graphite::ContextOptions context_options =
+  [[maybe_unused]] skgpu::graphite::ContextOptions context_options =
       GetDefaultGraphiteContextOptions();
-
   if (gr_context_type_ == GrContextType::kGraphiteDawn) {
 #if BUILDFLAG(SKIA_USE_DAWN)
     if (dawn_context_provider_ &&
@@ -402,9 +398,6 @@ bool SharedContextState::InitializeGraphite(
   viz_compositor_graphite_recorder_ = graphite_context_->makeRecorder();
   transfer_cache_ = std::make_unique<ServiceTransferCache>(gpu_preferences);
   return true;
-#else   // BUILDFLAG(ENABLE_SKIA_GRAPHITE)
-  NOTREACHED_NORETURN();
-#endif  // BUILDFLAG(ENABLE_SKIA_GRAPHITE)
 }
 
 bool SharedContextState::InitializeGL(
@@ -623,7 +616,8 @@ void SharedContextState::MarkContextLost(error::ContextLostReason reason) {
     // Notify |context_lost_callback_| and |context_lost_observers_| first,
     // since maybe they still need the GrDirectContext for releasing some skia
     // resources.
-    std::move(context_lost_callback_).Run(!device_needs_reset_);
+    std::move(context_lost_callback_)
+        .Run(!device_needs_reset_, context_lost_reason_.value());
     for (auto& observer : context_lost_observers_)
       observer.OnContextLost();
 
@@ -757,6 +751,14 @@ void SharedContextState::StoreVkPipelineCacheIfNeeded() {
   }
 }
 
+void SharedContextState::UseShaderCache(
+    absl::optional<gpu::raster::GrShaderCache::ScopedCacheUse>& cache_use,
+    int32_t client_id) const {
+  if (gr_shader_cache_) {
+    cache_use.emplace(gr_shader_cache_, client_id);
+  }
+}
+
 gl::GLDisplay* SharedContextState::display() {
   return surface_.get()->GetGLDisplay();
 }
@@ -852,6 +854,7 @@ absl::optional<error::ContextLostReason> SharedContextState::GetResetStatus(
     bool needs_gl) {
   DCHECK(!context_lost());
 
+  // TODO(crbug.com/1434131): Check context loss for Graphite Dawn/Metal.
   if (gr_context_) {
     // Maybe Skia detected VK_ERROR_DEVICE_LOST.
     if (gr_context_->abandoned()) {
@@ -929,6 +932,32 @@ bool SharedContextState::CheckResetStatus(bool need_gl) {
 void SharedContextState::ScheduleGrContextCleanup() {
   if (gr_cache_controller_)
     gr_cache_controller_->ScheduleGrContextCleanup();
+}
+
+int32_t SharedContextState::GetMaxTextureSize() const {
+  int32_t max_texture_size = 0;
+  if (GrContextIsGL()) {
+    gl::GLApi* const api = gl::g_current_gl_context;
+    api->glGetIntegervFn(GL_MAX_TEXTURE_SIZE, &max_texture_size);
+  } else if (GrContextIsVulkan()) {
+#if BUILDFLAG(ENABLE_VULKAN)
+    max_texture_size = vk_context_provider()
+                           ->GetDeviceQueue()
+                           ->vk_physical_device_properties()
+                           .limits.maxImageDimension2D;
+#else
+    NOTREACHED_NORETURN();
+#endif
+  } else {
+    // TODO(crbug.com/1090476): Query Dawn for this value once an API exists for
+    // capabilities.
+    max_texture_size = 8192;
+  }
+  // Ensure max_texture_size_ is less than INT_MAX so that gfx::Rect and friends
+  // can be used to accurately represent all valid sub-rects, with overflow
+  // cases, clamped to INT_MAX, always invalid.
+  max_texture_size = std::min(max_texture_size, INT32_MAX - 1);
+  return max_texture_size;
 }
 
 }  // namespace gpu

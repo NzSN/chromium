@@ -68,12 +68,6 @@ class WindowPerformanceTest : public testing::Test,
     ResetPerformance();
   }
 
-  bool ObservingLongTasks() {
-    return !PerformanceMonitor::Monitor(performance_->GetExecutionContext())
-                ->thresholds_[PerformanceMonitor::kLongTask]
-                .is_zero();
-  }
-
   void AddLongTaskObserver() {
     // simulate with filter options.
     performance_->observer_filter_options_ |= PerformanceEntry::kLongTask;
@@ -82,14 +76,6 @@ class WindowPerformanceTest : public testing::Test,
   void RemoveLongTaskObserver() {
     // simulate with filter options.
     performance_->observer_filter_options_ = PerformanceEntry::kInvalid;
-  }
-
-  void SimulateDidProcessLongTask() {
-    auto* monitor = GetFrame()->GetPerformanceMonitor();
-    monitor->WillExecuteScript(GetWindow());
-    monitor->DidExecuteScript();
-    monitor->DidProcessTask(base::TimeTicks(),
-                            base::TimeTicks() + base::Seconds(1));
   }
 
   void SimulatePaint() { performance_->OnPaintFinished(); }
@@ -216,20 +202,6 @@ class WindowPerformanceTest : public testing::Test,
   base::test::ScopedFeatureList features_;
 };
 
-TEST_P(WindowPerformanceTest, LongTaskObserverInstrumentation) {
-  // Check that we're always observing longtasks
-  EXPECT_TRUE(ObservingLongTasks());
-
-  // Adding LongTask observer.
-  AddLongTaskObserver();
-  EXPECT_TRUE(ObservingLongTasks());
-
-  // Removing LongTask observer doeos not cause us to stop observing. We still
-  // observe because entries should still be added to the longtasks buffer.
-  RemoveLongTaskObserver();
-  EXPECT_TRUE(ObservingLongTasks());
-}
-
 TEST_P(WindowPerformanceTest, SanitizedLongTaskName) {
   // Unable to attribute, when no execution contents are available.
   EXPECT_EQ("unknown", SanitizedAttribution(nullptr, false, GetFrame()));
@@ -261,13 +233,9 @@ TEST_P(WindowPerformanceTest, SanitizedLongTaskName_CrossOrigin) {
 // to the old window do not cause a crash.
 TEST_P(WindowPerformanceTest, NavigateAway) {
   AddLongTaskObserver();
-  EXPECT_TRUE(ObservingLongTasks());
 
   // Simulate navigation commit.
   GetFrame()->DomWindow()->FrameDestroyed();
-
-  // m_performance is still alive, and should not crash when notified.
-  SimulateDidProcessLongTask();
 }
 
 // Checks that WindowPerformance object and its fields (like PerformanceTiming)
@@ -1060,6 +1028,72 @@ TEST_P(WindowPerformanceTest, TouchesWithoutClick) {
       ukm::builders::Responsiveness_UserInteraction::kEntryName);
   EXPECT_EQ(0u, entries.size());
 }
+
+#if BUILDFLAG(IS_MAC)
+//  Test artificial pointerup and click on MacOS fall back to use processingEnd
+//  as event duration ending time.
+//  See crbug.com/1321819
+TEST_P(WindowPerformanceTest, ArtificialPointerupOrClick) {
+  // Random keycode picked for testing
+  PointerId pointer_id = 4;
+
+  // Pointerdown
+  base::TimeTicks pointerdown_timestamp = GetTimeOrigin();
+  base::TimeTicks processing_start_pointerdown = GetTimeStamp(1);
+  base::TimeTicks processing_end_pointerdown = GetTimeStamp(2);
+  base::TimeTicks presentation_time_pointerdown = GetTimeStamp(3);
+  RegisterPointerEvent("pointerdown", pointerdown_timestamp,
+                       processing_start_pointerdown, processing_end_pointerdown,
+                       pointer_id);
+  SimulatePaintAndResolvePresentationPromise(presentation_time_pointerdown);
+  // Artificial Pointerup
+  base::TimeTicks pointerup_timestamp = pointerdown_timestamp;
+  base::TimeTicks processing_start_pointerup = GetTimeStamp(5);
+  base::TimeTicks processing_end_pointerup = GetTimeStamp(6);
+  base::TimeTicks presentation_time_pointerup = GetTimeStamp(10);
+  RegisterPointerEvent("pointerup", pointerup_timestamp,
+                       processing_start_pointerup, processing_end_pointerup,
+                       pointer_id);
+  SimulatePaintAndResolvePresentationPromise(presentation_time_pointerup);
+  // Artificial Click
+  base::TimeTicks click_timestamp = pointerup_timestamp;
+  base::TimeTicks processing_start_click = GetTimeStamp(11);
+  base::TimeTicks processing_end_click = GetTimeStamp(12);
+  base::TimeTicks presentation_time_click = GetTimeStamp(20);
+  RegisterPointerEvent("click", click_timestamp, processing_start_click,
+                       processing_end_click, pointer_id);
+  SimulatePaintAndResolvePresentationPromise(presentation_time_click);
+
+  // Flush UKM logging mojo request.
+  RunPendingTasks();
+
+  // Check UKM recording.
+  auto entries = GetUkmRecorder()->GetEntriesByName(
+      ukm::builders::Responsiveness_UserInteraction::kEntryName);
+  EXPECT_EQ(1u, entries.size());
+  const ukm::mojom::UkmEntry* ukm_entry = entries[0];
+  GetUkmRecorder()->ExpectEntryMetric(
+      ukm_entry,
+      ukm::builders::Responsiveness_UserInteraction::kMaxEventDurationName, 12);
+  GetUkmRecorder()->ExpectEntryMetric(
+      ukm_entry,
+      ukm::builders::Responsiveness_UserInteraction::kTotalEventDurationName,
+      12);
+  GetUkmRecorder()->ExpectEntryMetric(
+      ukm_entry,
+      ukm::builders::Responsiveness_UserInteraction::kInteractionTypeName, 1);
+
+  // Check UMA recording.
+  GetHistogramTester().ExpectTotalCount(
+      "Blink.Responsiveness.UserInteraction.MaxEventDuration.AllTypes", 1);
+  GetHistogramTester().ExpectTotalCount(
+      "Blink.Responsiveness.UserInteraction.MaxEventDuration.Keyboard", 0);
+  GetHistogramTester().ExpectTotalCount(
+      "Blink.Responsiveness.UserInteraction.MaxEventDuration.TapOrClick", 1);
+  GetHistogramTester().ExpectTotalCount(
+      "Blink.Responsiveness.UserInteraction.MaxEventDuration.Drag", 0);
+}
+#endif  // BUILDFLAG(IS_MAC)
 
 TEST_P(WindowPerformanceTest, ElementTimingTraceEvent) {
   using trace_analyzer::Query;

@@ -39,7 +39,6 @@
 #include "third_party/blink/public/common/input/web_menu_source_type.h"
 #include "third_party/blink/public/common/navigation/impression.h"
 #include "third_party/blink/public/mojom/context_menu/context_menu.mojom-blink.h"
-#include "third_party/blink/public/mojom/conversions/attribution_reporting.mojom-blink.h"
 #include "third_party/blink/public/web/web_local_frame_client.h"
 #include "third_party/blink/public/web/web_plugin.h"
 #include "third_party/blink/public/web/web_text_check_client.h"
@@ -755,12 +754,16 @@ bool ContextMenuController::ShowContextMenu(LocalFrame* frame,
 
       // An impression should be attached to the navigation regardless of
       // whether a background request would have been allowed or attempted.
-      if (!data.impression &&
-          selected_frame->GetAttributionSrcLoader()->CanRegister(
-              result.AbsoluteLinkURL(), /*element=*/anchor,
-              /*request_id=*/absl::nullopt)) {
-        data.impression = blink::Impression{
-            .nav_type = mojom::blink::AttributionNavigationType::kContextMenu};
+      if (!data.impression) {
+        if (AttributionSrcLoader* attribution_src_loader =
+                selected_frame->GetAttributionSrcLoader();
+            attribution_src_loader->CanRegister(result.AbsoluteLinkURL(),
+                                                /*element=*/anchor,
+                                                /*request_id=*/absl::nullopt)) {
+          data.impression = blink::Impression{
+              .runtime_features = attribution_src_loader->GetRuntimeFeatures(),
+          };
+        }
       }
     }
   }

@@ -85,32 +85,36 @@ class _ArscStreamReader(stream_reader.StreamReader):
 
     Requires all classes in this file to be parsed, before calling.
     """
+    def MakeGeneric(type_name):
+      return lambda reader, parent: ArscGeneric(type_name, reader, parent)
+
     return {
         _RES_STRING_POOL_TYPE: ArscStringPool,
         _RES_TABLE_TYPE: ArscResTable,
-        _RES_XML_TYPE: None,
-        _RES_XML_FIRST_CHUNK_TYPE: None,
-        _RES_XML_START_NAMESPACE_TYPE: None,
-        _RES_XML_END_NAMESPACE_TYPE: None,
-        _RES_XML_START_ELEMENT_TYPE: None,
-        _RES_XML_END_ELEMENT_TYPE: None,
-        _RES_XML_CDATA_TYPE: None,
-        _RES_XML_LAST_CHUNK_TYPE: None,
-        _RES_XML_RESOURCE_MAP_TYPE: None,
+        _RES_XML_TYPE: MakeGeneric('XML'),
+        _RES_XML_FIRST_CHUNK_TYPE: MakeGeneric('XML_FIRST_CHUNK'),
+        _RES_XML_START_NAMESPACE_TYPE: MakeGeneric('XML_START_NAMESPACE'),
+        _RES_XML_END_NAMESPACE_TYPE: MakeGeneric('XML_END_NAMESPACE'),
+        _RES_XML_START_ELEMENT_TYPE: MakeGeneric('XML_START_ELEMENT'),
+        _RES_XML_END_ELEMENT_TYPE: MakeGeneric('XML_END_ELEMENT'),
+        _RES_XML_CDATA_TYPE: MakeGeneric('XML_CDATA'),
+        _RES_XML_LAST_CHUNK_TYPE: MakeGeneric('XML_LAST_CHUNK'),
+        _RES_XML_RESOURCE_MAP_TYPE: MakeGeneric('XML_RESOURCE_MAP'),
         _RES_TABLE_PACKAGE_TYPE: ArscResTablePackage,
         _RES_TABLE_TYPE_TYPE: ArscResTableType,
         _RES_TABLE_TYPE_SPEC_TYPE: ArscResTableTypeSpec,
-        _RES_TABLE_LIBRARY_TYPE: None,
-        _RES_TABLE_OVERLAYABLE_TYPE: None,
-        _RES_TABLE_OVERLAYABLE_POLICY_TYPE: None,
-        _RES_TABLE_STAGED_ALIAS_TYPE: None,
+        _RES_TABLE_LIBRARY_TYPE: MakeGeneric('LIBRARY'),
+        _RES_TABLE_OVERLAYABLE_TYPE: MakeGeneric('OVERLAYABLE'),
+        _RES_TABLE_OVERLAYABLE_POLICY_TYPE: MakeGeneric('OVERLAYABLE_POLICY'),
+        _RES_TABLE_STAGED_ALIAS_TYPE: MakeGeneric('STAGED_ALIAS'),
     }
 
   def NextArscChunk(self, parent=None):
     chunk_type = self.PeekArscHeaderType()
-    arsc_class = self.GetArscResTypeToClassMap().get(chunk_type)
-    assert arsc_class, 'Failed to get class for chunk_type = %d' % chunk_type
-    return arsc_class(self, parent=parent)
+    arsc_class = self.GetArscResTypeToClassMap().get(chunk_type) or ArscChunk
+    chunk = arsc_class(self, parent=parent)
+    self.Seek(chunk.end_addr)
+    return chunk
 
 
 def _SplitBits(value, *widths):
@@ -369,13 +373,26 @@ class ArscChunk:
     return '%s: %s%s: %s' % (r, '  ' * depth, name, f)
 
   def __str__(self):
-    return self.StrHelper('UNKNOWN (type=%d)' % self.type, {})
+    return self.StrHelper('GENERIC', {'type': self.type})
 
   def symbol_name(self):
-    return str(self)
+    return f'GENERIC: type={self.type}'
 
   def labelled_children(self):
     yield from ((None, child) for child in self.children)
+
+
+class ArscGeneric(ArscChunk):
+  """Generic chunk containing only name."""
+  def __init__(self, type_name, reader, parent):
+    super().__init__(reader, parent)
+    self.type_name = type_name
+
+  def __str__(self):
+    return self.StrHelper(self.type_name, {})
+
+  def symbol_name(self):
+    return self.type_name
 
 
 class ArscStringPool(ArscChunk):
@@ -611,7 +628,6 @@ class ArscResTableType(ArscChunk):
     self.entry_placeholder += sum(4 for o in entries_offsets
                                   if o == ArscResTableType.NO_ENTRY)
     # Skip reading actual entries.
-    reader.Seek(self.end_addr)
 
   @property
   def placeholder(self):

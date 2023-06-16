@@ -181,7 +181,7 @@ bool ShouldIgnoreBlocklists() {
 // cache. Some of these features are listed as blocking back/forward cache
 // when actually the blocking is flag controlled and they are not registered
 // as being used if we don't want them to block.
-constexpr WebSchedulerTrackedFeatures kDisallowedFeatures(
+constexpr WebSchedulerTrackedFeatures kDisallowedFeatures = {
     WebSchedulerTrackedFeature::kBroadcastChannel,
     WebSchedulerTrackedFeature::kContainsPlugins,
     WebSchedulerTrackedFeature::kDedicatedWorkerOrWorklet,
@@ -212,17 +212,17 @@ constexpr WebSchedulerTrackedFeatures kDisallowedFeatures(
     WebSchedulerTrackedFeature::kWebShare,
     WebSchedulerTrackedFeature::kWebSocket,
     WebSchedulerTrackedFeature::kWebTransport,
-    WebSchedulerTrackedFeature::kWebXR);
-constexpr WebSchedulerTrackedFeatures kInjectionFeatures(
+    WebSchedulerTrackedFeature::kWebXR};
+constexpr WebSchedulerTrackedFeatures kInjectionFeatures = {
     WebSchedulerTrackedFeature::kInjectedJavascript,
-    WebSchedulerTrackedFeature::kInjectedStyleSheet);
-constexpr WebSchedulerTrackedFeatures kNetworkFeatures(
+    WebSchedulerTrackedFeature::kInjectedStyleSheet};
+constexpr WebSchedulerTrackedFeatures kNetworkFeatures = {
     WebSchedulerTrackedFeature::kOutstandingNetworkRequestOthers,
     WebSchedulerTrackedFeature::kOutstandingNetworkRequestFetch,
-    WebSchedulerTrackedFeature::kOutstandingNetworkRequestXHR);
+    WebSchedulerTrackedFeature::kOutstandingNetworkRequestXHR};
 // A list of WebSchedulerTrackedFeatures that should never block back/forward
 // cache.
-constexpr WebSchedulerTrackedFeatures kAllowedFeatures(
+constexpr WebSchedulerTrackedFeatures kAllowedFeatures = {
     WebSchedulerTrackedFeature::kDocumentLoaded,
     WebSchedulerTrackedFeature::kMainResourceHasCacheControlNoCache,
     // This is handled in |UpdateCanStoreToIncludeCacheControlNoStore()|, and no
@@ -238,7 +238,12 @@ constexpr WebSchedulerTrackedFeatures kAllowedFeatures(
     // main frame.
     WebSchedulerTrackedFeature::kAuthorizationHeader,
     // TODO(crbug.com/1357482): Figure out if this should be allowed.
-    WebSchedulerTrackedFeature::kWebNfc);
+    WebSchedulerTrackedFeature::kWebNfc};
+
+// WebSchedulerTrackedFeatures that do not affect back/forward cache, but
+// affects other scheduling policies (e.g. aggressive throttling).
+constexpr WebSchedulerTrackedFeatures kNonBackForwardCacheAffectingFeatures = {
+    WebSchedulerTrackedFeature::kWebSerial};
 
 // The BackForwardCache feature is controlled via an experiment. This function
 // returns the allowed URL list where it is enabled.
@@ -381,7 +386,7 @@ static constexpr base::FeatureParam<CacheControlNoStoreExperimentLevel>::Option
          "restore-unless-http-only-cookie-change"},
 };
 const base::FeatureParam<CacheControlNoStoreExperimentLevel>
-    cache_control_level{&kCacheControlNoStoreEnterBackForwardCache,
+    cache_control_level{&features::kCacheControlNoStoreEnterBackForwardCache,
                         kCacheControlNoStoreExperimentLevelName,
                         CacheControlNoStoreExperimentLevel::kDoNotStore,
                         &cache_control_levels};
@@ -389,7 +394,7 @@ const base::FeatureParam<CacheControlNoStoreExperimentLevel>
 CacheControlNoStoreExperimentLevel GetCacheControlNoStoreLevel() {
   if (!IsBackForwardCacheEnabled() ||
       !base::FeatureList::IsEnabled(
-          kCacheControlNoStoreEnterBackForwardCache)) {
+          features::kCacheControlNoStoreEnterBackForwardCache)) {
     return CacheControlNoStoreExperimentLevel::kDoNotStore;
   }
   return cache_control_level.Get();
@@ -410,7 +415,8 @@ bool IsSameOriginForTreeResult(RenderFrameHostImpl* rfh,
 // static
 BlockListedFeatures BackForwardCacheImpl::GetAllowedFeatures(
     RequestedFeatures requested_features) {
-  WebSchedulerTrackedFeatures result = kAllowedFeatures;
+  WebSchedulerTrackedFeatures result =
+      Union(kAllowedFeatures, kNonBackForwardCacheAffectingFeatures);
   if (IsContentInjectionSupported()) {
     result.PutAll(kInjectionFeatures);
   }
@@ -829,7 +835,7 @@ void BackForwardCacheImpl::PopulateReasonsForMainDocument(
       // |should_cache_control_no_store_enter| flag is false. If true, put the
       // page in and evict later.
       result.NoDueToFeatures(
-          WebSchedulerTrackedFeature::kMainResourceHasCacheControlNoStore);
+          {WebSchedulerTrackedFeature::kMainResourceHasCacheControlNoStore});
     }
   }
 
@@ -898,7 +904,7 @@ void BackForwardCacheImpl::NotRestoredReasonBuilder::
           root_rfh_->GetLastCommittedOrigin()) &&
       rfh->GetBackForwardCacheDisablingFeatures().Has(
           WebSchedulerTrackedFeature::kAuthorizationHeader)) {
-    result.NoDueToFeatures(WebSchedulerTrackedFeature::kAuthorizationHeader);
+    result.NoDueToFeatures({WebSchedulerTrackedFeature::kAuthorizationHeader});
   }
 }
 

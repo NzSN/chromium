@@ -298,13 +298,7 @@ base::FilePath StartProcmonLogging() {
     return {};
   }
 
-  base::FilePath source_path;
-  CHECK(base::PathService::Get(base::DIR_SOURCE_ROOT, &source_path));
-  const base::FilePath pmc_path(source_path.Append(L"chrome")
-                                    .Append(L"updater")
-                                    .Append(L"test")
-                                    .Append(L"data")
-                                    .Append(L"ProcmonConfiguration.pmc"));
+  const base::FilePath pmc_path(GetTestFilePath("ProcmonConfiguration.pmc"));
   CHECK(base::PathExists(pmc_path));
 
   base::Time::Exploded start_time;
@@ -356,8 +350,7 @@ void StopProcmonLogging(const base::FilePath& pml_file) {
         << __func__ << ": failed to run: " << cmdline;
   }
 
-  // TODO(crbug/1396077): Make a copy of the PML file in case the original gets
-  // deleted.
+  // Make a copy of the PML file in case the original gets deleted.
   if (!base::CopyFile(pml_file, pml_file.ReplaceExtension(L".PML.BAK")))
     LOG(ERROR) << __func__ << ": failed to backup pml file";
 }
@@ -424,6 +417,16 @@ bool WaitFor(base::RepeatingCallback<bool()> predicate,
     base::PlatformThread::Sleep(TestTimeouts::tiny_timeout());
   }
   return false;
+}
+
+base::FilePath GetTestFilePath(const char* file_name) {
+  base::FilePath test_data_root;
+  base::PathService::Get(base::DIR_SRC_TEST_DATA_ROOT, &test_data_root);
+  return test_data_root.AppendASCII("chrome")
+      .AppendASCII("updater")
+      .AppendASCII("test")
+      .AppendASCII("data")
+      .AppendASCII(file_name);
 }
 
 }  // namespace updater::test

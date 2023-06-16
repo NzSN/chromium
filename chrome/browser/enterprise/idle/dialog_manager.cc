@@ -8,42 +8,17 @@
 
 #include "base/check.h"
 #include "base/check_is_test.h"
+#include "base/command_line.h"
 #include "base/functional/bind.h"
 #include "base/task/single_thread_task_runner.h"
+#include "chrome/common/chrome_switches.h"
 
 namespace enterprise_idle {
 
 namespace {
 
+constexpr base::TimeDelta kTestDialogTimeout = base::Seconds(5);
 constexpr base::TimeDelta kDialogTimeout = base::Seconds(30);
-
-IdleDialog::ActionSet ActionsToActionSet(
-    const base::flat_set<ActionType>& action_types) {
-  IdleDialog::ActionSet action_set = {.close = false, .clear = false};
-  for (ActionType action_type : action_types) {
-    switch (action_type) {
-      case ActionType::kCloseBrowsers:
-        action_set.close = true;
-        break;
-
-      case ActionType::kShowProfilePicker:
-        break;
-
-      case ActionType::kClearBrowsingHistory:
-      case ActionType::kClearDownloadHistory:
-      case ActionType::kClearCookiesAndOtherSiteData:
-      case ActionType::kClearCachedImagesAndFiles:
-      case ActionType::kClearPasswordSignin:
-      case ActionType::kClearAutofill:
-      case ActionType::kClearSiteSettings:
-      case ActionType::kClearHostedAppData:
-      case ActionType::kReloadPages:
-        action_set.clear = true;
-        break;
-    }
-  }
-  return action_set;
-}
 
 }  // namespace
 
@@ -70,12 +45,16 @@ base::CallbackListSubscription DialogManager::ShowDialog(
     return subscription;
   }
 
-  dialog_ = IdleDialog::Show(
-      kDialogTimeout, threshold, ActionsToActionSet(action_types),
-      base::BindOnce(&DialogManager::OnDialogDismissedByUser,
-                     base::Unretained(this)));
+  base::TimeDelta timeout = base::CommandLine::ForCurrentProcess()->HasSwitch(
+                                switches::kSimulateIdleTimeout)
+                                ? kTestDialogTimeout
+                                : kDialogTimeout;
+  dialog_ =
+      IdleDialog::Show(timeout, threshold, ActionsToActionSet(action_types),
+                       base::BindOnce(&DialogManager::OnDialogDismissedByUser,
+                                      base::Unretained(this)));
   dialog_timer_.Start(
-      FROM_HERE, kDialogTimeout,
+      FROM_HERE, timeout,
       base::BindOnce(&DialogManager::OnDialogExpired, base::Unretained(this)));
   return subscription;
 }

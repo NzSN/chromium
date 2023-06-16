@@ -19,6 +19,7 @@
 <translation id="1414495520565016063">ທ່ານ​ລົງຊື່ເຂົ້າ​ໃຊ້ Chromium ແລ້ວ​!</translation>
 <translation id="1524282610922162960">ແບ່ງປັນແຖບ Chromium</translation>
 <translation id="1553461853655228091">Chromium ຕ້ອງການການອະນຸຍາດເພື່ອເຂົ້າເຖິງກ້ອງຂອງທ່ານເພື່ອສ້າງແຜນທີ່ 3 ມິຕິຂອງສະພາບແວດລ້ອມອ້ອມຂ້າງຂອງທ່ານ</translation>
+<translation id="1555506416658437797">ແກ້ໄຂວິທີການຈ່າຍເງິນ.</translation>
 <translation id="1607715478322902680">{COUNT,plural, =0{ຜູ້ເບິ່ງແຍງລະບົບຂອງທ່ານກຳນົດໃຫ້ທ່ານເປີດ Chromium ຄືນໃໝ່ເພື່ອນຳໃຊ້ການອັບເດດ}=1{ຜູ້ເບິ່ງແຍງລະບົບຂອງທ່ານກຳນົດໃຫ້ທ່ານເປີດ Chromium ຄືນໃໝ່ເພື່ອນຳໃຊ້ການອັບເດດ. ໜ້າຈໍທີ່ບໍ່ເປີດເຜີຍຕົວຕົນຂອງທ່ານຈະບໍ່ເປີດຄືນໃໝ່.}other{ຜູ້ເບິ່ງແຍງລະບົບຂອງທ່ານກຳນົດໃຫ້ທ່ານເປີດ Chromium ຄືນໃໝ່ເພື່ອນຳໃຊ້ການອັບເດດ. ໜ້າຈໍທີ່ບໍ່ເປີດເຜີຍຕົວຕົນຂອງທ່ານ # ລາຍການຈະບໍ່ເປີດຄືນໃໝ່.}}</translation>
 <translation id="1625909126243026060">ກວດສອບການຄວບຄຸມຄວາມເປັນສ່ວນຕົວ ແລະ ຄວາມປອດໄພຫຼັກໃນ Chromium</translation>
 <translation id="1632539827495546968">ຫາກທ່ານຕ້ອງການໃຊ້ບັນຊີນີ້ແບບເທື່ອດຽວເທົ່ານັ້ນ, ທ່ານສາມາດໃຊ້ <ph name="GUEST_LINK_BEGIN" />ໂໝດແຂກ<ph name="GUEST_LINK_END" /> ໃນໂປຣແກຣມທ່ອງເວັບ Chromium ໄດ້. ຫາກທ່ານຕ້ອງການເພີ່ມບັນຊີໃຫ້ຄົນອື່ນ, ກະລຸນາ <ph name="LINK_BEGIN" />ເພີ່ມຄົນໃໝ່<ph name="LINK_END" /> ໃສ່ <ph name="DEVICE_TYPE" /> ຂອງທ່ານ.
@@ -94,6 +95,7 @@
 <translation id="3179665906251668410">ເປີດລິ້ງໃນໜ້າຈໍທີ່ບໍ່ເຜີຍຕົວຕົນຂອງ Chromium</translation>
 <translation id="3185330573522821672">ປັບແຕ່ງໂປຣໄຟລ໌ Chromium ໃໝ່ຂອງທ່ານ</translation>
 <translation id="3190315855212034486">ໂຮ້! Chromium ​ເກີດ​ຂັດຂ້ອງ. ເປີດໃຊ້ໃໝ່ດຽວນີ້ບໍ?</translation>
+<translation id="3255926992597692024">Chromium ກຳລັງພະຍາຍາມແກ້ໄຂການຕັ້ງຄ່າສຳລັບການຕື່ມວິທີການຈ່າຍເງິນ.</translation>
 <translation id="3258596308407688501">Chromium ບໍ່ສາມາດອ່ານ ແລະຂຽນໄປໃສ່ໄດເຣັກຕໍຣີຂໍ້ມູນຂອງມັນໄດ້:
 
 <ph name="USER_DATA_DIRECTORY" /></translation>
@@ -138,6 +140,8 @@
 <translation id="4019629340646866719">ChromiumOS ເກີດຂຶ້ນໄດ້ດ້ວຍ <ph name="BEGIN_LINK_CROS_OSS" />ຊອບແວໂອເພນຊອດ<ph name="END_LINK_CROS_OSS" /> ເພີ່ມເຕີມ, ຮວມທັງ <ph name="BEGIN_LINK_LINUX_OSS" />ສະພາບແວດລ້ອມການພັດທະນາ Linux<ph name="END_LINK_LINUX_OSS" />.</translation>
 <translation id="4036079820698952681">ຊ່ວຍເຮັດໃຫ້ Chromium ດີຂຶ້ນໂດຍການລາຍງານ <ph name="BEGIN_LINK" />ການຕັ້ງຄ່າປັດຈຸບັນ<ph name="END_LINK" /></translation>
 <translation id="4050175100176540509">ການ​ປັບ​ປຸງ​ຄວາມ​ປອດ​ໄພ​ທີ່​ສຳ​ຄັນ ແລະ​ຄຸນ​ສົມ​ບັດ​ໃໝ່​ມີ​ໃຫ້​ຢູ່​ໃນ​ເວີ​ຊັນ​ຫຼ້າ​ສຸດ.</translation>
+<translation id="4050599136622776556">Chromium ກຳລັງພະຍາຍາມແກ້ໄຂວິທີການຈ່າຍເງິນ.</translation>
+<translation id="4055805654398742145">ຕົວຈັດການລະຫັດຜ່ານ</translation>
 <translation id="4148957013307229264">ກໍາລັງ​ຕິດ​ຕັ້ງ...</translation>
 <translation id="419998258129752635"><ph name="PAGE_TITLE" /> - ການເຂົ້າສູ່ລະບົບເຄືອຂ່າຍ - Chromium</translation>
 <translation id="421369550622382712">ຄົ້ນພົບແອັບ, ເກມ, ສ່ວນຂະຫຍາຍ ແລະ ຮູບແບບສີສັນສຳລັບ Chromium.</translation>
@@ -200,6 +204,7 @@
 <translation id="5653831366781983928">ກະລຸນາປິດເປີດ Chromium ຄືນໃໝ່ຕອນນີ້</translation>
 <translation id="5690427481109656848">Google LLC</translation>
 <translation id="5698481217667032250">ສະ​ແດງ Chromium ເປັນພາສານີ້</translation>
+<translation id="585620188971323280">ແກ້ໄຂການຕັ້ງຄ່າສຳລັບການຕື່ມວິທີການຈ່າຍເງິນ.</translation>
 <translation id="5862307444128926510">ຍິນ​ດີ​ຕ້ອນ​ຮັບສູ່ Chromium</translation>
 <translation id="5883558403894052917">Chromium ພົບວ່າລາຍການເຫຼົ່ານີ້ມີເມົາແວ:</translation>
 <translation id="5895138241574237353">ເລີ່ມຕົ້ນໃໝ່</translation>
@@ -250,6 +255,7 @@
 <translation id="6475912303565314141">ມັນຍັງຄວບຄຸມວ່າຈະໃຫ້ສະແດງໜ້າໃດຂຶ້ນ ເມື່ອທ່ານເລີ່ມຕົ້ນເປີດ Chromium.</translation>
 <translation id="648319183876919572">Safe Browsing ທີ່ປັບປຸງດີຂຶ້ນຊ່ວຍປົກປ້ອງທ່ານຈາກເວັບໄຊ ແລະ ການດາວໂຫຼດທີ່ອັນຕະລາຍ</translation>
 <translation id="6510925080656968729">ຖອນ​ຕິດ​ຕັ້ງ Chromium</translation>
+<translation id="6539122709674868420">ອົງກອນຂອງທ່ານປິດ Chromium ໄວ້ເມື່ອມັນບໍ່ໄດ້ຖືກນຳໃຊ້ເປັນເວລາ <ph name="TIMEOUT_DURATION" />. ຂໍ້ມູນການທ່ອງເວັບຖືກລຶບອອກແລ້ວ. ເຊິ່ງຮວມເຖິງປະຫວັດ, ການຕື່ມຂໍ້ມູນອັດຕະໂນມັດ ແລະ ການດາວໂຫຼດ.</translation>
 <translation id="6542839706527980775">ແຕ່ລະໂປຣໄຟລ໌ມີຂໍ້ມູນ Chromium ຂອງມັນເອງ ເຊັ່ນ: ບຸກມາກ, ປະຫວັດ, ລະຫັດຜ່ານ ແລະ ອື່ນໆອີກ</translation>
 <translation id="656935081669708576">ທ່ານສາມາດສະຫຼັບເພື່ອເບິ່ງລະຫັດຜ່ານຈາກໂປຣໄຟລ໌ Chromium ອື່ນໄດ້</translation>
 <translation id="6570579332384693436">ເພື່ອແກ້ໄຂການສະກົດຄຳຜິດ, Chromium ສົ່ງຂໍ້ຄວາມທີ່ທ່ານພິມໃນຊ່ອງຂໍ້ຄວາມໃຫ້ Google</translation>
@@ -287,6 +293,7 @@
 <translation id="7025789849649390912">ຢຸດການຕິດຕັ້ງແລ້ວ.</translation>
 <translation id="705851970750939768">ອັບເດດ Chromium</translation>
 <translation id="7067091210845072982">ຖ້າຮູບບໍ່ມີລາຍລະອຽດທີ່ເປັນປະໂຫຍດ, Chromium ຈະພະຍາຍາມໃຫ້ລາຍລະອຽດແກ່ທ່ານ. ເພື່ອສ້າງລາຍລະອຽດ, ລະບົບຈະສົ່ງຮູບພາບໃຫ້ Google.</translation>
+<translation id="7173822816570314652">ອົງກອນຂອງທ່ານລຶບຂໍ້ມູນຂອງ Chromium ອອກເມື່ອມັນບໍ່ໄດ້ຖືກນຳໃຊ້ເປັນເວລາ <ph name="TIMEOUT_DURATION" />. ເຊິ່ງຮວມເຖິງປະຫວັດ, ການຕື່ມຂໍ້ມູນອັດຕະໂນມັດ ແລະ ການດາວໂຫຼດ.</translation>
 <translation id="718435575166326686">Chromium ຕ້ອງການການອະນຸຍາດກ້ອງຖ່າຍຮູບສຳລັບເວັບໄຊນີ້</translation>
 <translation id="7196312274710523067">ບໍ່ສາມາດເປີດໃຊ້ Chromium ໄດ້. ກະລຸນາລອງອີກຄັ້ງ.</translation>
 <translation id="7197677400338048821">Chromium ບໍ່ສາມາດກວດລະຫັດຜ່ານຂອງທ່ານໄດ້. ກະລຸນາລອງໃໝ່ຫຼັງຈາກ 24 ຊົ່ວໂມງ.</translation>
@@ -341,6 +348,7 @@ Chromium ບໍ່ສາມາດກູ້ການຕັ້ງຄ່າຂອ�
 <translation id="8248265253516264921">ຖ້າຮູບບໍ່ມີລາຍລະອຽດທີ່ເປັນປະໂຫຍດ, Chromium ຈະພະຍາຍາມໃຫ້ລາຍລະອຽດແກ່ທ່ານ. ເພື່ອສ້າງລາຍລະອຽດ, ລະບົບຈະສົ່ງຮູບພາບໃຫ້ Google. ທ່ານສາມາດປິດສິ່ງນີ້ໃນການຕັ້ງຄ່າໄດ້ທຸກເວລາ.</translation>
 <translation id="8266560134891435528">Chromium ບໍ່ສາມາດກວດລະຫັດຜ່ານຂອງທ່ານໄດ້ ເພາະວ່າທ່ານບໍ່ໄດ້ເຂົ້າສູ່ລະບົບ</translation>
 <translation id="8290862415967981663">ໄຟລ໌ນີ້ອາດຈະເປັນອັນຕະລາຍ, ສະນັ້ນ Chromium ໄດ້ບລັອກມັນໄວ້ແລ້ວ.</translation>
+<translation id="8318772038038596122">ອົງກອນຂອງທ່ານປິດ Chromium ໄວ້ເມື່ອມັນບໍ່ໄດ້ຖືກນຳໃຊ້ເປັນເວລາ <ph name="TIMEOUT_DURATION" />.</translation>
 <translation id="8325404639443959713">ເຮັດສິ່ງຕ່າງໆໄດ້ຫຼາຍຂຶ້ນດ້ວຍ Chromium</translation>
 <translation id="8330519371938183845">ເຂົ້າສູ່ລະບົບເພື່ອຊິ້ງຂໍ້ມູນ ແລະ ປັບແຕ່ງ Chromium ໃຫ້ເປັນແບບສ່ວນຕົວໃນທົ່ວອຸປະກອນຂອງທ່ານ</translation>
 <translation id="8340674089072921962"><ph name="USER_EMAIL_ADDRESS" /> ເຄີຍໃຊ້ Chromium ໃນເມື່ອກ່ອນ</translation>
@@ -376,6 +384,7 @@ Chromium ບໍ່ສາມາດກູ້ການຕັ້ງຄ່າຂອ�
 <translation id="9019929317751753759">ເພື່ອເຮັດໃຫ້ Chromium ປອດໄພຂຶ້ນ, ພວກເຮົາປິດໃຊ້ງານບາງສ່ວນການ​ຕໍ່​ເຂົ້າ​ຫາ ທີ່​ບໍ່​ໄດ້​ເຮັດ​ເປັນ​ລາຍ​ການ​ໄວ້​ຢູ່​ໃນ <ph name="IDS_EXTENSION_WEB_STORE_TITLE" /> ແລະ​ອາດ​ຈະ​ຖືກ​ເອົາ​ເພີ່ມ​ເຂົ້າ​ໂດຍ​ທີ່​ທ່ານ​ບໍ່​ຮູ້​ຈັກ.</translation>
 <translation id="9022552996538154597">ລົງຊື່ເຂົ້າ​ໃຊ້ Chromium</translation>
 <translation id="907832235989677238">ເຂົ້າສູ່ລະບົບ Chromium. ຫາກທ່ານຕ້ອງການເຂົ້າສູ່ລະບົບບັນຊີແບບເທື່ອດຽວ, ທ່ານສາມາດ <ph name="GUEST_LINK_BEGIN" />ໃຊ້ອຸປະກອນໃນຖານະແຂກ<ph name="GUEST_LINK_END" /> ໄດ້.</translation>
+<translation id="9078733879136747090">Chromium ຖືກປິດໂດຍອັດຕະໂນມັດ</translation>
 <translation id="9089354809943900324">Chromium ຫຼ້າສະໄໝແລ້ວ</translation>
 <translation id="9093206154853821181">{0,plural, =1{Chromium ຈະເປີດຄືນໃໝ່ໃນໜຶ່ງຊົ່ວໂມງ}other{Chromium ຈະເປີດຄືນໃໝ່ໃນ # ຊົ່ວໂມງ}}</translation>
 <translation id="9106612006984859720">ເພື່ອໄດ້ຮັບການອັບເດດ Chromium ໃນອະນາຄົດ, ທ່ານຈະຕ້ອງໃຊ້ Windows 10 ຫຼື ໃໝ່ກວ່ານັ້ນ. ຄອມພິວເຕີນີ້ກຳລັງນຳໃຊ້ Windows 8.1.</translation>

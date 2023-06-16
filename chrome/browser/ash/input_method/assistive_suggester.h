@@ -35,6 +35,9 @@ enum class AssistiveSuggesterKeyResult {
   // dispatched as a PROCESS key to prevent the client from triggering the
   // default behaviour for the key.
   kHandled,
+  // Same as not kNotHandled, except the key event should not trigger
+  // autorepeat.
+  kNotHandledSuppressAutoRepeat,
 };
 
 // An agent to suggest assistive information when the user types, and adopt or
@@ -85,7 +88,8 @@ class AssistiveSuggester : public SuggestionsSource {
 
   // Called when suggestions are generated outside of the assistive framework.
   void OnExternalSuggestionsUpdated(
-      const std::vector<ime::AssistiveSuggestion>& suggestions);
+      const std::vector<ime::AssistiveSuggestion>& suggestions,
+      const absl::optional<ime::SuggestionsTextContext>& context);
 
   // Accepts the suggestion at a given index if a suggester is currently
   // active.
@@ -160,6 +164,7 @@ class AssistiveSuggester : public SuggestionsSource {
 
   void ProcessExternalSuggestions(
       const std::vector<ime::AssistiveSuggestion>& suggestions,
+      const absl::optional<ime::SuggestionsTextContext>& context,
       const AssistiveSuggesterSwitch::EnabledSuggestions& enabled_suggestions);
 
   // This records any text input state metrics for each relevant assistive

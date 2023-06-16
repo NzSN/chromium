@@ -150,6 +150,7 @@ class FeedStream : public FeedApi,
                          const LoggingParameters& logging_parameters) override;
   bool WasUrlRecentlyNavigatedFromFeed(const GURL& url) override;
   void InvalidateContentCacheFor(StreamKind stream_kind) override;
+  void RecordContentViewed(uint64_t docid) override;
   DebugStreamData GetDebugStreamData() override;
   void ForceRefreshForDebugging(const StreamType& stream_type) override;
   std::string DumpStateForDebugging() override;
@@ -267,11 +268,6 @@ class FeedStream : public FeedApi,
   LaunchResult ShouldMakeFeedQueryRequest(const StreamType& stream_type,
                                           LoadType load_type,
                                           bool consume_quota = true);
-
-  // Returns true if a FeedQuery request made right now should be made without
-  // user credentials.
-  bool ShouldForceSignedOutFeedQueryRequest(
-      const StreamType& stream_type) const;
 
   // Returns the Chrome sign in status
   feedwire::ChromeSignInStatus::SignInStatus GetSignInStatus() const;
@@ -444,8 +440,9 @@ class FeedStream : public FeedApi,
   raw_ptr<PrefService> profile_prefs_;  // May be null.
   raw_ptr<FeedNetwork> feed_network_;
   raw_ptr<ImageFetcher> image_fetcher_;
-  raw_ptr<FeedStore> store_;
-  raw_ptr<PersistentKeyValueStoreImpl> persistent_key_value_store_;
+  raw_ptr<FeedStore, DanglingUntriaged> store_;
+  raw_ptr<PersistentKeyValueStoreImpl, DanglingUntriaged>
+      persistent_key_value_store_;
   raw_ptr<const WireResponseTranslator> wire_response_translator_;
 
   StreamModel::Context stream_model_context_;
@@ -463,7 +460,6 @@ class FeedStream : public FeedApi,
 
   // Mutable state.
   RequestThrottler request_throttler_;
-  base::TimeTicks signed_out_for_you_refreshes_until_;
 
   BooleanPrefMember has_stored_data_;
   BooleanPrefMember snippets_enabled_by_policy_;

@@ -39,6 +39,7 @@ constexpr uint32_t kUsage = SHARED_IMAGE_USAGE_DISPLAY_READ |
                             SHARED_IMAGE_USAGE_RASTER |
                             SHARED_IMAGE_USAGE_CPU_UPLOAD;
 
+// TODO(crbug.com/1442381): Add appropriate graphite unittests here.
 class WrappedSkImageBackingFactoryTest
     : public SharedImageTestBase,
       public testing::WithParamInterface<viz::SharedImageFormat> {
@@ -155,7 +156,7 @@ TEST_P(WrappedSkImageBackingFactoryTest, Upload) {
   std::unique_ptr<SharedImageRepresentationFactoryRef> shared_image =
       shared_image_manager_.Register(std::move(backing), &memory_type_tracker_);
 
-  VerifyPixelsWithReadback(mailbox, bitmaps);
+  VerifyPixelsWithReadbackGanesh(mailbox, bitmaps);
 }
 
 std::string TestParamToString(

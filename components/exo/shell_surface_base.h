@@ -58,6 +58,8 @@ class ShellSurfaceBase : public SurfaceTreeHost,
                          public wm::ActivationChangeObserver,
                          public wm::TooltipObserver {
  public:
+  using ShapeRects = std::vector<gfx::Rect>;
+
   // The |origin| is the initial position in screen coordinates. The position
   // specified as part of the geometry is relative to the shell surface.
   ShellSurfaceBase(Surface* surface,
@@ -98,8 +100,6 @@ class ShellSurfaceBase : public SurfaceTreeHost,
   void set_client_supports_window_bounds(bool enable) {
     client_supports_window_bounds_ = enable;
   }
-
-  void set_bounds_is_dirty(bool dirty) { bounds_is_dirty_ = dirty; }
 
   // Activates the shell surface. Brings it to the foreground.
   void Activate();
@@ -226,6 +226,10 @@ class ShellSurfaceBase : public SurfaceTreeHost,
   // Sets the z order for the window. If the window's widget has not yet been
   // initialized, it saves `z_order` for when it is initialized.
   void SetZOrder(ui::ZOrderLevel z_order);
+
+  // Sets the shape of the toplevel window, applied on commit. If shape is null
+  // this will unset the window shape.
+  void SetShape(absl::optional<cc::Region> shape);
 
   // SurfaceDelegate:
   void OnSurfaceCommit() override;
@@ -359,9 +363,6 @@ class ShellSurfaceBase : public SurfaceTreeHost,
   // Returns true if surface is currently being resized.
   bool IsResizing() const;
 
-  // Returns true if widget bounds should be updated.
-  bool ShouldUpdateWidgetBounds() const;
-
   // Updates the bounds of widget to match the current surface bounds.
   void UpdateWidgetBounds();
 
@@ -389,6 +390,9 @@ class ShellSurfaceBase : public SurfaceTreeHost,
 
   // Applies |system_modal_| to |widget_|.
   void UpdateSystemModal();
+
+  // Applies `shape_rects_dp_` to the host window's layer.
+  void UpdateShape();
 
   // Returns the "visible bounds" for the surface from the user's perspective.
   gfx::Rect GetVisibleBounds() const;
@@ -439,6 +443,8 @@ class ShellSurfaceBase : public SurfaceTreeHost,
   gfx::Rect geometry_;
   gfx::Rect pending_geometry_;
   absl::optional<gfx::Rect> initial_bounds_;
+  absl::optional<ShapeRects> shape_rects_dp_;
+  absl::optional<ShapeRects> pending_shape_rects_dp_;
 
   int64_t display_id_ = display::kInvalidDisplayId;
   int64_t pending_display_id_ = display::kInvalidDisplayId;
@@ -509,7 +515,6 @@ class ShellSurfaceBase : public SurfaceTreeHost,
   gfx::SizeF pending_aspect_ratio_;
   bool pending_pip_ = false;
   bool in_extended_drag_ = false;
-  bool bounds_is_dirty_ = true;
   absl::optional<std::string> initial_workspace_;
   absl::optional<ui::ZOrderLevel> initial_z_order_;
 

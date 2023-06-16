@@ -123,11 +123,22 @@ class MockOptGuideDecider
 class MockWebWrapper : public WebWrapper {
  public:
   MockWebWrapper(const GURL& last_committed_url, bool is_off_the_record);
+
+  // `result` specified the result of the subsequent javascript execution. This
+  // object does not take ownership of the provided pointer.
+  MockWebWrapper(const GURL& last_committed_url,
+                 bool is_off_the_record,
+                 base::Value* result);
+
   MockWebWrapper(const MockWebWrapper&) = delete;
   MockWebWrapper operator=(const MockWebWrapper&) = delete;
+
   ~MockWebWrapper() override;
 
   const GURL& GetLastCommittedURL() override;
+
+  bool IsFirstLoadForNavigationFinished() override;
+  void SetIsFirstLoadForNavigationFinished(bool finished);
 
   bool IsOffTheRecord() override;
 
@@ -135,15 +146,11 @@ class MockWebWrapper : public WebWrapper {
       const std::u16string& script,
       base::OnceCallback<void(const base::Value)> callback) override;
 
-  // Set the result of some javascript execution. This object does not take
-  // ownership of the provided pointer.
-  void SetMockJavaScriptResult(base::Value* result);
-
  private:
-  GURL last_committed_url_;
-  bool is_off_the_record_;
-
-  raw_ptr<base::Value> mock_js_result_;
+  const GURL last_committed_url_;
+  const bool is_off_the_record_;
+  bool is_first_load_finished_{true};
+  const raw_ptr<base::Value> mock_js_result_;
 };
 
 class ShoppingServiceTestBase : public testing::Test {
@@ -152,6 +159,8 @@ class ShoppingServiceTestBase : public testing::Test {
   ShoppingServiceTestBase(const ShoppingServiceTestBase&) = delete;
   ShoppingServiceTestBase operator=(const ShoppingServiceTestBase&) = delete;
   ~ShoppingServiceTestBase() override;
+
+  void SetUp() override;
 
   void TestBody() override;
 
@@ -165,6 +174,10 @@ class ShoppingServiceTestBase : public testing::Test {
   static void MergeProductInfoData(ProductInfo* info,
                                    const base::Value::Dict& on_page_data_map);
 
+  // Skip the delay for running the on-page javascript for product info and
+  // wait until the task completes.
+  void SimulateProductInfoJsTaskFinished();
+
   // Get the count of the number of tabs a particular URL is open in from the
   // product info cache.
   int GetProductInfoCacheOpenURLCount(const GURL& url);
@@ -173,7 +186,8 @@ class ShoppingServiceTestBase : public testing::Test {
   const ProductInfo* GetFromProductInfoCache(const GURL& url);
 
  protected:
-  base::test::TaskEnvironment task_environment_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
 
   // Used primarily for decoding JSON for the mock javascript execution.
   data_decoder::test::InProcessDataDecoder in_process_data_decoder_;

@@ -24,9 +24,6 @@
 // Positioner for activity services attached to the toolbar
 - (id<SharingPositioner>)SharingPositioner;
 
-// Shows the animation when transitioning to a prerendered page.
-- (void)showPrerenderingAnimation;
-
 // Coordinates the location bar focusing/defocusing. For example, initiates
 // transition to the expanded location bar state of the view controller.
 - (void)transitionToLocationBarFocusedState:(BOOL)focused;
@@ -37,6 +34,9 @@
 
 // Updates toolbar appearance.
 - (void)updateToolbar;
+
+// YES when a prerendered webstate is being inserted into a webStateList.
+- (BOOL)isLoadingPrerenderer;
 
 @end
 

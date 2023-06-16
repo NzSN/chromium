@@ -205,9 +205,10 @@ path_mappings: Additional non-default path mappings for absolute imports. The
                flaky build errors.
 manifest_excludes: List of input files to exclude from the output
                    the manifest file.
-enable_source_maps: Defaults to "false". Setting it to "true" turns on TS
-                    compiler's 'inlineSourceMap' and 'inlineSources' flags.
-                    Non-inlined source maps are currently not supported.
+enable_source_maps: Defaults to the value of the enable_webui_inline_sourcemaps
+                    GN flag. Setting it to "true" turns on TS compiler's
+                    'inlineSourceMap' and 'inlineSources' flags. Non-inlined
+                    source maps are currently not supported.
 ```
 
 #### **Example**
@@ -282,6 +283,8 @@ external_paths: Mappings between absolute URLs and paths where files imported
                 Note: all absolute URLs must either be listed in |excludes| or
                 be mapped in |external_paths|, otherwise a build time error is
                 raised.
+out_folder: The location where bundled files will be placed in. Defaults to
+            |target_gen_dir|.
 ```
 
 #### **Example**
@@ -314,9 +317,8 @@ if (optimize_webui) {
 ### **minify_js**
 ```
 This rule is used to minify Javascript files to reduce build size.
-Also generates a manifest file to |target_gen_dir| named
-minify_js_manifest.json. This can be used alongside bundle_js(), if
-bundling and minifying is desired.
+This can be used alongside bundle_js(), if bundling and minifying is
+desired.
 ```
 
 #### **Arguments**
@@ -324,6 +326,9 @@ bundling and minifying is desired.
 in_folder: The location of the input files to be minified.
 in_files: The list of JS files to minify with respect to the |in_folder|.
 out_folder: The location where minified files will be outputted.
+out_manifest: The location to write the manifest file of all files
+              outputted by minify_js(). Defaults to
+              $target_gen_dir/${target_name}_manifest.json.
 deps: Targets generating any files being minified.
 ```
 
@@ -385,7 +390,7 @@ generate_grd("build_grd") {
   input_files = [ "my_webui.html" ]
   input_files_base_dir = rebase_path(".", "//")
   deps = [ ":build_ts" ]
-  manifest_files = filter_include(get_target_outputs(":build_ts"), [ "*.manifest" ])
+  manifest_files = filter_include(get_target_outputs(":build_ts"), [ "*_manifest.json" ])
   # Or, configure statically the manifest file name:
   # manifest_files = [ "$target_gen_dir/build_ts.manifest" ]
   grd_prefix = "my_webui"
@@ -473,7 +478,7 @@ css_to_wrapper("css_wrapper_files")
 copy("copy_mojo")
 ts_library("build_ts")
 merge_js_source_maps("merge_source_maps")
-optimize_webui("build_bundle")
+bundle_js("build_bundle")
 minify_js("build_min_js")
 generate_grd("build_grd")
 generate_grd("build_grdp")
@@ -517,6 +522,14 @@ mojo_files: List of Mojo JS generated files. These will be copied to a temporary
 mojo_files_deps: List of Mojo targets that generate |mojo_files|. Must be
                  defined if |mojo_files| is defined.
 
+mojo_base_path: Specifies the directory under which Mojo files will be served at
+                runtime. Optional parameter. Defaults to the top level folder
+                '.', which results in Mojo files being served from
+                'chrome://<webui_name>/foo.mojom-webui.js'.
+                Example: Passing 'mojom-webui' would result in Mojo files being
+                served from
+                'chrome://<webui_name>/mojom-webui/foo.mojom-webui.js'.
+
 TypeScript (ts_library()) related params:
 ts_composite: See |composite| in ts_library(). Defaults to false, optional.
 ts_out_dir: See |out_dir| in ts_library(). Optional parameter, defaults
@@ -537,17 +550,16 @@ optimize: Specifies whether any optimization steps will be used. Defaults to the
           value of the optimize_webui GN flag.
           When true, html_to_wrapper() and css_to_wrapper() will be invoked with
           the |minify| flag on, to minify HTML/CSS code.
-          If |optimize_webui_in_files| is provided then optimize_webui() will be
-          invoked to bundle+minify JS code (using Rollup and Terser).
-          If |optimize_webui_in_files| is not provided then minify_js() will be
-          invoked to minify JS code (using Terser).
+          When true, minify_js() will be invoked to minify JS code (using Terser).
+          If |optimize_webui_in_files| is provided then bundle_js() will also be
+          invoked to bundle JS code (using Rollup).
           |optimize_webui_host| must be specified if |optimize_webui_in_files|
           is provided.
-optimize_webui_excludes: See |excludes| in optimize_webui(). Optional.
+optimize_webui_excludes: See |excludes| in bundle_js(). Optional.
 optimize_webui_external_paths: See |external_paths| in optimize_webui().
                                Optional.
-optimize_webui_host: See |host| in optimize_webui().
-optimize_webui_in_files: See |in_files| in optimize_webui().
+optimize_webui_host: See |host| in bundle_js().
+optimize_webui_in_files: See |in_files| in bundle_js().
 
 Other params:
 generate_grdp: Whether to generate grdp file instead of a grd file. Defaults to
@@ -732,7 +744,7 @@ generate_grd("build_grd") {
   out_grd = "$target_gen_dir/resources.grd"
   input_files = [ "my_debug_page_index.html" ]
   input_files_base_dir = rebase_path(".", "//")
-  manifest_files = filter_include(get_target_outputs(":build_ts"), [ "*.manifest" ])
+  manifest_files = filter_include(get_target_outputs(":build_ts"), [ "*_manifest.json" ])
 }
 
 # Create the pak, header, and resource map files.
@@ -815,7 +827,7 @@ generate_grd("build_grd") {
   out_grd = "$target_gen_dir/resources.grd"
   input_files = [ "my_debug_page_index.html" ]
   input_files_base_dir = rebase_path(".", "//")
-  manifest_files = filter_include(get_target_outputs(":build_ts"), [ "*.manifest" ])
+  manifest_files = filter_include(get_target_outputs(":build_ts"), [ "*_manifest.json" ])
 }
 
 # Create the pak, header, and resource map files.

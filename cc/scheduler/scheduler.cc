@@ -168,20 +168,6 @@ void Scheduler::DidSubmitCompositorFrame(uint32_t frame_token,
                                          base::TimeTicks submit_time,
                                          EventMetricsSet events_metrics,
                                          bool has_missing_content) {
-  // Timedelta used from begin impl frame to submit frame.
-  const auto cc_begin_impl_to_submit_ = Now() - cc_frame_start_;
-  if (cc_frame_time_available_ >= cc_begin_impl_to_submit_) {
-    UMA_HISTOGRAM_CUSTOM_MICROSECONDS_TIMES(
-        "Scheduling.Renderer.FrameProduction.TimeUnused",
-        cc_frame_time_available_ - cc_begin_impl_to_submit_,
-        base::Microseconds(1), base::Milliseconds(50), 50);
-  } else {
-    UMA_HISTOGRAM_CUSTOM_MICROSECONDS_TIMES(
-        "Scheduling.Renderer.FrameProduction.TimeOverused",
-        cc_begin_impl_to_submit_ - cc_frame_time_available_,
-        base::Microseconds(1), base::Milliseconds(50), 50);
-  }
-
   // Hardware and software draw may occur at the same frame simultaneously for
   // Android WebView. There is no need to call DidSubmitCompositorFrame here for
   // software draw.
@@ -680,9 +666,6 @@ void Scheduler::BeginImplFrame(const viz::BeginFrameArgs& args,
             SchedulerStateMachine::BeginImplFrameState::IDLE);
   DCHECK(!begin_impl_frame_deadline_timer_.IsRunning());
   DCHECK(state_machine_.HasInitializedLayerTreeFrameSink());
-  cc_frame_time_available_ = args.interval - kDeadlineFudgeFactor -
-                             compositor_timing_history_->DrawDurationEstimate();
-  cc_frame_start_ = now;
 
   {
     DCHECK(!inside_scheduled_action_);
@@ -821,15 +804,11 @@ void Scheduler::FinishImplFrameSynchronous() {
 void Scheduler::DrawIfPossible() {
   DCHECK(!inside_scheduled_action_);
   base::AutoReset<bool> mark_inside(&inside_scheduled_action_, true);
-  bool drawing_with_new_active_tree =
-      state_machine_.active_tree_needs_first_draw() &&
-      !state_machine_.previous_pending_tree_was_impl_side();
   compositor_timing_history_->WillDraw();
   state_machine_.WillDraw();
   DrawResult result = client_->ScheduledActionDrawIfPossible();
   state_machine_.DidDraw(result);
-  compositor_timing_history_->DidDraw(drawing_with_new_active_tree,
-                                      client_->HasInvalidationAnimation());
+  compositor_timing_history_->DidDraw();
 }
 
 void Scheduler::DrawForced() {
@@ -849,8 +828,7 @@ void Scheduler::DrawForced() {
   state_machine_.WillDraw();
   DrawResult result = client_->ScheduledActionDrawForced();
   state_machine_.DidDraw(result);
-  compositor_timing_history_->DidDraw(drawing_with_new_active_tree,
-                                      client_->HasInvalidationAnimation());
+  compositor_timing_history_->DidDraw();
 }
 
 void Scheduler::SetDeferBeginMainFrame(bool defer_begin_main_frame) {

@@ -106,8 +106,9 @@ public class Features {
             "SAFE_BROWSING_RESPONSE_SHOW_INTERSTITIAL";
 
     /**
-     * Feature was renamed to WEB_MESSAGE_ARRAY_BUFFER.
+     * @deprecated Feature was renamed to WEB_MESSAGE_ARRAY_BUFFER. Do not reuse feature name.
      */
+    @Deprecated()
     public static final String WEB_MESSAGE_GET_MESSAGE_PAYLOAD = "WEB_MESSAGE_GET_MESSAGE_PAYLOAD";
 
     // JsReplyProxy.postMessageWithPayload
@@ -195,9 +196,6 @@ public class Features {
     // WebViewCompat.addWebMessageListener
     // WebViewCompat.removeWebMessageListener
     public static final String WEB_MESSAGE_LISTENER = "WEB_MESSAGE_LISTENER";
-
-    // WebViewProviderFactoryAdapter.setSupportLibraryVersion
-    public static final String SET_SUPPORT_LIBRARY_VERSION = "SET_SUPPORT_LIBRARY_VERSION";
 
     // WebViewCompat.addDocumentStartJavascript
     public static final String DOCUMENT_START_SCRIPT = "DOCUMENT_START_SCRIPT:1";

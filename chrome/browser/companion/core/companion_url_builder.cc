@@ -115,7 +115,8 @@ std::string CompanionUrlBuilder::BuildCompanionUrlParamProto(GURL page_url) {
   }
 
   url_params.set_has_msbb_enabled(is_msbb_enabled);
-  url_params.set_signin_allowed_and_required(signin_delegate_->AllowedSignin());
+  url_params.set_is_sign_in_allowed(signin_delegate_->AllowedSignin());
+  url_params.set_is_signed_in(signin_delegate_->IsSignedIn());
 
   companion::proto::PromoState* promo_state = url_params.mutable_promo_state();
   promo_state->set_signin_promo_denial_count(
@@ -124,6 +125,12 @@ std::string CompanionUrlBuilder::BuildCompanionUrlParamProto(GURL page_url) {
       pref_service_->GetInteger(kMsbbPromoDeclinedCountPref));
   promo_state->set_exps_promo_denial_count(
       pref_service_->GetInteger(kExpsPromoDeclinedCountPref));
+  promo_state->set_exps_promo_shown_count(
+      pref_service_->GetInteger(kExpsPromoShownCountPref));
+
+  // Set region search IPH state.
+  promo_state->set_should_show_region_search_iph(
+      signin_delegate_->ShouldShowRegionSearchIPH());
 
   std::string base64_encoded_proto;
   base::Base64Encode(url_params.SerializeAsString(), &base64_encoded_proto);

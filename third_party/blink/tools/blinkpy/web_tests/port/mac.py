@@ -121,12 +121,6 @@ class MacPort(base.Port):
             return True
         return super().default_smoke_test_only()
 
-    def default_child_processes(self):
-        # limit process count to half on older mac versions to avoid timeout
-        if self._version in {'mac10.13', 'mac10.14'}:
-            return max(1, super().default_child_processes() // 2)
-        return super().default_child_processes()
-
     def path_to_smoke_tests_file(self):
         if self._version in {'mac10.13', 'mac10.14'}:
             return self._filesystem.join(self.web_tests_dir(), 'SmokeTests',
@@ -138,3 +132,9 @@ class MacPort(base.Port):
                                             self.driver_name() + '.app',
                                             'Contents', 'MacOS',
                                             self.driver_name())
+
+    def _default_timeout_ms(self):
+        # increase timeout by 4x on older mac versions
+        if self._version in {'mac10.13', 'mac10.14'}:
+            return 4 * super()._default_timeout_ms()
+        return super()._default_timeout_ms()

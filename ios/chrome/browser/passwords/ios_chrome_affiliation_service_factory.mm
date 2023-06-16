@@ -14,7 +14,7 @@
 #import "components/keyed_service/ios/browser_state_keyed_service_factory.h"
 #import "components/password_manager/core/browser/affiliation/affiliation_service_impl.h"
 #import "components/password_manager/core/browser/password_manager_constants.h"
-#import "ios/chrome/browser/application_context/application_context.h"
+#import "ios/chrome/browser/shared/model/application_context/application_context.h"
 #import "ios/chrome/browser/shared/model/browser_state/browser_state_otr_helper.h"
 #import "ios/chrome/browser/shared/model/browser_state/chrome_browser_state.h"
 #import "services/network/public/cpp/shared_url_loader_factory.h"
@@ -51,7 +51,8 @@ IOSChromeAffiliationServiceFactory::BuildServiceInstanceFor(
     web::BrowserState* context) const {
   scoped_refptr<base::SequencedTaskRunner> backend_task_runner =
       base::ThreadPool::CreateSequencedTaskRunner(
-          {base::MayBlock(), base::TaskPriority::USER_VISIBLE});
+          {base::MayBlock(), base::TaskPriority::USER_VISIBLE,
+           base::TaskShutdownBehavior::BLOCK_SHUTDOWN});
   auto affiliation_service =
       std::make_unique<password_manager::AffiliationServiceImpl>(
           context->GetSharedURLLoaderFactory(), backend_task_runner,

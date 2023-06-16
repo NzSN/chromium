@@ -151,6 +151,22 @@ void CONTENT_EXPORT AnalyzePrerenderActivationHeader(
     PrerenderTriggerType trigger_type,
     const std::string& embedder_histogram_suffix);
 
+// Records ui::PageTransition of prerender activation navigation when transition
+// mismatch happens on prerender activation.
+void RecordPrerenderActivationTransition(
+    int32_t potential_activation_transition,
+    PrerenderTriggerType trigger_type,
+    const std::string& embedder_histogram_suffix);
+
+// Records the net error code when a prerendering page fails the navigation upon
+// PrerenderHost::DidFinishNavigation. Note that this is different from the one
+// that checked at `PrerenderNavigationThrottle::WillProcessResponse` which
+// checks the http_response_code of the `commit_params`.
+void RecordPrerenderNavigationErrorCode(
+    net::Error error_code,
+    PrerenderTriggerType trigger_type,
+    const std::string& embedder_histogram_suffix);
+
 // These values are persisted to logs. Entries should not be renumbered and
 // numeric values should never be reused.
 // These are also mapped onto the second content internal range of
@@ -179,6 +195,11 @@ void RecordPrerenderBackNavigationEligibility(
     PreloadingPredictor predictor,
     PrerenderBackNavigationEligibility eligibility,
     PreloadingAttempt* preloading_attempt);
+
+void RecordPrerenderActivationCommitDeferTime(
+    base::TimeDelta time_delta,
+    PrerenderTriggerType trigger_type,
+    const std::string& embedder_histogram_suffix);
 
 }  // namespace content
 

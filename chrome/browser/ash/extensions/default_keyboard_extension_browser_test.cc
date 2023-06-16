@@ -83,7 +83,7 @@ void DefaultKeyboardExtensionBrowserTest::RunTest(
                    base::FilePath(config.base_framework_));
   InjectJavascript(base::FilePath(config.test_dir_), file);
 
-  ASSERT_TRUE(content::ExecuteScript(web_contents, utf8_content_));
+  ASSERT_TRUE(content::ExecJs(web_contents, utf8_content_));
 
   // Inject DOM-automation test harness and run tests.
   EXPECT_TRUE(ExecuteWebUIResourceTest(web_contents));
@@ -184,12 +184,11 @@ IN_PROC_BROWSER_TEST_F(DefaultKeyboardExtensionBrowserTest, EndToEndTest) {
     base::ScopedAllowBlockingForTesting allow_io;
     ASSERT_TRUE(base::ReadFileToString(path, &script));
   }
-  EXPECT_TRUE(content::ExecuteScript(keyboard_wc, script));
+  EXPECT_TRUE(content::ExecJs(keyboard_wc, script));
   // Verify 'a' appeared on test page.
-  bool success = false;
-  EXPECT_TRUE(content::ExecuteScriptAndExtractBool(
-      browser_wc, "success ? verifyInput('a') : waitForInput('a');", &success));
-  ASSERT_TRUE(success);
+  ASSERT_EQ(true,
+            content::EvalJs(browser_wc,
+                            "success ? verifyInput('a') : waitForInput('a');"));
 }
 
 // TODO(kevers|rsadam|bshe):  Add UI tests for remaining virtual keyboard

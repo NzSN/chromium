@@ -18,7 +18,9 @@
 #include "components/omnibox/browser/autocomplete_input.h"
 #include "components/omnibox/browser/autocomplete_match_type.h"
 #include "components/omnibox/browser/autocomplete_provider.h"
+#include "components/omnibox/common/omnibox_features.h"
 #include "third_party/metrics_proto/omnibox_event.pb.h"
+#include "third_party/omnibox_proto/entity_info.pb.h"
 
 namespace base {
 class TimeDelta;
@@ -341,18 +343,11 @@ extern const base::FeatureParam<int> kFuzzyUrlSuggestionsPenaltyTaperLength;
 bool IsOnDeviceHeadSuggestEnabledForIncognito();
 bool IsOnDeviceHeadSuggestEnabledForNonIncognito();
 bool IsOnDeviceHeadSuggestEnabledForAnyMode();
+bool IsOnDeviceHeadSuggestEnabledForLocale(const std::string& locale);
 bool IsOnDeviceTailSuggestEnabled();
 bool ShouldEncodeLeadingSpaceForOnDeviceTailSuggest();
 // Functions can be used in both non-incognito and incognito.
 std::string OnDeviceHeadModelLocaleConstraint(bool is_incognito);
-
-// Returns true if CGI parameter names should not be considered when scoring
-// suggestions.
-bool ShouldDisableCGIParamMatching();
-
-// If true, enables a "starter pack" of @history, @bookmarks, and @settings
-// scopes for Site Search.
-bool IsSiteSearchStarterPackEnabled();
 
 // Omnibox UI Simplification - Square icon backgrounds.
 // Blue rounded rect background icons for answers e.g. '1+1' and 'define x'.
@@ -371,14 +366,21 @@ extern const base::FeatureParam<double> kSquareSuggestIconEntitiesScale;
 // Omnibox UI simplification - uniform row heights.
 // Returns true if the feature to enable uniform row height is enabled.
 bool IsUniformRowHeightEnabled();
+
 // Specifies the row height in pixels for omnibox suggestions.
 extern const base::FeatureParam<int> kSuggestionRowHeight;
 // Specifies the vertical margin to use in one-line rich entity and answer
 // suggestions.
 extern const base::FeatureParam<int> kRichSuggestionVerticalMargin;
+
 // Omnibox GM3 - icons.
 // Returns true if the feature to enable GM3 icons is enabled.
 bool IsChromeRefreshIconsEnabled();
+
+// Omnibox CR23 - suggestion icons.
+// Returns true if the feature to enable CR23 suggestion icons is enabled.
+bool IsChromeRefreshSuggestIconsEnabled();
+
 // Omnibox GM3 - text style.
 // Returns true if the feature to enable GM3 text styling is enabled.
 bool IsGM3TextStyleEnabled();
@@ -386,6 +388,10 @@ bool IsGM3TextStyleEnabled();
 extern const base::FeatureParam<int> kFontSizeTouchUI;
 // Specifies the omnibox font size (non-Touch UI).
 extern const base::FeatureParam<int> kFontSizeNonTouchUI;
+
+// Omnibox CR23 - layout.
+// Returns true if `kExpandedLayout` is enabled.
+bool IsCr23LayoutEnabled();
 
 // ---------------------------------------------------------
 // Clipboard URL suggestions:
@@ -476,32 +482,6 @@ extern const char kOmniboxUIUnelideURLOnHoverThresholdMsParam[];
 // `FeatureParam`s
 
 // Autocomplete stability and related features.
-// If enabled and the input is in keyword mode, the default suggestion isn't
-// preserved.
-extern const base::FeatureParam<bool>
-    kAutocompleteStabilityPreserveDefaultExcludeKeywordInputs;
-// When providers update their matches, the aggregated matches for the current
-// input are sorted, then merged with the matches from the previous input
-// (`TransferOldMatches()`), then resorted. If enabled, both sorts preserve the
-// default suggestion. Otherwise, only the first sort of the pre-merged matches
-// preserves the default.
-extern const base::FeatureParam<bool>
-    kAutocompleteStabilityPreserveDefaultAfterTransfer;
-// The minimum input length for which to preserve the default suggestion during
-// sync updates. If 0, all sync updates preserve the default suggestion,
-// regardless of input length. If <0, no sync updates preserve the default
-// suggestion; i.e. control behavior.
-extern const base::FeatureParam<int>
-    kAutocompleteStabilityPreserveDefaultForSyncUpdatesMinInputLength;
-// Whether to preserve the default suggestion during async updates. It doesn't
-// make too much sense to enable preservation for sync but not async
-// updates. True by default.
-extern const base::FeatureParam<bool>
-    kAutocompleteStabilityPreserveDefaultForAsyncUpdates;
-// If enabled, transferred matches from the previous input are not allowed to
-// be default.
-extern const base::FeatureParam<bool>
-    kAutocompleteStabilityPreventDefaultPreviousMatches;
 // Limit how frequently `AutocompleteController::UpdateResult()` will be
 // invoked. See the comments at `AutocompleteController::update_debouncer_`.
 extern const base::FeatureParam<bool>
@@ -525,23 +505,6 @@ bool IsZeroSuggestPrefetchingEnabled();
 // Returns whether zero-suggest prefetching is enabled in the given context.
 bool IsZeroSuggestPrefetchingEnabledInContext(
     metrics::OmniboxEventProto::PageClassification page_classification);
-
-// Short bookmarks.
-// Determine whether bookmarks should look for exact matches only or prefix
-// matches as well when the input is short.
-bool IsShortBookmarkSuggestionsEnabled();
-bool IsShortBookmarkSuggestionsByTotalInputLengthEnabled();
-// Returns the minimum input length to enable prefix matches.
-size_t ShortBookmarkSuggestionsByTotalInputLengthThreshold();
-// If true, when applicable, the feature will be logged as triggered but won't
-// affect omnibox results.
-extern const base::FeatureParam<bool>
-    kShortBookmarkSuggestionsByTotalInputLengthCounterfactual;
-extern const base::FeatureParam<int>
-    kShortBookmarkSuggestionsByTotalInputLengthThreshold;
-
-// Shortcut Expanding.
-bool IsShortcutExpandingEnabled();
 
 // Shortcut boost
 // The scores to use for boosting search and URL suggestions respectively.
@@ -579,12 +542,6 @@ extern const base::FeatureParam<bool>
 // Specifies the relevance scores for the Site Search Starter Pack ACMatches
 // (e.g. @bookmarks, @history) provided by the Builtin Provider.
 extern const base::FeatureParam<int> kSiteSearchStarterPackRelevanceScore;
-
-// Document provider.
-// The max number of low quality doc suggestions to show. Docs are considered
-// low quality if they're neither owned nor fully contain the input in their
-// titles and owners.
-extern const base::FeatureParam<int> kDocumentProviderMaxLowQualitySuggestions;
 
 // Domain suggestions.
 // Whether enabled for counterfactual logging; i.e. shouldn't use domain
@@ -638,15 +595,17 @@ struct MLConfig {
   // Equivalent to omnibox::kLogUrlScoringSignals.
   bool log_url_scoring_signals{false};
 
-  // If true, enables scoring signal annotators for logging Omnibox URL scoring
-  // signals to OmniboxEventProto. Equivalent to
-  // OmniboxFieldTrial::kLogUrlScoringSignalsEnableScoringSignalsAnnotators.
+  // If true, enables scoring signal annotators for populating additional
+  // Omnibox URL scoring signals for logging or ML scoring.
   bool enable_scoring_signals_annotators{false};
 
   // If true, runs the ML scoring model to assign new relevance scores to the
   // URL suggestions and reranks them.
   // Equivalent to omnibox::kMlUrlScoring.
   bool ml_url_scoring{false};
+
+  // If true, runs batch ML scoring of URL candidates.
+  bool ml_batch_url_scoring{false};
 
   // If true, runs the ML scoring model but does not assign new relevance scores
   // to the URL suggestions and does not rerank them.
@@ -657,6 +616,18 @@ struct MLConfig {
   // pass to the controller beyond `provider_max_matches`.
   // Equivalent to OmniboxFieldTrial::kMlUrlScoringIncreaseNumCandidates.
   bool ml_url_scoring_increase_num_candidates{false};
+
+  // If true, the ML model only re-scores and re-ranks the final set of matches
+  // that would be shown in the legacy scoring system. The full legacy system
+  // including the final call to `SortAndCull()` is completed before the ML
+  // model is invoked.
+  bool ml_url_scoring_rerank_final_matches_only{false};
+
+  // If true, the would-be default match from the legacy system is determined
+  // before ML scoring is invoked, and preserved even after re-scoring and
+  // re-ranking with the new scores.  This param has no effect if
+  // `ml_url_scoring_rerank_final_matches_only` above is false.
+  bool ml_url_scoring_preserve_default{false};
 
   // If true, creates Omnibox autocompete URL scoring model.
   // Equivalent to omnibox::kUrlScoringModel.
@@ -685,7 +656,10 @@ const MLConfig& GetMLConfig();
 
 // If enabled, logs Omnibox scoring signals to OmniboxEventProto for training
 // the ML scoring models.
-bool IsLogUrlScoringSignalsEnabled();
+bool IsReportingUrlScoringSignalsEnabled();
+
+// If enabled, populates scoring signals of URL matches.
+bool IsPopulatingUrlScoringSignalsEnabled();
 
 // Whether the scoring signal annotators are enabled for logging Omnibox scoring
 // signals to OmniboxEventProto.
@@ -694,6 +668,9 @@ bool AreScoringSignalsAnnotatorsEnabled();
 // If enabled, runs the ML scoring model to assign new relevance scores to the
 // URL suggestions and reranks them.
 bool IsMlUrlScoringEnabled();
+
+// Whether batch ML url scoring is enabled.
+bool IsMlBatchUrlScoringEnabled();
 
 // If true, runs the ML scoring model but does not assign new relevance scores
 // to URL suggestions.
@@ -734,7 +711,33 @@ extern const base::FeatureParam<int> kInspireMeAdditionalTrendingQueries;
 //
 // When set to true, permits Entity suggestion with associated Actions to be
 // promoted over the Escape Hatch.
-extern const base::FeatureParam<bool> kActionsInSuggestPromoteEntitySuggestion;
+constexpr base::FeatureParam<bool> kActionsInSuggestPromoteEntitySuggestion(
+    &omnibox::kActionsInSuggest,
+    "PromoteEntitySuggestion",
+    false);
+
+// Specifies which actions in suggest will be offered to users.
+constexpr base::FeatureParam<omnibox::ActionInfo::ActionType>::Option
+    kActionsInSuggestRemoveActionTypesVariants[] = {
+        {{}, ""},
+        {omnibox::ActionInfo_ActionType_CALL, "call"},
+        {omnibox::ActionInfo_ActionType_DIRECTIONS, "directions"},
+        {omnibox::ActionInfo_ActionType_REVIEWS, "reviews"},
+};
+constexpr base::FeatureParam<omnibox::ActionInfo::ActionType>
+    kActionsInSuggestRemoveActionTypes(
+        &omnibox::kActionsInSuggest,
+        "RemoveActionTypes",
+        {},
+        &kActionsInSuggestRemoveActionTypesVariants);
+
+// Controls the placement of Reviews and Call actions position.
+// false => Call, Directions, Reviews.
+// true  => Reviews, Directions, Call.
+constexpr base::FeatureParam<bool> kActionsInSuggestPromoteReviewsAction(
+    &omnibox::kActionsInSuggest,
+    "PromoteReviewsAction",
+    false);
 // <- Actions In Suggest
 // ---------------------------------------------------------
 // Android UI Revamp ->

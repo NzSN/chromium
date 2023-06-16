@@ -148,6 +148,7 @@
 <translation id="3600792891314830896">Səs oxudan saytları səssiz rejimə keçirin</translation>
 <translation id="3602290021589620013">Önizləmə</translation>
 <translation id="3628308229821498208">Təklif edilən axtarışlar</translation>
+<translation id="3707034683772193706">Daxil olduğunuz sayt bot olmadığınızı doğrulamaq üçün Chrome ilə az miqdarda məlumat yadda saxlaya bilər</translation>
 <translation id="3721953990244350188">İmtina edin və növbəti əlçatan əməliyyatı göstərin</translation>
 <translation id="3744111561329211289">Arxa fon sinx</translation>
 <translation id="3763247130972274048">10 saniyə keçmək üçün videonun sol və ya sağına iki dəfə toxunun</translation>
@@ -188,7 +189,6 @@
 <translation id="4412992751769744546">Üçüncü tərəf kukilərinə icazə verin</translation>
 <translation id="4428065317363009941">Reklam fərdiləşdirməsi</translation>
 <translation id="4434045419905280838">Popap və yönləndirmələr</translation>
-<translation id="4440642537584213025"><ph name="TARGET_DESCRIPTION" /> genişləndirin</translation>
 <translation id="4468959413250150279">Xüsusi saytı səsiz rejimə keçirin.</translation>
 <translation id="4475912480633855319">{COOKIES,plural, =1{# kuki}other{# kuki}}</translation>
 <translation id="4478158430052450698">Fərqli saytlar üçün miqyasdəyişməni fərdiləşdirməyi asanlaşdırın</translation>
@@ -310,6 +310,7 @@
 <translation id="6612358246767739896">Qorunan kontent</translation>
 <translation id="662080504995468778">Qalın</translation>
 <translation id="6643016212128521049">Silin</translation>
+<translation id="6653342741369270081">Tam ekrandan çıxmaq üçün geri düyməsinə basın.</translation>
 <translation id="6689172468748959065">Profil fotoları</translation>
 <translation id="6697925417670533197">Aktiv endirmələr</translation>
 <translation id="6722828510648505498">Kimlik xidmətlərindən daxil olma sorğularını bloklayın.</translation>
@@ -344,6 +345,7 @@
 <translation id="7302486331832100261">Adətən bildirişləri bloklayırsınız. İcazə vermək üçün Detallar seçiminə toxunun.</translation>
 <translation id="7366415735885268578">Sayt əlavə edin</translation>
 <translation id="7383715096023715447"><ph name="DOMAIN" /> üçün ayarlar</translation>
+<translation id="7406113532070524618">Bu ayar kimliyi müəyyən etmir və ya saytlara brauzer tarixçəsini görmək imkanı vermir. Lakin saytlar doğrulamanın bir hissəsi kimi az miqdarda məlumat paylaşa bilər</translation>
 <translation id="7423098979219808738">Öncə soruşun</translation>
 <translation id="7423538860840206698">Buferdə oxu girişi blok edildi</translation>
 <translation id="7425915948813553151">Saytlar üçün tünd tema</translation>
@@ -369,6 +371,7 @@
 <translation id="7846076177841592234">Seçimi ləğv edin</translation>
 <translation id="7882806643839505685">Xüsusi sayt üçün səsə icazə verin.</translation>
 <translation id="789180354981963912">Anonim rejimdə üçüncü tərəf kukilərini bloklayın:</translation>
+<translation id="7895868624847501462">Bu əməliyyat kukilər daxil olmaqla lokal datanı siləcək, <ph name="DOMAIN" /> və ona aid saytların icazələrini sıfırlayacaq</translation>
 <translation id="7940722705963108451">Mənə xatırladın</translation>
 <translation id="7974024493641668069">{COUNT,plural, =1{<ph name="FPS_MEMBERS_COUNT" /> sayt qrupdakı fəaliyyətinizi görə bilən <ph name="FPS_OWNER" /> adlı şəxsin saytlar qrupundadır}other{<ph name="FPS_MEMBERS_COUNT" /> sayt qrupdakı fəaliyyətinizi görə bilən <ph name="FPS_OWNER" /> adlı şəxsin saytlar qrupundadır}}</translation>
 <translation id="7986741934819883144">Kontakt seçin</translation>
@@ -394,6 +397,7 @@
 <translation id="8284326494547611709">Başlıqlar</translation>
 <translation id="8300705686683892304">Tədbiq tərəfindən idarə edilən</translation>
 <translation id="8324158725704657629">Daha soruşma</translation>
+<translation id="8338445138528827481">Bu əməliyyat kukilər daxil olmaqla lokal datanı siləcək və <ph name="ORIGIN" /> icazələrini sıfırlayacaq</translation>
 <translation id="8362795839483915693">Ziyarət etdiyiniz saytlarda böyütmə və ya kiçiltmə edə bilərsiniz</translation>
 <translation id="8372893542064058268">Xüsusi sayt üçün Arxa fon Sinxronizasiyasına icazə verin.</translation>
 <translation id="8376384591331888629">Bu saytdakı üçüncü tərəf kukilər daxil olmaqla</translation>
@@ -433,6 +437,7 @@
 <translation id="8816026460808729765">Saytların sensorlara girişini blok edin</translation>
 <translation id="8823559166155093873">Kukiləri bloklayın</translation>
 <translation id="8847988622838149491">USB</translation>
+<translation id="8889294078294184559">Baxmağa davam etdikcə saytlar Chrome ilə yoxlanış apara və daxil olduğunuz əvvəlki sayt ilə real insan olduğunuzu təsdiqləyə bilər</translation>
 <translation id="8899807382908246773">İntruziv reklamlar</translation>
 <translation id="8903921497873541725">Zoom</translation>
 <translation id="8921772741368021346"><ph name="POSITION" /> / <ph name="DURATION" /></translation>

@@ -254,6 +254,10 @@ source_set("browser_sources") {
     "blocklist_extension_prefs.h",
     "blocklist_state.h",
     "browser_context_keyed_api_factory.h",
+    "browser_frame_context_data.cc",
+    "browser_frame_context_data.h",
+    "browser_process_context_data.cc",
+    "browser_process_context_data.h",
     "component_extension_resource_manager.h",
     "computed_hashes.cc",
     "computed_hashes.h",
@@ -429,10 +433,6 @@ source_set("browser_sources") {
 
     # TODO(crbug.com/730220): Ideally web_view should be a separate target on
     # which the extension system depends.
-    "browser_frame_context_data.cc",
-    "browser_frame_context_data.h",
-    "browser_process_context_data.cc",
-    "browser_process_context_data.h",
     "guest_view/web_view/javascript_dialog_helper.cc",
     "guest_view/web_view/javascript_dialog_helper.h",
     "guest_view/web_view/web_view_constants.cc",
@@ -590,6 +590,8 @@ source_set("browser_sources") {
     "//components/services/unzip/content",
     "//components/services/unzip/public/cpp",
     "//components/sessions",
+    "//components/supervised_user/core/common",
+    "//components/supervised_user/core/common:buildflags",
     "//components/sync",
     "//components/ukm/content",
     "//components/update_client",
@@ -1018,8 +1020,11 @@ source_set("unit_tests") {
       "//chromeos/ash/components/standalone_browser",
       "//chromeos/dbus/permission_broker",
       "//chromeos/dbus/power",
+      "//components/account_id",
       "//components/feedback",
       "//components/prefs:prefs",
+      "//components/user_manager",
+      "//components/user_manager:test_support",
       "//extensions/shell:app_shell_lib",
     ]
   }

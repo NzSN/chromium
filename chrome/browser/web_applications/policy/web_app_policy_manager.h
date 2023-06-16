@@ -118,7 +118,7 @@ class WebAppPolicyManager {
     WebAppSetting& operator=(const WebAppSetting&) = default;
     ~WebAppSetting() = default;
 
-    bool Parse(const base::Value& dict, bool for_default_settings);
+    bool Parse(const base::Value::Dict& dict, bool for_default_settings);
     void ResetSettings();
 
     RunOnOsLoginPolicy run_on_os_login_policy;
@@ -155,8 +155,8 @@ class WebAppPolicyManager {
 
   void OverrideManifest(const GURL& custom_values_key,
                         blink::mojom::ManifestPtr& manifest) const;
-  RunOnOsLoginPolicy GetUrlRunOnOsLoginPolicyByUnhashedAppId(
-      const std::string& unhashed_app_id) const;
+  RunOnOsLoginPolicy GetUrlRunOnOsLoginPolicyByManifestId(
+      const std::string& manifest_id) const;
 
   // Parses install options from a `base::Value::Dict`, which represents one
   // entry of the kWepAppInstallForceList. If the value contains a custom_name
@@ -180,10 +180,10 @@ class WebAppPolicyManager {
 
   // Used to install, uninstall, and update apps. Should outlive this class
   // (owned by WebAppProvider).
-  raw_ptr<ExternallyManagedAppManager> externally_managed_app_manager_ =
-      nullptr;
-  raw_ptr<WebAppRegistrar> app_registrar_ = nullptr;
-  raw_ptr<WebAppSyncBridge> sync_bridge_ = nullptr;
+  raw_ptr<ExternallyManagedAppManager, DanglingUntriaged>
+      externally_managed_app_manager_ = nullptr;
+  raw_ptr<WebAppRegistrar, DanglingUntriaged> app_registrar_ = nullptr;
+  raw_ptr<WebAppSyncBridge, DanglingUntriaged> sync_bridge_ = nullptr;
 #if BUILDFLAG(IS_CHROMEOS_ASH)
   raw_ptr<const ash::SystemWebAppDelegateMap, DanglingUntriaged>
       system_web_apps_delegate_map_ = nullptr;

@@ -137,6 +137,7 @@ class TestPdfAccessibilityActionHandler
       const chrome_pdf::AccessibilityActionData& action_data) override {
     received_action_data_ = action_data;
   }
+  void LoadOrReloadAccessibility() override {}
 
   chrome_pdf::AccessibilityActionData received_action_data() {
     return received_action_data_;
@@ -1957,8 +1958,6 @@ TEST_F(PdfAccessibilityTreeTest, TestEmptyPdfAxActions) {
   EXPECT_EQ(point.x(), 0);
   EXPECT_EQ(point.y(), 0);
 
-  EXPECT_FALSE(pdf_action_target->SetSelected(true));
-  EXPECT_FALSE(pdf_action_target->SetSelected(false));
   EXPECT_FALSE(pdf_action_target->ScrollToMakeVisible());
 }
 
@@ -2222,7 +2221,8 @@ TEST_F(PdfAccessibilityTreeTest, TestTransformFromOnOcrDataReceived) {
   EXPECT_EQ(image.bounds, image_node->data().relative_bounds.bounds);
 
   // Simulate creating a child tree using OCR results.
-  pdf_accessibility_tree.IncrementNumberOfRemainingOcrRequests();
+  pdf_accessibility_tree.CreateOcrService();
+
   // Text bounds before applying the transform.
   constexpr gfx::RectF kTextBoundsBeforeTransform1 = {{8.0f, 8.0f},
                                                       {80.0f, 24.0f}};

@@ -298,15 +298,18 @@ class CORE_EXPORT NGLayoutResult final
   }
 
   absl::optional<LayoutUnit> MinimalSpaceShortage() const {
-    if (!HasRareData() || rare_data_->minimal_space_shortage == kIndefiniteSize)
+    if (!HasRareData() || space_.IsInitialColumnBalancingPass() ||
+        rare_data_->minimal_space_shortage == kIndefiniteSize) {
       return absl::nullopt;
+    }
     return rare_data_->minimal_space_shortage;
   }
 
   LayoutUnit TallestUnbreakableBlockSize() const {
-    if (!HasRareData() ||
-        rare_data_->tallest_unbreakable_block_size == kIndefiniteSize)
+    if (!HasRareData() || !space_.IsInitialColumnBalancingPass() ||
+        rare_data_->tallest_unbreakable_block_size == kIndefiniteSize) {
       return LayoutUnit();
+    }
     return rare_data_->tallest_unbreakable_block_size;
   }
 
@@ -443,12 +446,6 @@ class CORE_EXPORT NGLayoutResult final
   // appended a non-zero margin).
   bool SubtreeModifiedMarginStrut() const {
     return bitfields_.subtree_modified_margin_strut;
-  }
-
-  // Returns true if we can't apply the simplified layout algorithm to the
-  // box with this layout result.
-  bool DisableSimplifiedLayout() const {
-    return bitfields_.disable_simplified_layout;
   }
 
   // Returns true if the fragment got truncated because it reached the
@@ -946,7 +943,6 @@ class CORE_EXPORT NGLayoutResult final
           initial_break_before(static_cast<unsigned>(EBreakBetween::kAuto)),
           final_break_after(static_cast<unsigned>(EBreakBetween::kAuto)),
           status(static_cast<unsigned>(kSuccess)),
-          disable_simplified_layout(false),
           is_truncated_by_fragmentation_line(false) {}
 
     unsigned has_rare_data_exclusion_space : 1;
@@ -973,7 +969,6 @@ class CORE_EXPORT NGLayoutResult final
     unsigned final_break_after : 4;     // EBreakBetween
 
     unsigned status : 3;  // EStatus
-    unsigned disable_simplified_layout : 1;
     unsigned is_truncated_by_fragmentation_line : 1;
   };
 

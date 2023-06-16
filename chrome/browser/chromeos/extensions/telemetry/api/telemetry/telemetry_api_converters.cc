@@ -121,6 +121,9 @@ cx_telem::LogicalCpuInfo UncheckedConvertPtr(
   }
   result.c_states =
       ConvertPtrVector<cx_telem::CpuCStateInfo>(std::move(input->c_states));
+  if (input->core_id) {
+    result.core_id = input->core_id->value;
+  }
   return result;
 }
 
@@ -212,7 +215,8 @@ cx_telem::StatefulPartitionInfo UncheckedConvertPtr(
 }
 
 cx_telem::NetworkInfo UncheckedConvertPtr(
-    chromeos::network_health::mojom::NetworkPtr input) {
+    chromeos::network_health::mojom::NetworkPtr input,
+    bool has_mac_address_permission) {
   cx_telem::NetworkInfo result;
 
   result.type = Convert(input->type);
@@ -224,6 +228,26 @@ cx_telem::NetworkInfo UncheckedConvertPtr(
   result.ipv6_addresses = input->ipv6_addresses;
   if (input->signal_strength) {
     result.signal_strength = input->signal_strength->value;
+  }
+  if (has_mac_address_permission) {
+    result.mac_address = std::move(input->mac_address);
+  }
+
+  return result;
+}
+
+cx_telem::InternetConnectivityInfo UncheckedConvertPtr(
+    chromeos::network_health::mojom::NetworkHealthStatePtr input,
+    bool has_mac_address_permission) {
+  cx_telem::InternetConnectivityInfo result;
+  for (auto& network : input->networks) {
+    auto converted_network = converters::ConvertPtr<cx_telem::NetworkInfo>(
+        std::move(network), has_mac_address_permission);
+
+    // Don't include networks with an undefined type.
+    if (converted_network.type != cx_telem::NetworkType::kNone) {
+      result.networks.push_back(std::move(converted_network));
+    }
   }
 
   return result;
@@ -365,6 +389,22 @@ cx_telem::UsbBusInfo UncheckedConvertPtr(crosapi::ProbeUsbBusInfoPtr input) {
           std::move(input->fwupd_firmware_version_info));
   result.version = Convert(input->version);
   result.spec_speed = Convert(input->spec_speed);
+
+  return result;
+}
+
+chromeos::api::os_telemetry::VpdInfo UncheckedConvertPtr(
+    crosapi::ProbeCachedVpdInfoPtr input,
+    bool has_serial_number_permission) {
+  cx_telem::VpdInfo result;
+
+  result.activate_date = std::move(input->first_power_date);
+  result.model_name = std::move(input->model_name);
+  result.sku_number = std::move(input->sku_number);
+
+  if (has_serial_number_permission) {
+    result.serial_number = std::move(input->serial_number);
+  }
 
   return result;
 }

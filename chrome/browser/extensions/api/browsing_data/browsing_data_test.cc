@@ -23,8 +23,8 @@
 #include "components/signin/public/base/signin_buildflags.h"
 #include "components/signin/public/identity_manager/identity_manager.h"
 #include "components/signin/public/identity_manager/identity_test_utils.h"
-#include "components/sync/driver/sync_service.h"
-#include "components/sync/driver/sync_user_settings.h"
+#include "components/sync/service/sync_service.h"
+#include "components/sync/service/sync_user_settings.h"
 #include "content/public/browser/storage_partition.h"
 #include "content/public/test/browser_test.h"
 #include "extensions/browser/api_test_utils.h"
@@ -114,7 +114,7 @@ IN_PROC_BROWSER_TEST_F(ExtensionBrowsingDataTest, Syncing) {
   syncer::SyncService* sync_service =
       SyncServiceFactory::GetForProfile(profile);
   sync_service->SetSyncFeatureRequested();
-  sync_service->GetUserSettings()->SetFirstSetupComplete(
+  sync_service->GetUserSettings()->SetInitialSyncFeatureSetupComplete(
       syncer::SyncFirstSetupCompleteSource::BASIC_FLOW);
 
   ASSERT_EQ(SyncStatusMessageType::kSynced, GetSyncStatusMessageType(profile));
@@ -242,6 +242,30 @@ IN_PROC_BROWSER_TEST_F(ExtensionBrowsingDataTest, DeleteLocalStorageAll) {
       function.get(), kRemoveEverythingArguments, browser()->profile()));
 
   usage_infos = GetLocalStorage(browser()->profile());
+  EXPECT_EQ(0U, usage_infos.size());
+}
+
+IN_PROC_BROWSER_TEST_F(ExtensionBrowsingDataTest, DeleteLocalStorageIncognito) {
+  const blink::StorageKey key1 =
+      blink::StorageKey::CreateFromStringForTesting("https://example.com");
+  const blink::StorageKey key2 =
+      blink::StorageKey::CreateFromStringForTesting("https://other.com");
+  // Create some local storage for each of the origins.
+  auto* incognito_profile = browser()->profile()->GetPrimaryOTRProfile(true);
+  CreateLocalStorageForKey(incognito_profile, key1);
+  CreateLocalStorageForKey(incognito_profile, key2);
+  // Verify that the data is actually stored.
+  auto usage_infos = GetLocalStorage(incognito_profile);
+  EXPECT_EQ(2U, usage_infos.size());
+  EXPECT_TRUE(UsageInfosHasStorageKey(usage_infos, key1));
+  EXPECT_TRUE(UsageInfosHasStorageKey(usage_infos, key2));
+
+  // Clear the data for everything.
+  auto function = base::MakeRefCounted<BrowsingDataRemoveFunction>();
+  EXPECT_FALSE(RunFunctionAndReturnSingleResult(
+      function.get(), kRemoveEverythingArguments, incognito_profile));
+
+  usage_infos = GetLocalStorage(incognito_profile);
   EXPECT_EQ(0U, usage_infos.size());
 }
 

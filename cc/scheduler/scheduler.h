@@ -89,9 +89,6 @@ class SchedulerClient {
       base::TimeTicks time) = 0;
   virtual void FrameIntervalUpdated(base::TimeDelta interval) = 0;
 
-  // Functions used for reporting animation targeting UMA, crbug.com/758439.
-  virtual bool HasInvalidationAnimation() const = 0;
-
  protected:
   virtual ~SchedulerClient() {}
 };
@@ -410,10 +407,6 @@ class CC_EXPORT Scheduler : public viz::BeginFrameObserverBase {
   }
 
   void UpdatePowerModeVote();
-
-  // Used only for UMa metric calculations.
-  base::TimeDelta cc_frame_time_available_;
-  base::TimeTicks cc_frame_start_;  // Begin impl frame time.
 
   // Temporary for production debugging of renderer hang (crbug.com/1159366).
   std::vector<SchedulerStateMachine::Action> commit_debug_action_sequence_;

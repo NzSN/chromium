@@ -28,6 +28,7 @@
 #include "base/task/bind_post_task.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/trace_event/traced_value.h"
+#include "gpu/command_buffer/common/constants.h"
 #include "gpu/command_buffer/common/context_creation_attribs.h"
 #include "gpu/command_buffer/common/sync_token.h"
 #if BUILDFLAG(USE_DAWN)
@@ -47,7 +48,6 @@
 #include "gpu/ipc/common/memory_stats.h"
 #include "gpu/ipc/service/gpu_channel.h"
 #include "gpu/ipc/service/gpu_channel_manager_delegate.h"
-#include "gpu/ipc/service/gpu_memory_ablation_experiment.h"
 #include "gpu/ipc/service/gpu_memory_buffer_factory.h"
 #include "gpu/ipc/service/gpu_watchdog_thread.h"
 #include "third_party/skia/include/core/SkGraphics.h"
@@ -167,10 +167,7 @@ void SetCrashKeyTimeDelta(base::debug::CrashKeyString* key,
 GpuChannelManager::GpuPeakMemoryMonitor::GpuPeakMemoryMonitor(
     GpuChannelManager* channel_manager,
     scoped_refptr<base::SingleThreadTaskRunner> task_runner)
-    : ablation_experiment_(
-          std::make_unique<GpuMemoryAblationExperiment>(channel_manager,
-                                                        task_runner)),
-      weak_factory_(this) {}
+    : weak_factory_(this) {}
 
 GpuChannelManager::GpuPeakMemoryMonitor::~GpuPeakMemoryMonitor() = default;
 
@@ -184,12 +181,6 @@ GpuChannelManager::GpuPeakMemoryMonitor::GetPeakMemoryUsage(
   if (sequence != sequence_trackers_.end()) {
     *out_peak_memory = sequence->second.total_memory_;
     allocation_per_source = sequence->second.peak_memory_per_source_;
-
-    uint64_t ablation_memory =
-        ablation_experiment_->GetPeakMemory(sequence_num);
-    *out_peak_memory += ablation_memory;
-    allocation_per_source[GpuPeakMemoryAllocationSource::SHARED_IMAGE_STUB] +=
-        ablation_memory;
   }
   return allocation_per_source;
 }
@@ -199,7 +190,6 @@ void GpuChannelManager::GpuPeakMemoryMonitor::StartGpuMemoryTracking(
   sequence_trackers_.emplace(
       sequence_num,
       SequenceTracker(current_memory_, current_memory_per_source_));
-  ablation_experiment_->StartSequence(sequence_num);
   TRACE_EVENT_ASYNC_BEGIN2("gpu", "PeakMemoryTracking", sequence_num, "start",
                            current_memory_, "start_sources",
                            StartTrackingTracedValue());
@@ -213,7 +203,6 @@ void GpuChannelManager::GpuPeakMemoryMonitor::StopGpuMemoryTracking(
                            sequence->second.total_memory_, "end_sources",
                            StopTrackingTracedValue(sequence->second));
     sequence_trackers_.erase(sequence);
-    ablation_experiment_->StopSequence(sequence_num);
   }
 }
 
@@ -296,7 +285,6 @@ void GpuChannelManager::GpuPeakMemoryMonitor::OnMemoryAllocatedChange(
   current_memory_ += diff;
   current_memory_per_source_[source] += diff;
 
-  ablation_experiment_->OnMemoryAllocated(old_size, new_size);
   if (old_size < new_size) {
     // When memory has increased, iterate over the sequences to update their
     // peak.
@@ -829,9 +817,13 @@ void GpuChannelManager::PerformImmediateCleanup() {
     auto* fence_helper =
         vulkan_context_provider_->GetDeviceQueue()->GetFenceHelper();
     fence_helper->PerformImmediateCleanup();
+
+    // TODO(lizeb): Also perform this on GL devices.
+    if (auto* context = shared_context_state_->gr_context()) {
+      context->flushAndSubmit(true);
+    }
   }
 #endif
-  shared_context_state_->gr_context()->flushAndSubmit(true);
 }
 
 void GpuChannelManager::HandleMemoryPressure(
@@ -1013,8 +1005,10 @@ scoped_refptr<SharedContextState> GpuChannelManager::GetSharedContextState(
   return shared_context_state_;
 }
 
-void GpuChannelManager::OnContextLost(int context_lost_count,
-                                      bool synthetic_loss) {
+void GpuChannelManager::OnContextLost(
+    int context_lost_count,
+    bool synthetic_loss,
+    error::ContextLostReason context_lost_reason) {
   if (context_lost_count < 0)
     context_lost_count = context_lost_count_ + 1;
   // Because of the DrDC, we may receive context loss from the GPU main and
@@ -1074,7 +1068,7 @@ void GpuChannelManager::OnContextLost(int context_lost_count,
   // Work around issues with recovery by allowing a new GPU process to launch.
   if (force_restart || gpu_driver_bug_workarounds_.exit_on_context_lost ||
       (shared_context_state_ && !shared_context_state_->GrContextIsGL())) {
-    delegate_->MaybeExitOnContextLost(synthetic_loss);
+    delegate_->MaybeExitOnContextLost(synthetic_loss, context_lost_reason);
   }
 }
 

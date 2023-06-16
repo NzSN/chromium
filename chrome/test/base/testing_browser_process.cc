@@ -29,6 +29,7 @@
 #include "chrome/browser/status_icons/status_tray.h"
 #include "chrome/common/chrome_paths.h"
 #include "chrome/test/base/testing_browser_process_platform_part.h"
+#include "components/embedder_support/origin_trials/origin_trials_settings_storage.h"
 #include "components/metrics/metrics_service.h"
 #include "components/network_time/network_time_tracker.h"
 #include "components/permissions/permissions_client.h"
@@ -110,7 +111,7 @@ void TestingBrowserProcess::CreateInstance() {
       std::make_unique<device::FakeGeolocationManager>();
   fake_geolocation_manager->SetSystemPermission(
       device::LocationSystemPermissionStatus::kAllowed);
-  process->SetGeolocationManager(std::move(fake_geolocation_manager));
+  device::GeolocationManager::SetInstance(std::move(fake_geolocation_manager));
 #endif
 }
 
@@ -211,8 +212,13 @@ metrics::MetricsService* TestingBrowserProcess::metrics_service() {
   return metrics_service_;
 }
 
-device::GeolocationManager* TestingBrowserProcess::geolocation_manager() {
-  return geolocation_manager_.get();
+embedder_support::OriginTrialsSettingsStorage*
+TestingBrowserProcess::GetOriginTrialsSettingsStorage() {
+  if (!origin_trials_settings_storage_) {
+    origin_trials_settings_storage_ =
+        std::make_unique<embedder_support::OriginTrialsSettingsStorage>();
+  }
+  return origin_trials_settings_storage_.get();
 }
 
 SystemNetworkContextManager*
@@ -325,11 +331,6 @@ void TestingBrowserProcess::set_background_mode_manager_for_test(
   NOTREACHED();
 }
 #endif
-
-void TestingBrowserProcess::SetGeolocationManager(
-    std::unique_ptr<device::GeolocationManager> geolocation_manager) {
-  geolocation_manager_ = std::move(geolocation_manager);
-}
 
 StatusTray* TestingBrowserProcess::status_tray() {
   return status_tray_.get();

@@ -4,16 +4,14 @@
 
 package org.chromium.chrome.browser.tab;
 
-import android.support.annotation.VisibleForTesting;
-
 import androidx.annotation.IntDef;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import org.chromium.base.ObserverList;
 import org.chromium.base.UserDataHost;
 import org.chromium.base.task.PostTask;
 import org.chromium.base.task.TaskTraits;
-import org.chromium.chrome.browser.flags.ChromeFeatureList;
 import org.chromium.chrome.browser.tab.state.CriticalPersistedTabData;
 import org.chromium.chrome.browser.tab.state.CriticalPersistedTabDataObserver;
 import org.chromium.content_public.browser.NavigationHandle;
@@ -54,7 +52,7 @@ public class TabStateAttributes extends TabWebContentsUserData {
 
     /** Whether or not the TabState has changed. */
     @DirtinessState
-    private int mDirtinessState;
+    private int mDirtinessState = DirtinessState.CLEAN;
     private WebContentsObserver mWebContentsObserver;
     private boolean mPendingLowPrioritySave;
 
@@ -92,36 +90,27 @@ public class TabStateAttributes extends TabWebContentsUserData {
         super(tab);
         mTab = tab;
         if (creationState == null || creationState == TabCreationState.FROZEN_FOR_LAZY_LOAD) {
-            mDirtinessState = DirtinessState.DIRTY;
+            updateIsDirty(DirtinessState.DIRTY);
         } else if (creationState == TabCreationState.LIVE_IN_FOREGROUND
                 || creationState == TabCreationState.LIVE_IN_BACKGROUND) {
-            mDirtinessState = DirtinessState.UNTIDY;
+            updateIsDirty(DirtinessState.UNTIDY);
         } else {
             assert creationState == TabCreationState.FROZEN_ON_RESTORE;
-            mDirtinessState = DirtinessState.CLEAN;
         }
         // TODO(crbug/1374456): Should this also handle mTab.getPendingLoadParams(), and ignore
         //                      URL updates when the URL matches the pending load?
         mTab.addObserver(new EmptyTabObserver() {
             @Override
             public void onHidden(Tab tab, int reason) {
-                if (ChromeFeatureList.isEnabled(ChromeFeatureList.TAB_STATE_V1_OPTIMIZATIONS)) {
-                    if (!mTab.isClosing() && mDirtinessState == DirtinessState.UNTIDY) {
-                        updateIsDirty(DirtinessState.DIRTY);
-                    }
-                } else {
-                    if (mDirtinessState == DirtinessState.UNTIDY) {
-                        updateIsDirty(DirtinessState.DIRTY);
-                    }
+                if (!mTab.isClosing() && mDirtinessState == DirtinessState.UNTIDY) {
+                    updateIsDirty(DirtinessState.DIRTY);
                 }
             }
 
             @Override
             public void onClosingStateChanged(Tab tab, boolean closing) {
-                if (ChromeFeatureList.isEnabled(ChromeFeatureList.TAB_STATE_V1_OPTIMIZATIONS)) {
-                    if (!closing && mDirtinessState == DirtinessState.UNTIDY) {
-                        updateIsDirty(DirtinessState.DIRTY);
-                    }
+                if (!closing && mDirtinessState == DirtinessState.UNTIDY) {
+                    updateIsDirty(DirtinessState.DIRTY);
                 }
             }
 
@@ -134,10 +123,7 @@ public class TabStateAttributes extends TabWebContentsUserData {
             public void onLoadStopped(Tab tab, boolean toDifferentDocument) {
                 if (mDirtinessState != DirtinessState.UNTIDY) return;
 
-                boolean shouldCommitDirtyState =
-                        !ChromeFeatureList.isEnabled(ChromeFeatureList.TAB_STATE_V1_OPTIMIZATIONS)
-                        || toDifferentDocument;
-                if (shouldCommitDirtyState) {
+                if (toDifferentDocument) {
                     updateIsDirty(DirtinessState.DIRTY);
                 } else {
                     if (mPendingLowPrioritySave) return;
@@ -232,9 +218,8 @@ public class TabStateAttributes extends TabWebContentsUserData {
     void updateIsDirty(@DirtinessState int dirtiness) {
         if (mTab.isDestroyed()) return;
         if (dirtiness == mDirtinessState) return;
-        if (ChromeFeatureList.isEnabled(ChromeFeatureList.TAB_STATE_V1_OPTIMIZATIONS)) {
-            if (mTab.isBeingRestored()) return;
-        }
+        if (mTab.isBeingRestored()) return;
+
         mDirtinessState = dirtiness;
         if (dirtiness == DirtinessState.DIRTY) {
             CriticalPersistedTabData.from(mTab).setShouldSave();

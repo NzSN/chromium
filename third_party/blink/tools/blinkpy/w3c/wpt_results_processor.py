@@ -18,6 +18,7 @@ from typing import (
     NamedTuple,
     Optional,
     Set,
+    Tuple,
     TypedDict,
 )
 from urllib.parse import urlsplit
@@ -85,14 +86,13 @@ class WPTResult(Result):
         super().__init__(*args, **kwargs)
         self.messages = []
         self._test_section = wptnode.DataNode(_test_basename(self.name))
-        self.has_expected_fail = False
 
     def _add_expected_status(self, section: wptnode.DataNode, status: str):
         expectation = wptnode.KeyValueNode('expected')
         expectation.append(wptnode.ValueNode(status))
         section.append(expectation)
 
-    def _maybe_set_statuses(self, actual: str, unexpected: bool):
+    def _maybe_set_statuses(self, status: str, expected: Set[str]):
         """Set this result's actual/expected statuses.
 
         A `testharness.js` test may have subtests with their own statuses and
@@ -105,12 +105,29 @@ class WPTResult(Result):
         latest status. The order tiebreaker ensures a test-level status
         overrides a subtest-level status when they have the same priority.
         """
-        priority = (self._status_priority.index(actual), unexpected)
+        unexpected = status not in expected
+        actual = self._wptrunner_to_chromium_statuses[status]
+        expected = {
+            self._wptrunner_to_chromium_statuses[status]
+            for status in expected
+        }
+        # Converting wptrunner to ResultDB statuses is lossy, so it's possible
+        # for the wptrunner result to be unexpected, but ResultDB status
+        # `actual` maps to a member of `expected`. Removing the common status
+        # forces `typ` to report this test result as unexpected.
+        if unexpected:
+            expected.discard(actual)
         # pylint: disable=access-member-before-definition
         # `actual` and `unexpected` are set in `Result`'s constructor.
-        if priority > (self._status_priority.index(
-                self.actual), self.unexpected):
-            self.actual, self.unexpected = actual, unexpected
+        priority = self._result_priority(actual, unexpected)
+        if priority >= self._result_priority(self.actual, self.unexpected):
+            self.actual, self.expected = actual, expected
+            self.unexpected = unexpected
+
+    def _result_priority(self, status: str,
+                         unexpected: bool) -> Tuple[bool, bool, int]:
+        incomplete = status in {ResultType.Timeout, ResultType.Crash}
+        return (incomplete, unexpected, self._status_priority.index(status))
 
     def update_from_subtest(self,
                             subtest: str,
@@ -123,21 +140,12 @@ class WPTResult(Result):
         self._add_expected_status(subtest_section, status)
         self._test_section.append(subtest_section)
 
+        # Any result against a subtest not expected to run is considered an
+        # unexpected pass (and therefore won't cause a build failure).
+        if status != 'NOTRUN' and 'NOTRUN' in expected:
+            status = 'PASS'
         # Tentatively promote "interesting" statuses to the test level.
-        # Rules for promoting subtest status to test level:
-        #     Any result against 'NOTRUN' is an unexpected pass.
-        #     'NOTRUN' against other expected results is an unexpected failure.
-        #     Expected results only come from test level expectations
-        #     Only promote subtest status when run unexpected.
-        #     Exception: report expected failure if all subtest failures are expected.
-        unexpected = status not in expected
-        actual = (ResultType.Pass if 'NOTRUN' in expected else
-                  self._wptrunner_to_chromium_statuses[status])
-        self.has_expected_fail = (self.has_expected_fail
-                                  or actual == ResultType.Failure
-                                  and not unexpected)
-        if unexpected:
-            self._maybe_set_statuses(actual, unexpected)
+        self._maybe_set_statuses(status, expected)
 
     def update_from_test(self,
                          status: str,
@@ -146,21 +154,7 @@ class WPTResult(Result):
         if message:
             self.messages.insert(0, 'Harness: %s\n' % message)
         self._add_expected_status(self._test_section, status)
-
-        unexpected = status not in expected
-        actual = self._wptrunner_to_chromium_statuses[status]
-        self.expected = {
-            self._wptrunner_to_chromium_statuses[status]
-            for status in expected
-        }
-        self._maybe_set_statuses(actual, unexpected)
-
-        # Report expected failure instead of expected pass when there are
-        # expected subtest failures.
-        if (self.actual == ResultType.Pass and not self.unexpected
-                and self.has_expected_fail):
-            self.actual = ResultType.Failure
-            self.expected = {ResultType.Failure}
+        self._maybe_set_statuses(status, expected)
 
     @property
     def actual_metadata(self):
@@ -293,14 +287,7 @@ class WPTResultsProcessor:
         }
         self.has_regressions: bool = False
 
-    def recreate_artifacts_dir(self):
-        if self.fs.exists(self.artifacts_dir):
-            self.fs.rmtree(self.artifacts_dir)
-        self.fs.maybe_make_directory(self.artifacts_dir)
-        self._copy_results_viewer()
-        _log.info('Recreated artifacts directory (%s)', self.artifacts_dir)
-
-    def _copy_results_viewer(self):
+    def copy_results_viewer(self):
         files_to_copy = ['results.html', 'results.html.version']
         for file in files_to_copy:
             source = self.path_finder.path_from_blink_tools(
@@ -308,8 +295,7 @@ class WPTResultsProcessor:
             destination = self.fs.join(self.artifacts_dir, file)
             self.fs.copyfile(source, destination)
             if file == 'results.html':
-                _log.info('Copied results viewer (%s -> %s)', source,
-                          destination)
+                _log.info(f'View the test results at file://{destination}')
 
     def process_results_json(self,
                              raw_results_path,
@@ -391,7 +377,7 @@ class WPTResultsProcessor:
                 before this manager exited; a well-behaved caller should avoid
                 this.
         """
-        self.recreate_artifacts_dir()
+        self.copy_results_viewer()
         events = queue.SimpleQueue()
         worker = threading.Thread(target=self._consume_events,
                                   args=(events, ),
@@ -460,21 +446,33 @@ class WPTResultsProcessor:
             file_path=self._file_path_for_test(test),
             pid=event.pid)
 
-    @memoized
-    def _file_path_for_test(self, test: str) -> str:
-        if test.startswith('wpt_internal/'):
-            prefix = 'wpt_internal'
+    def get_path_from_test_root(self, test: str) -> str:
+        if self.path_finder.is_wpt_internal_path(test):
             path_from_test_root = self.internal_manifest.file_path_for_test_url(
                 test[len('wpt_internal/'):])
         else:
-            prefix = self.path_finder.wpt_prefix()
             path_from_test_root = self.wpt_manifest.file_path_for_test_url(
                 test)
+        return path_from_test_root
+
+    @memoized
+    def _file_path_for_test(self, test: str) -> str:
+        path_from_test_root = self.get_path_from_test_root(test)
+        if self.path_finder.is_wpt_internal_path(test):
+            prefix = 'wpt_internal'
+        else:
+            prefix = self.path_finder.wpt_prefix()
         if not path_from_test_root:
             raise EventProcessingError(
                 'Test ID %r does not exist in the manifest' % test)
         return self.path_finder.path_from_web_tests(prefix,
                                                     path_from_test_root)
+
+    def get_test_type(self, test_path: str) -> str:
+        if self.path_finder.is_wpt_internal_path(test_path):
+            return self.internal_manifest.get_test_type(test_path)
+        else:
+            return self.wpt_manifest.get_test_type(test_path)
 
     def test_status(self,
                     event: Event,
@@ -503,17 +501,10 @@ class WPTResultsProcessor:
         result.took = max(0, event.time - result.started) / 1000
         result.update_from_test(status, expected, message)
         result.artifacts = self._extract_artifacts(result, extra).artifacts
-        if result.unexpected:
-            if (self.run_info.get('sanitizer_enabled')
-                    and result.actual == ResultType.Failure):
-                # `--enable-sanitizer` is equivalent to running every test as a
-                # crashtest. It suffices for a crashtest to not suffer a timeout
-                # or low-level crash to pass:
-                #   https://web-platform-tests.org/writing-tests/crashtest.html
-                result.actual = ResultType.Pass
-                result.unexpected = False
-            if result.actual not in {ResultType.Pass, ResultType.Skip}:
-                self.has_regressions = True
+        if result.unexpected and result.actual not in {
+                ResultType.Pass, ResultType.Skip
+        }:
+            self.has_regressions = True
         if not self.run_info.get('used_upstream'):
             # We only need Wpt report when run with upstream
             self.sink.report_individual_test_result(
@@ -655,8 +646,13 @@ class WPTResultsProcessor:
         expected_node = None
         if expected_file_exists:
             expected_node = expected_manifest.node
+
+        path_from_test_root = self.get_path_from_test_root(test_name)
+
+        test_type = self.get_test_type(path_from_test_root)
+
         html_diff_content = wpt_results_diff(expected_node, actual_node,
-                                             file_path)
+                                             file_path, test_type)
         html_diff_subpath = self.port.output_filename(
             test_name, test_failures.FILENAME_SUFFIX_HTML_DIFF, '.html')
         artifacts.CreateArtifact('pretty_text_diff', html_diff_subpath,

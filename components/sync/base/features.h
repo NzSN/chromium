@@ -51,6 +51,10 @@ inline constexpr base::FeatureParam<base::TimeDelta> kPasswordNotesAuthValidity{
     &kPasswordNotesWithBackup, "authentication_validity_duration",
     base::Minutes(5)};
 
+// Controls whether to enable bootstrapping Public-private keys in Nigori
+// key-bag.
+BASE_DECLARE_FEATURE(kSharingOfferKeyPairBootstrap);
+
 #if BUILDFLAG(IS_ANDROID)
 BASE_DECLARE_FEATURE(kSyncAndroidLimitNTPPromoImpressions);
 inline constexpr base::FeatureParam<int> kSyncAndroidNTPPromoMaxImpressions{
@@ -84,24 +88,6 @@ BASE_DECLARE_FEATURE(kSyncChromeOSAppsToggleSharing);
 // Whether SyncedSessions are updated by Lacros to Ash.
 BASE_DECLARE_FEATURE(kChromeOSSyncedSessionSharing);
 #endif  // BUILDFLAG(IS_CHROMEOS)
-
-// Whether the periodic degraded recoverability polling is enabled.
-BASE_DECLARE_FEATURE(kSyncTrustedVaultPeriodicDegradedRecoverabilityPolling);
-inline constexpr base::FeatureParam<base::TimeDelta>
-    kSyncTrustedVaultLongPeriodDegradedRecoverabilityPolling{
-        &kSyncTrustedVaultPeriodicDegradedRecoverabilityPolling,
-        "kSyncTrustedVaultLongPeriodDegradedRecoverabilityPolling",
-        base::Days(7)};
-inline constexpr base::FeatureParam<base::TimeDelta>
-    kSyncTrustedVaultShortPeriodDegradedRecoverabilityPolling{
-        &kSyncTrustedVaultPeriodicDegradedRecoverabilityPolling,
-        "kSyncTrustedVaultShortPeriodDegradedRecoverabilityPolling",
-        base::Hours(1)};
-
-// Enables logging a UMA metric that requires first communicating with the
-// trusted vault server, in order to verify that the local notion of the device
-// being registered is consistent with the server-side state.
-BASE_DECLARE_FEATURE(kSyncTrustedVaultVerifyDeviceRegistration);
 
 // If enabled, the device will register with FCM and listen to new
 // invalidations. Also, FCM token will be set in DeviceInfo, which signals to
@@ -174,6 +160,15 @@ BASE_DECLARE_FEATURE(kSyncEnforcePreferencesAllowlist);
 // have any effect for signed-in non-syncing users!)
 BASE_DECLARE_FEATURE(kEnablePreferencesAccountStorage);
 
+#if !BUILDFLAG(IS_CHROMEOS_ASH)
+// Influences how precisely SyncServiceImpl determines whether Sync-the-feature
+// is enabled. If the feature is on, the new approach is used, which leans on
+// the state reported by IdentityManager. If false, the legacy approach is used,
+// which is based on preference prefs::kSyncRequested.
+// TODO(crbug.com/1219990): Remove this.
+BASE_DECLARE_FEATURE(kSyncIgnoreSyncRequestedPreference);
+#endif  // BUILDFLAG(!IS_CHROMEOS_ASH)
+
 // If enabled, Sync will send a poll GetUpdates request on every browser
 // startup. This is a temporary hack; see crbug.com/1425026.
 // TODO(crbug.com/1425071): Remove this.
@@ -196,6 +191,22 @@ BASE_DECLARE_FEATURE(kSyncWebauthnCredentials);
 
 // If enabled, ignore GetUpdates retry delay command from the server.
 BASE_DECLARE_FEATURE(kSyncIgnoreGetUpdatesRetryDelay);
+
+// If enabled, uses a JsonPrefStore for account preferences.
+BASE_DECLARE_FEATURE(kSyncEnablePersistentStorageForAccountPreferences);
+
+// Flag to control if a user can enable sync for the #tab-groups-save feature.
+BASE_DECLARE_FEATURE(kTabGroupsSaveSyncIntegration);
+
+// If provided, changes the amount of time before we send messages to the sync
+// service.
+inline constexpr base::FeatureParam<base::TimeDelta>
+    kTabGroupsSaveCustomNudgeDelay(&kTabGroupsSaveSyncIntegration,
+                                   "TabGroupsSaveCustomNudgeDelay",
+                                   base::Seconds(11));
+
+// Feature flag to replace all sync-related UI with sign-in ones.
+BASE_DECLARE_FEATURE(kReplaceSyncPromosWithSignInPromos);
 
 }  // namespace syncer
 

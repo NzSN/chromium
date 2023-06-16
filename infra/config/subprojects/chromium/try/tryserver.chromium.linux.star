@@ -17,7 +17,7 @@ try_.defaults.set(
     cores = 8,
     os = os.LINUX_DEFAULT,
     compilator_cores = 8,
-    compilator_reclient_jobs = reclient.jobs.MID_JOBS_FOR_CQ,
+    compilator_reclient_jobs = reclient.jobs.HIGH_JOBS_FOR_CQ,
     execution_timeout = try_.DEFAULT_EXECUTION_TIMEOUT,
     orchestrator_cores = 2,
     reclient_instance = reclient.instance.DEFAULT_UNTRUSTED,
@@ -115,6 +115,26 @@ try_.builder(
     reclient_jobs = reclient.jobs.LOW_JOBS_FOR_CQ,
 )
 
+# TODO(crbug.com/1442587): Remove this builder after burning down failures
+# found when we now post-process stdout.
+try_.builder(
+    name = "linux-exp-asan-lsan-fyi-rel",
+    mirrors = [
+        "ci/linux-exp-asan-lsan-fyi-rel",
+    ],
+    reclient_jobs = reclient.jobs.LOW_JOBS_FOR_CQ,
+)
+
+# TODO(crbug.com/1442587): Remove this builder after burning down failures
+# found when we now post-process stdout.
+try_.builder(
+    name = "linux-exp-tsan-fyi-rel",
+    mirrors = [
+        "ci/linux-exp-tsan-fyi-rel",
+    ],
+    reclient_jobs = reclient.jobs.LOW_JOBS_FOR_CQ,
+)
+
 try_.builder(
     name = "linux-extended-tracing-rel",
     mirrors = [
@@ -138,6 +158,7 @@ try_.builder(
     reclient_jobs = reclient.jobs.LOW_JOBS_FOR_CQ,
     tryjob = try_.job(
         location_filters = [
+            "components/headless/.+",
             "headless/.+",
         ],
     ),
@@ -238,7 +259,7 @@ try_.orchestrator_builder(
     experiments = {
         "chromium_rts.inverted_rts": 100,
         # go/nplus1shardsproposal
-        "chromium.add_one_test_shard": 5,
+        "chromium.add_one_test_shard": 10,
     },
     main_list_view = "try",
     tryjob = try_.job(),
@@ -401,6 +422,8 @@ try_.orchestrator_builder(
     compilator = "linux_chromium_asan_rel_ng-compilator",
     experiments = {
         "chromium_rts.inverted_rts": 100,
+        # go/nplus1shardsproposal
+        "chromium.add_one_test_shard": 10,
     },
     main_list_view = "try",
     tryjob = try_.job(),
@@ -554,6 +577,8 @@ try_.orchestrator_builder(
     compilator = "linux_chromium_tsan_rel_ng-compilator",
     experiments = {
         "chromium_rts.inverted_rts": 100,
+        # go/nplus1shardsproposal
+        "chromium.add_one_test_shard": 10,
     },
     main_list_view = "try",
     tryjob = try_.job(),
@@ -703,6 +728,26 @@ try_.gpu.optional_tests_builder(
     ),
 )
 
+# This builder is different from try/linux-js-code-coverage builder below as
+# this is a try builder meant to provide javascript coverage for webui related
+# CLs, where as try/linux-js-code-coverage builder is there to test changes in
+# ci/linux-js-code-coverage builder and would mostly be used by coverage devs
+# only.
+try_.builder(
+    name = "linux-js-coverage-rel",
+    mirrors = ["ci/linux-js-code-coverage"],
+    coverage_test_types = ["unit", "overall"],
+    main_list_view = "try",
+    tryjob = try_.job(
+        experiment_percentage = 10,
+        location_filters = [
+            cq.location_filter(path_regexp = r".*\.(js|ts)"),
+        ],
+    ),
+    use_javascript_coverage = True,
+)
+
+# Coverage builders set up mainly to test changes in CI builders
 try_.builder(
     name = "linux-code-coverage",
     mirrors = ["ci/linux-code-coverage"],
@@ -721,17 +766,22 @@ try_.builder(
     execution_timeout = 20 * time.hour,
 )
 
+# This builder serves a different purpose than try/linux-js-coverage-rel
+# See the note on linux-js-coverage-rel builder above to understand more.
 try_.builder(
     name = "linux-js-code-coverage",
     mirrors = ["ci/linux-js-code-coverage"],
     execution_timeout = 20 * time.hour,
+    use_javascript_coverage = True,
 )
 
 try_.builder(
     name = "chromeos-js-code-coverage",
     mirrors = ["ci/chromeos-js-code-coverage"],
     execution_timeout = 20 * time.hour,
+    use_javascript_coverage = True,
 )
+############### Coverage Builders End ##################
 
 # ML experimental builder, modifies RTS itself to use a ml model
 try_.builder(
@@ -748,4 +798,9 @@ try_.builder(
     tryjob = try_.job(
         experiment_percentage = 5,
     ),
+)
+
+try_.builder(
+    name = "linux-cr23-rel",
+    mirrors = ["ci/linux-cr23-rel"],
 )

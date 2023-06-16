@@ -47,6 +47,8 @@
 #include "third_party/blink/renderer/core/layout/layout_embedded_content.h"
 #include "third_party/blink/renderer/core/layout/ng/list/layout_ng_inline_list_item.h"
 #include "third_party/blink/renderer/core/layout/ng/list/layout_ng_list_item.h"
+#include "third_party/blink/renderer/core/layout/ng/ng_block_node.h"
+#include "third_party/blink/renderer/core/layout/ng/ng_constraint_space_builder.h"
 #include "third_party/blink/renderer/core/layout/svg/layout_svg_root.h"
 #include "third_party/blink/renderer/core/layout/view_fragmentation_context.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
@@ -241,6 +243,22 @@ void LayoutView::ComputeLogicalHeight(
     LogicalExtentComputedValues& computed_values) const {
   NOT_DESTROYED();
   computed_values.extent_ = LayoutUnit(ViewLogicalHeightForBoxSizing());
+}
+
+LayoutUnit LayoutView::ComputeMinimumWidth() {
+  if (!RuntimeEnabledFeatures::RemoveLegacySizeComputationEnabled()) {
+    return PreferredLogicalWidths().min_size;
+  }
+  const ComputedStyle& style = StyleRef();
+  WritingMode mode = style.GetWritingMode();
+  NGConstraintSpaceBuilder builder(mode, style.GetWritingDirection(),
+                                   /* is_new_fc */ true);
+  LayoutUnit min = NGBlockNode(this)
+                       .ComputeMinMaxSizes(mode, MinMaxSizesType::kIntrinsic,
+                                           builder.ToConstraintSpace())
+                       .sizes.min_size;
+  DCHECK_EQ(min, PreferredLogicalWidths().min_size);
+  return min;
 }
 
 bool LayoutView::IsChildAllowed(LayoutObject* child,
@@ -585,34 +603,17 @@ void LayoutView::CalculateScrollbarModes(
       AutosizeHorizontalScrollbarMode() != mojom::blink::ScrollbarMode::kAuto) {
     h_mode = AutosizeHorizontalScrollbarMode();
     v_mode = AutosizeVerticalScrollbarMode();
-
-    if (h_mode == mojom::blink::ScrollbarMode::kAlwaysOff &&
-        v_mode == mojom::blink::ScrollbarMode::kAlwaysOff) {
-      TRACE_EVENT_INSTANT1(
-          TRACE_DISABLED_BY_DEFAULT("blink.debug.layout.scrollbars"),
-          "CalculateScrollbarModes", TRACE_EVENT_SCOPE_THREAD, "disable_reason",
-          ScrollbarDisableReason::kAutosizeMode);
-    }
     return;
   }
 
   LocalFrame* frame = GetFrame();
   if (!frame) {
-    // GetFrame() returns null if either Document::dom_window_ or
-    // DOMWindow::frame_ is null.
-    TRACE_EVENT_INSTANT1(
-        TRACE_DISABLED_BY_DEFAULT("blink.debug.layout.scrollbars"),
-        "CalculateScrollbarModes", TRACE_EVENT_SCOPE_THREAD, "disable_reason",
-        !GetDocument().domWindow() ? ScrollbarDisableReason::kNullDomWindow
-                                   : ScrollbarDisableReason::kNullFrame);
-
     RETURN_SCROLLBAR_MODE(mojom::blink::ScrollbarMode::kAlwaysOff);
   }
 
   // ClipsContent() is false means that the client wants to paint the whole
   // contents of the frame without scrollbars, which is for printing etc.
-  ScrollbarDisableReason reason;
-  if (!frame->ClipsContent(&reason)) {
+  if (!frame->ClipsContent()) {
     bool disable_scrollbars = true;
 #if BUILDFLAG(IS_ANDROID)
     // However, Android WebView has a setting recordFullDocument. When it's set
@@ -627,10 +628,6 @@ void LayoutView::CalculateScrollbarModes(
     }
 #endif
     if (disable_scrollbars) {
-      TRACE_EVENT_INSTANT1(
-          TRACE_DISABLED_BY_DEFAULT("blink.debug.layout.scrollbars"),
-          "CalculateScrollbarModes", TRACE_EVENT_SCOPE_THREAD, "disable_reason",
-          reason);
       RETURN_SCROLLBAR_MODE(mojom::blink::ScrollbarMode::kAlwaysOff);
     }
   }
@@ -638,11 +635,6 @@ void LayoutView::CalculateScrollbarModes(
   if (FrameOwner* owner = frame->Owner()) {
     // Setting scrolling="no" on an iframe element disables scrolling.
     if (owner->ScrollbarMode() == mojom::blink::ScrollbarMode::kAlwaysOff) {
-      TRACE_EVENT_INSTANT1(
-          TRACE_DISABLED_BY_DEFAULT("blink.debug.layout.scrollbars"),
-          "CalculateScrollbarModes", TRACE_EVENT_SCOPE_THREAD, "disable_reason",
-          ScrollbarDisableReason::kIframeScrollingNo);
-
       RETURN_SCROLLBAR_MODE(mojom::blink::ScrollbarMode::kAlwaysOff);
     }
   }
@@ -651,11 +643,6 @@ void LayoutView::CalculateScrollbarModes(
   if (Node* body = document.body()) {
     // Framesets can't scroll.
     if (body->GetLayoutObject() && body->GetLayoutObject()->IsFrameSet()) {
-      TRACE_EVENT_INSTANT1(
-          TRACE_DISABLED_BY_DEFAULT("blink.debug.layout.scrollbars"),
-          "CalculateScrollbarModes", TRACE_EVENT_SCOPE_THREAD, "disable_reason",
-          ScrollbarDisableReason::kFrameSet);
-
       RETURN_SCROLLBAR_MODE(mojom::blink::ScrollbarMode::kAlwaysOff);
     }
   }
@@ -663,11 +650,6 @@ void LayoutView::CalculateScrollbarModes(
   if (LocalFrameView* frameView = GetFrameView()) {
     // Scrollbars can be disabled by LocalFrameView::setCanHaveScrollbars.
     if (!frameView->CanHaveScrollbars()) {
-      TRACE_EVENT_INSTANT1(
-          TRACE_DISABLED_BY_DEFAULT("blink.debug.layout.scrollbars"),
-          "CalculateScrollbarModes", TRACE_EVENT_SCOPE_THREAD, "disable_reason",
-          ScrollbarDisableReason::kFrameViewCanHaveScrollbarsFalse);
-
       RETURN_SCROLLBAR_MODE(mojom::blink::ScrollbarMode::kAlwaysOff);
     }
   }
@@ -693,11 +675,6 @@ void LayoutView::CalculateScrollbarModes(
     // Overflow is always hidden when stand-alone SVG documents are embedded.
     if (To<LayoutSVGRoot>(viewport)
             ->IsEmbeddedThroughFrameContainingSVGDocument()) {
-      TRACE_EVENT_INSTANT1(
-          TRACE_DISABLED_BY_DEFAULT("blink.debug.layout.scrollbars"),
-          "CalculateScrollbarModes", TRACE_EVENT_SCOPE_THREAD, "disable_reason",
-          ScrollbarDisableReason::kSVGRoot);
-
       RETURN_SCROLLBAR_MODE(mojom::blink::ScrollbarMode::kAlwaysOff);
     }
   }
@@ -724,14 +701,6 @@ void LayoutView::CalculateScrollbarModes(
     h_mode = mojom::blink::ScrollbarMode::kAlwaysOn;
   if (overflow_y == EOverflow::kScroll)
     v_mode = mojom::blink::ScrollbarMode::kAlwaysOn;
-
-  if (h_mode == mojom::blink::ScrollbarMode::kAlwaysOff &&
-      v_mode == mojom::blink::ScrollbarMode::kAlwaysOff) {
-    TRACE_EVENT_INSTANT1(
-        TRACE_DISABLED_BY_DEFAULT("blink.debug.layout.scrollbars"),
-        "CalculateScrollbarModes", TRACE_EVENT_SCOPE_THREAD, "disable_reason",
-        ScrollbarDisableReason::kOverflowHidden);
-  }
 
 #undef RETURN_SCROLLBAR_MODE
 }
@@ -827,7 +796,7 @@ bool LayoutView::BackgroundIsKnownToBeOpaqueInRect(const PhysicalRect&) const {
   NOT_DESTROYED();
   // The base background color applies to the main frame only.
   return GetFrame()->IsMainFrame() &&
-         !frame_view_->BaseBackgroundColor().HasAlpha();
+         frame_view_->BaseBackgroundColor().IsOpaque();
 }
 
 gfx::SizeF LayoutView::ViewportSizeForViewportUnits() const {

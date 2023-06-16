@@ -12,6 +12,7 @@
 #include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
 #include "base/timer/timer.h"
+#include "base/uuid.h"
 #include "chrome/browser/ui/ash/desks/desks_client.h"
 #include "components/desks_storage/core/desk_model.h"
 #include "components/desks_storage/core/desk_model_observer.h"
@@ -59,7 +60,9 @@ class FloatingWorkspaceService : public KeyedService,
 
   // Used in constructor for initializations
   void Init();
-  void InitForTest(TestFloatingWorkspaceVersion version);
+  void InitForTest(
+      TestFloatingWorkspaceVersion version,
+      raw_ptr<desks_storage::DeskSyncService> fake_desk_sync_service);
 
   // Add subscription to foreign session changes.
   void SubscribeToForeignSessionUpdates();
@@ -149,6 +152,11 @@ class FloatingWorkspaceService : public KeyedService,
       desks_storage::DeskModel::AddOrUpdateEntryStatus status,
       std::unique_ptr<DeskTemplate> new_entry);
 
+  // Get the associated floating workspace uuid for the current device. Return
+  // an absl::nullopt if there is no floating workspace uuid that is associated
+  // with the current device.
+  absl::optional<base::Uuid> GetFloatingWorkspaceUuidForCurrentDevice();
+
   const raw_ptr<Profile, ExperimentalAsh> profile_;
 
   raw_ptr<sync_sessions::SessionSyncService, ExperimentalAsh>
@@ -174,7 +182,7 @@ class FloatingWorkspaceService : public KeyedService,
 
   // The uuid associated with this device's floating workspace template. This is
   // populated when we first capture a floating workspace template.
-  absl::optional<base::GUID> floating_workspace_uuid_;
+  absl::optional<base::Uuid> floating_workspace_uuid_;
 
   // Weak pointer factory used to provide references to this service.
   base::WeakPtrFactory<FloatingWorkspaceService> weak_pointer_factory_{this};

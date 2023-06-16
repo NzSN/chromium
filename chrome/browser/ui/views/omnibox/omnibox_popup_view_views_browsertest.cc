@@ -25,6 +25,7 @@
 #include "chrome/browser/ui/views/toolbar/toolbar_view.h"
 #include "chrome/common/chrome_features.h"
 #include "chrome/test/base/ui_test_utils.h"
+#include "components/omnibox/browser/actions/tab_switch_action.h"
 #include "components/omnibox/browser/omnibox_edit_model.h"
 #include "components/omnibox/browser/omnibox_field_trial.h"
 #include "components/omnibox/browser/omnibox_popup_selection.h"
@@ -33,6 +34,7 @@
 #include "content/public/test/test_utils.h"
 #include "ui/accessibility/ax_enums.mojom.h"
 #include "ui/base/theme_provider.h"
+#include "ui/base/ui_base_features.h"
 #include "ui/compositor/layer.h"
 #include "ui/compositor/layer_animator.h"
 #include "ui/events/test/event_generator.h"
@@ -194,13 +196,25 @@ IN_PROC_BROWSER_TEST_F(OmniboxPopupViewViewsTest, ThemeIntegration) {
   }
 
   // Same in the non-incognito browser.
-  EXPECT_EQ(selection_color_light, GetSelectedColor(browser()));
+  if (features::IsChromeRefresh2023()) {
+    // TODO(khalidpeer): Delete this clause once CR23 colors are supported on
+    //   themed clients. Currently themed clients fall back to pre-CR23 colors.
+    EXPECT_NE(selection_color_light, GetSelectedColor(browser()));
+  } else {
+    EXPECT_EQ(selection_color_light, GetSelectedColor(browser()));
+  }
 
   // Switch to the default theme without installing a custom theme. E.g. this is
   // what gets used on KDE or when switching to the "classic" theme in settings.
   UseDefaultTheme();
 
-  EXPECT_EQ(selection_color_light, GetSelectedColor(browser()));
+  if (features::IsChromeRefresh2023()) {
+    // TODO(khalidpeer): Delete this clause once CR23 colors are supported on
+    //   themed clients. Currently themed clients fall back to pre-CR23 colors.
+    EXPECT_NE(selection_color_light, GetSelectedColor(browser()));
+  } else {
+    EXPECT_EQ(selection_color_light, GetSelectedColor(browser()));
+  }
 }
 
 // Integration test for omnibox popup theming in Incognito.
@@ -405,6 +419,7 @@ IN_PROC_BROWSER_TEST_F(OmniboxPopupViewViewsTest,
   match.contents = u"https://foobar.com";
   match.description = u"The Foo Of All Bars";
   match.has_tab_match = true;
+  match.actions.push_back(base::MakeRefCounted<TabSwitchAction>(GURL()));
   matches.push_back(match);
   controller->result_.AppendMatches(matches);
   controller->NotifyChanged();
@@ -423,9 +438,9 @@ IN_PROC_BROWSER_TEST_F(OmniboxPopupViewViewsTest,
       contains(observer.selected_option_name(), "press Tab then Enter"));
   EXPECT_FALSE(contains(observer.selected_option_name(), "2 of 2"));
 
-  edit_model()->SetPopupSelection(OmniboxPopupSelection(
-      1, OmniboxPopupSelection::FOCUSED_BUTTON_TAB_SWITCH));
-  EXPECT_TRUE(contains(observer.omnibox_value(), "The Foo Of All Bars"));
+  edit_model()->SetPopupSelection(
+      OmniboxPopupSelection(1, OmniboxPopupSelection::FOCUSED_BUTTON_ACTION));
+  EXPECT_TRUE(contains(observer.omnibox_value(), "Tab switch button"));
   EXPECT_EQ(observer.selected_children_changed_count(), 3);
   EXPECT_EQ(observer.selection_changed_count(), 3);
   EXPECT_EQ(observer.active_descendant_changed_count(), 3);

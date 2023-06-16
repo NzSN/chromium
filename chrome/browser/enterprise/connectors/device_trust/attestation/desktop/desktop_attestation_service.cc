@@ -14,15 +14,16 @@
 #include "base/task/task_traits.h"
 #include "base/task/thread_pool.h"
 #include "base/values.h"
+#include "chrome/browser/enterprise/connectors/device_trust/attestation/browser/attestation_switches.h"
+#include "chrome/browser/enterprise/connectors/device_trust/attestation/browser/crypto_utility.h"
 #include "chrome/browser/enterprise/connectors/device_trust/attestation/common/attestation_utils.h"
 #include "chrome/browser/enterprise/connectors/device_trust/attestation/common/proto/device_trust_attestation_ca.pb.h"
-#include "chrome/browser/enterprise/connectors/device_trust/attestation/desktop/crypto_utility.h"
-#include "chrome/browser/enterprise/connectors/device_trust/attestation/desktop/desktop_attestation_switches.h"
 #include "chrome/browser/enterprise/connectors/device_trust/common/common_types.h"
 #include "chrome/browser/enterprise/connectors/device_trust/common/metrics_utils.h"
 #include "components/device_signals/core/common/signals_constants.h"
 #include "components/enterprise/browser/controller/browser_dm_token_storage.h"
 #include "components/enterprise/browser/device_trust/device_trust_key_manager.h"
+#include "components/policy/core/common/cloud/cloud_policy_store.h"
 #include "crypto/random.h"
 #include "crypto/unexportable_key.h"
 
@@ -30,6 +31,7 @@ namespace enterprise_connectors {
 
 namespace {
 using policy::BrowserDMTokenStorage;
+using policy::CloudPolicyStore;
 
 // Size of nonce for challenge response.
 const size_t kChallengeResponseNonceBytesSize = 32;
@@ -97,9 +99,11 @@ absl::optional<std::string> CreateChallengeResponseString(
 
 DesktopAttestationService::DesktopAttestationService(
     BrowserDMTokenStorage* dm_token_storage,
-    DeviceTrustKeyManager* key_manager)
+    DeviceTrustKeyManager* key_manager,
+    CloudPolicyStore* browser_cloud_policy_store)
     : dm_token_storage_(dm_token_storage),
       key_manager_(key_manager),
+      browser_cloud_policy_store_(browser_cloud_policy_store),
       background_task_runner_(base::ThreadPool::CreateTaskRunner(
           {base::MayBlock(), base::TaskPriority::USER_BLOCKING,
            base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN})) {
@@ -119,18 +123,20 @@ DesktopAttestationService::~DesktopAttestationService() = default;
 void DesktopAttestationService::BuildChallengeResponseForVAChallenge(
     const std::string& challenge,
     base::Value::Dict signals,
+    const std::set<DTCPolicyLevel>& levels,
     AttestationCallback callback) {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   key_manager_->ExportPublicKeyAsync(
       base::BindOnce(&DesktopAttestationService::OnPublicKeyExported,
                      weak_factory_.GetWeakPtr(), challenge, std::move(signals),
-                     std::move(callback)));
+                     levels, std::move(callback)));
 }
 
 void DesktopAttestationService::OnPublicKeyExported(
     const std::string& challenge,
     base::Value::Dict signals,
+    const std::set<DTCPolicyLevel>& levels,
     AttestationCallback callback,
     absl::optional<std::string> exported_key) {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
@@ -149,7 +155,7 @@ void DesktopAttestationService::OnPublicKeyExported(
                      google_keys_.va_signing_key(GetVAType()).modulus_in_hex()),
       base::BindOnce(&DesktopAttestationService::OnChallengeValidated,
                      weak_factory_.GetWeakPtr(), signed_data,
-                     std::move(exported_key), std::move(signals),
+                     std::move(exported_key), std::move(signals), levels,
                      std::move(callback)));
 }
 
@@ -157,6 +163,7 @@ void DesktopAttestationService::OnChallengeValidated(
     const SignedData& signed_data,
     const absl::optional<std::string>& exported_public_key,
     base::Value::Dict signals,
+    const std::set<DTCPolicyLevel>& levels,
     AttestationCallback callback,
     bool is_va_challenge) {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
@@ -182,6 +189,12 @@ void DesktopAttestationService::OnChallengeValidated(
   // the device. device_id is necessary to validate the dm_token.
   key_info.set_dm_token(dm_token.value());
   key_info.set_device_id(dm_token_storage_->RetrieveClientId());
+
+  if (browser_cloud_policy_store_ &&
+      browser_cloud_policy_store_->has_policy()) {
+    const auto* policy = browser_cloud_policy_store_->policy();
+    key_info.set_customer_id(policy->obfuscated_customer_id());
+  }
 
   if (exported_public_key) {
     key_info.set_browser_instance_public_key(exported_public_key.value());

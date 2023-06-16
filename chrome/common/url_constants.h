@@ -193,6 +193,10 @@ extern const char kGooglePhotosURL[];
 // The URL for the "Learn more" link for the High Efficiency Mode.
 extern const char kHighEfficiencyModeLearnMoreUrl[];
 
+// The URL in the help text for the High Efficiency Mode tab discarding
+// exceptions add dialog.
+extern const char kHighEfficiencyModeTabDiscardingHelpUrl[];
+
 // The URL for the "Learn more" page for the usage/crash reporting option in the
 // first run dialog.
 extern const char kLearnMoreReportingURL[];
@@ -445,6 +449,14 @@ extern const char kSmartPrivacySettingsLearnMoreURL[];
 // The URL for the "Learn more" page for the network file shares settings page.
 extern const char kSmbSharesLearnMoreURL[];
 
+// The URL for the "Learn more" page for Speak-on-mute Detection in the privacy
+// hub page.
+extern const char kSpeakOnMuteDetectionLearnMoreURL[];
+
+// The URL for the "Learn more" page for the geolocation toggle in the privacy
+// hub page.
+extern const char kGeolocationToggleLearnMoreURL[];
+
 // The URL for the "Learn more" page for Suggested Content in the privacy page.
 extern const char kSuggestedContentLearnMoreURL[];
 
@@ -484,9 +496,6 @@ extern const char kMacOsObsoleteURL[];
 #endif
 
 #if BUILDFLAG(IS_WIN)
-// The URL for the Learn More link in the Chrome Cleanup settings card.
-extern const char kChromeCleanerLearnMoreURL[];
-
 // The URL for the Windows XP/Vista deprecation help center article.
 extern const char kWindowsXPVistaDeprecationURL[];
 

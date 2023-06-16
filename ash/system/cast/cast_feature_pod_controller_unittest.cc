@@ -50,8 +50,9 @@ TEST_F(CastFeaturePodControllerTest, CreateTile) {
   EXPECT_FALSE(tile->IsToggled());
   EXPECT_EQ(tile->label()->GetText(), u"Cast screen");
   EXPECT_EQ(tile->GetTooltipText(), u"Show cast devices");
-  EXPECT_TRUE(tile->drill_in_button()->GetVisible());
-  EXPECT_EQ(tile->drill_in_button()->GetTooltipText(), u"Show cast devices");
+  ASSERT_TRUE(tile->drill_in_arrow());
+  EXPECT_TRUE(tile->drill_in_arrow()->GetVisible());
+  ASSERT_TRUE(tile->sub_label());
   EXPECT_FALSE(tile->sub_label()->GetVisible());
 }
 
@@ -103,6 +104,20 @@ TEST_F(CastFeaturePodControllerTest, TileStateWhenCastingScreen) {
   EXPECT_EQ(tile->label()->GetText(), u"Casting screen");
   EXPECT_TRUE(tile->sub_label()->GetVisible());
   EXPECT_EQ(tile->sub_label()->GetText(), u"Sony TV");
+}
+
+TEST_F(CastFeaturePodControllerTest, CompactTileStateWhenCastingScreen) {
+  cast_config_.set_has_active_route(true);
+  cast_config_.set_has_sinks_and_routes(true);
+  SinkAndRoute sink_and_route = MakeLocalSinkAndRoute();
+  sink_and_route.sink.name = "Sony TV";
+  sink_and_route.route.content_source = ContentSource::kDesktop;
+  cast_config_.AddSinkAndRoute(sink_and_route);
+
+  std::unique_ptr<FeatureTile> tile = controller_->CreateTile(/*compact=*/true);
+  EXPECT_TRUE(tile->IsToggled());
+  EXPECT_EQ(tile->label()->GetText(), u"Casting screen");
+  EXPECT_FALSE(tile->sub_label());
 }
 
 TEST_F(CastFeaturePodControllerTest, TileStateWhenCastingTab) {

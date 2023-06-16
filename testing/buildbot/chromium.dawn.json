@@ -49,9 +49,141 @@
         },
         "test": "dawn_end2end_tests",
         "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-implicit-device-sync",
+          "--gs-results-bucket=chromium-result-details",
+          "--recover-devices",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "args": [
+            "--bucket",
+            "chromium-result-details",
+            "--test-name",
+            "dawn_end2end_implicit_device_sync_tests"
+          ],
+          "script": "//build/android/pylib/results/presentation/test_results_presentation.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "R",
+              "device_os_type": "userdebug",
+              "device_type": "flame",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
       }
     ],
-    "isolated_scripts": []
+    "isolated_scripts": [
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=1"
+        ],
+        "ci_only": true,
+        "isolate_name": "telemetry_gpu_integration_test_android_chrome",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "R",
+              "device_os_type": "userdebug",
+              "device_type": "flame",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 36
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test_android_chrome/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=1"
+        ],
+        "ci_only": true,
+        "isolate_name": "telemetry_gpu_integration_test_android_chrome",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_with_validation_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "R",
+              "device_os_type": "userdebug",
+              "device_type": "flame",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 36
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test_android_chrome/"
+      }
+    ]
   },
   "Dawn Android arm Release (Pixel 4)": {
     "gtest_tests": [
@@ -101,9 +233,509 @@
         },
         "test": "dawn_end2end_tests",
         "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-implicit-device-sync",
+          "--gs-results-bucket=chromium-result-details",
+          "--recover-devices",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "args": [
+            "--bucket",
+            "chromium-result-details",
+            "--test-name",
+            "dawn_end2end_implicit_device_sync_tests"
+          ],
+          "script": "//build/android/pylib/results/presentation/test_results_presentation.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "R",
+              "device_os_type": "userdebug",
+              "device_type": "flame",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
       }
     ],
-    "isolated_scripts": []
+    "isolated_scripts": [
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=1"
+        ],
+        "ci_only": true,
+        "isolate_name": "telemetry_gpu_integration_test_android_chrome",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "R",
+              "device_os_type": "userdebug",
+              "device_type": "flame",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 36
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test_android_chrome/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=1"
+        ],
+        "ci_only": true,
+        "isolate_name": "telemetry_gpu_integration_test_android_chrome",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_with_validation_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "R",
+              "device_os_type": "userdebug",
+              "device_type": "flame",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 36
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test_android_chrome/"
+      }
+    ]
+  },
+  "Dawn Android arm64 DEPS Release (Pixel 6)": {
+    "gtest_tests": [
+      {
+        "args": [
+          "--gs-results-bucket=chromium-result-details",
+          "--recover-devices",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "merge": {
+          "args": [
+            "--bucket",
+            "chromium-result-details",
+            "--test-name",
+            "dawn_end2end_tests"
+          ],
+          "script": "//build/android/pylib/results/presentation/test_results_presentation.py"
+        },
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "TP1A.220624.021",
+              "device_os_type": "userdebug",
+              "device_type": "oriole",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-implicit-device-sync",
+          "--gs-results-bucket=chromium-result-details",
+          "--recover-devices",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "args": [
+            "--bucket",
+            "chromium-result-details",
+            "--test-name",
+            "dawn_end2end_implicit_device_sync_tests"
+          ],
+          "script": "//build/android/pylib/results/presentation/test_results_presentation.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "TP1A.220624.021",
+              "device_os_type": "userdebug",
+              "device_type": "oriole",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=1"
+        ],
+        "ci_only": true,
+        "isolate_name": "telemetry_gpu_integration_test_android_chrome",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "TP1A.220624.021",
+              "device_os_type": "userdebug",
+              "device_type": "oriole",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 36
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test_android_chrome/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=1"
+        ],
+        "ci_only": true,
+        "isolate_name": "telemetry_gpu_integration_test_android_chrome",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_with_validation_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "TP1A.220624.021",
+              "device_os_type": "userdebug",
+              "device_type": "oriole",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 36
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test_android_chrome/"
+      }
+    ]
+  },
+  "Dawn Android arm64 Release (Pixel 6)": {
+    "gtest_tests": [
+      {
+        "args": [
+          "--gs-results-bucket=chromium-result-details",
+          "--recover-devices",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "merge": {
+          "args": [
+            "--bucket",
+            "chromium-result-details",
+            "--test-name",
+            "dawn_end2end_tests"
+          ],
+          "script": "//build/android/pylib/results/presentation/test_results_presentation.py"
+        },
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "TP1A.220624.021",
+              "device_os_type": "userdebug",
+              "device_type": "oriole",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-implicit-device-sync",
+          "--gs-results-bucket=chromium-result-details",
+          "--recover-devices",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "args": [
+            "--bucket",
+            "chromium-result-details",
+            "--test-name",
+            "dawn_end2end_implicit_device_sync_tests"
+          ],
+          "script": "//build/android/pylib/results/presentation/test_results_presentation.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "TP1A.220624.021",
+              "device_os_type": "userdebug",
+              "device_type": "oriole",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=1"
+        ],
+        "ci_only": true,
+        "isolate_name": "telemetry_gpu_integration_test_android_chrome",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "TP1A.220624.021",
+              "device_os_type": "userdebug",
+              "device_type": "oriole",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 36
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test_android_chrome/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=1"
+        ],
+        "ci_only": true,
+        "isolate_name": "telemetry_gpu_integration_test_android_chrome",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_with_validation_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "TP1A.220624.021",
+              "device_os_type": "userdebug",
+              "device_type": "oriole",
+              "os": "Android",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 36
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test_android_chrome/"
+      }
+    ]
   },
   "Dawn Linux TSAN Release": {
     "gtest_tests": [
@@ -117,6 +749,33 @@
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "10de:2184-440.100",
+              "os": "Ubuntu-18.04.5|Ubuntu-18.04.6",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-implicit-device-sync",
+          "--no-xvfb",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -215,6 +874,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--no-xvfb",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "8086:9bc5-20.0.8",
+              "os": "Ubuntu-18.04.6",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--no-xvfb",
           "--use-gpu-in-tests",
@@ -320,11 +1006,17 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--no-xvfb"
+          "--no-xvfb",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -396,8 +1088,7 @@
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -408,11 +1099,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -435,8 +1121,7 @@
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -446,11 +1131,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -476,6 +1156,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -513,6 +1194,7 @@
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "ci_only": true,
@@ -546,8 +1228,7 @@
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -557,11 +1238,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -584,8 +1260,7 @@
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -595,11 +1270,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -627,6 +1297,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -666,6 +1337,7 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "ci_only": true,
@@ -724,6 +1396,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--no-xvfb",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "10de:2184-440.100",
+              "os": "Ubuntu-18.04.5|Ubuntu-18.04.6",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--no-xvfb",
           "--use-gpu-in-tests",
@@ -829,11 +1528,17 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--no-xvfb"
+          "--no-xvfb",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -905,8 +1610,7 @@
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -917,11 +1621,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -944,8 +1643,7 @@
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -955,11 +1653,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -985,6 +1678,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -1022,6 +1716,7 @@
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -1054,8 +1749,7 @@
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -1065,11 +1759,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -1092,8 +1781,7 @@
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -1103,11 +1791,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -1135,6 +1818,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -1174,6 +1858,7 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -1231,6 +1916,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--no-xvfb",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "8086:9bc5-20.0.8",
+              "os": "Ubuntu-18.04.6",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--no-xvfb",
           "--use-gpu-in-tests",
@@ -1336,11 +2048,17 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--no-xvfb"
+          "--no-xvfb",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -1412,8 +2130,7 @@
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -1424,11 +2141,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -1451,8 +2163,7 @@
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -1462,11 +2173,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -1492,6 +2198,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -1529,6 +2236,7 @@
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "ci_only": true,
@@ -1562,8 +2270,7 @@
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -1573,11 +2280,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -1600,8 +2302,7 @@
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -1611,11 +2312,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -1643,6 +2339,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -1682,6 +2379,7 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "ci_only": true,
@@ -1740,6 +2438,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--no-xvfb",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "10de:2184-440.100",
+              "os": "Ubuntu-18.04.5|Ubuntu-18.04.6",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--no-xvfb",
           "--use-gpu-in-tests",
@@ -1845,11 +2570,17 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--no-xvfb"
+          "--no-xvfb",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -1921,8 +2652,7 @@
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -1933,11 +2663,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -1960,8 +2685,7 @@
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -1971,11 +2695,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -2001,6 +2720,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -2038,6 +2758,7 @@
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -2070,8 +2791,7 @@
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -2081,11 +2801,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -2108,8 +2823,7 @@
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--no-xvfb",
-          "--additional-driver-flag=--enable-features=Vulkan",
-          "--git-revision=${got_revision}"
+          "--additional-driver-flag=--enable-features=Vulkan"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -2119,11 +2833,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -2151,6 +2860,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu --enable-features=Vulkan",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -2190,6 +2900,7 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -2208,6 +2919,1126 @@
             {
               "gpu": "10de:2184-440.100",
               "os": "Ubuntu-18.04.5|Ubuntu-18.04.6",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 2
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
+      }
+    ]
+  },
+  "Dawn Mac arm64 DEPS Release (Apple M2)": {
+    "gtest_tests": [
+      {
+        "args": [
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-toggles=skip_validation",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_skip_validation_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-backend-validation",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_validation_layers_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--use-wire",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_wire_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--use-cmd-decoder=passthrough",
+          "--use-gl=angle",
+          "--use-gpu-in-tests"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "gl_tests_passthrough",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 2
+        },
+        "test": "gl_tests",
+        "test_id_prefix": "ninja://gpu:gl_tests/"
+      },
+      {
+        "args": [
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "gl_unittests",
+        "test_id_prefix": "ninja://ui/gl:gl_unittests/"
+      }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "--override-steps=1",
+          "--gtest-benchmark-name=dawn_perf_tests",
+          "-v"
+        ],
+        "isolate_name": "dawn_perf_tests",
+        "merge": {
+          "args": [
+            "--smoke-test-mode"
+          ],
+          "script": "//tools/perf/process_perf_results.py"
+        },
+        "name": "dawn_perf_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_perf_tests/"
+      },
+      {
+        "isolate_name": "telemetry_gpu_unittests",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "telemetry_gpu_unittests",
+        "resultdb": {
+          "enable": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_unittests/"
+      },
+      {
+        "args": [
+          "--flag-specific=webgpu",
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
+          "--platform=mac-mac11"
+        ],
+        "check_flakiness_for_new_tests": false,
+        "isolate_name": "webgpu_blink_web_tests",
+        "merge": {
+          "args": [
+            "--verbose"
+          ],
+          "script": "//third_party/blink/tools/merge_web_test_results.py"
+        },
+        "name": "webgpu_blink_web_tests",
+        "resultdb": {
+          "enable": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
+      },
+      {
+        "args": [
+          "--flag-specific=webgpu-with-backend-validation",
+          "--timeout-ms=30000",
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
+          "--platform=mac-mac11"
+        ],
+        "isolate_name": "webgpu_blink_web_tests",
+        "merge": {
+          "args": [
+            "--verbose"
+          ],
+          "script": "//third_party/blink/tools/merge_web_test_results.py"
+        },
+        "name": "webgpu_blink_web_tests_with_backend_validation",
+        "resultdb": {
+          "enable": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=4"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 14
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=4"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_with_validation_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 14
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
+      },
+      {
+        "args": [
+          "--flag-specific=webgpu-swiftshader",
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
+          "--platform=mac-mac11"
+        ],
+        "isolate_name": "webgpu_blink_web_tests",
+        "merge": {
+          "args": [
+            "--verbose"
+          ],
+          "script": "//third_party/blink/tools/merge_web_test_results.py"
+        },
+        "name": "webgpu_swiftshader_blink_web_tests",
+        "resultdb": {
+          "enable": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
+      },
+      {
+        "args": [
+          "--flag-specific=webgpu-swiftshader-with-backend-validation",
+          "--timeout-ms=30000",
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
+          "--platform=mac-mac11"
+        ],
+        "isolate_name": "webgpu_blink_web_tests",
+        "merge": {
+          "args": [
+            "--verbose"
+          ],
+          "script": "//third_party/blink/tools/merge_web_test_results.py"
+        },
+        "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
+        "resultdb": {
+          "enable": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-adapter=swiftshader",
+          "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=4"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_swiftshader_web_platform_cts_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 2
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-adapter=swiftshader",
+          "--test-filter=*web_platform*",
+          "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=4"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_swiftshader_web_platform_cts_with_validation_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 2
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
+      }
+    ]
+  },
+  "Dawn Mac arm64 Release (Apple M2)": {
+    "gtest_tests": [
+      {
+        "args": [
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-toggles=skip_validation",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_skip_validation_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-backend-validation",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_validation_layers_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--use-wire",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_wire_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--use-cmd-decoder=passthrough",
+          "--use-gl=angle",
+          "--use-gpu-in-tests"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "gl_tests_passthrough",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 2
+        },
+        "test": "gl_tests",
+        "test_id_prefix": "ninja://gpu:gl_tests/"
+      },
+      {
+        "args": [
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
+        ],
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "gl_unittests",
+        "test_id_prefix": "ninja://ui/gl:gl_unittests/"
+      }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "--override-steps=1",
+          "--gtest-benchmark-name=dawn_perf_tests",
+          "-v"
+        ],
+        "isolate_name": "dawn_perf_tests",
+        "merge": {
+          "args": [
+            "--smoke-test-mode"
+          ],
+          "script": "//tools/perf/process_perf_results.py"
+        },
+        "name": "dawn_perf_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_perf_tests/"
+      },
+      {
+        "isolate_name": "telemetry_gpu_unittests",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "telemetry_gpu_unittests",
+        "resultdb": {
+          "enable": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_unittests/"
+      },
+      {
+        "args": [
+          "--flag-specific=webgpu",
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
+          "--platform=mac-mac11"
+        ],
+        "check_flakiness_for_new_tests": false,
+        "isolate_name": "webgpu_blink_web_tests",
+        "merge": {
+          "args": [
+            "--verbose"
+          ],
+          "script": "//third_party/blink/tools/merge_web_test_results.py"
+        },
+        "name": "webgpu_blink_web_tests",
+        "resultdb": {
+          "enable": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
+      },
+      {
+        "args": [
+          "--flag-specific=webgpu-with-backend-validation",
+          "--timeout-ms=30000",
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
+          "--platform=mac-mac11"
+        ],
+        "isolate_name": "webgpu_blink_web_tests",
+        "merge": {
+          "args": [
+            "--verbose"
+          ],
+          "script": "//third_party/blink/tools/merge_web_test_results.py"
+        },
+        "name": "webgpu_blink_web_tests_with_backend_validation",
+        "resultdb": {
+          "enable": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=4"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 14
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=4"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_cts_with_validation_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 14
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
+      },
+      {
+        "args": [
+          "--flag-specific=webgpu-swiftshader",
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
+          "--platform=mac-mac11"
+        ],
+        "isolate_name": "webgpu_blink_web_tests",
+        "merge": {
+          "args": [
+            "--verbose"
+          ],
+          "script": "//third_party/blink/tools/merge_web_test_results.py"
+        },
+        "name": "webgpu_swiftshader_blink_web_tests",
+        "resultdb": {
+          "enable": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
+      },
+      {
+        "args": [
+          "--flag-specific=webgpu-swiftshader-with-backend-validation",
+          "--timeout-ms=30000",
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
+          "--platform=mac-mac11"
+        ],
+        "isolate_name": "webgpu_blink_web_tests",
+        "merge": {
+          "args": [
+            "--verbose"
+          ],
+          "script": "//third_party/blink/tools/merge_web_test_results.py"
+        },
+        "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
+        "resultdb": {
+          "enable": true
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-adapter=swiftshader",
+          "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=4"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_swiftshader_web_platform_cts_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "idempotent": false,
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 2
+        },
+        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
+      },
+      {
+        "args": [
+          "webgpu_cts",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--stable-jobs",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-adapter=swiftshader",
+          "--test-filter=*web_platform*",
+          "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
+          "--jobs=4"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "merge": {
+          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
+        },
+        "name": "webgpu_swiftshader_web_platform_cts_with_validation_tests",
+        "resultdb": {
+          "enable": true,
+          "has_native_resultdb_integration": true
+        },
+        "should_retry_with_patch": false,
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "arm64",
+              "display_attached": "1",
+              "hidpi": "1",
+              "mac_model": "Mac14,7",
+              "os": "Mac-13.3.1",
               "pool": "chromium.tests.gpu"
             }
           ],
@@ -2251,6 +4082,35 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "x86-64",
+              "display_attached": "1",
+              "gpu": "1002:67ef",
+              "hidpi": "1",
+              "os": "Mac-13.2.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--use-gpu-in-tests",
           "--test-launcher-retry-limit=0",
@@ -2363,11 +4223,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -2447,8 +4313,7 @@
         "args": [
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -2459,11 +4324,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -2488,8 +4348,7 @@
           "--flag-specific=webgpu-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -2499,11 +4358,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -2532,6 +4386,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -2572,9 +4427,9 @@
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
-        "ci_only": true,
         "isolate_name": "telemetry_gpu_integration_test",
         "merge": {
           "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
@@ -2607,8 +4462,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -2618,11 +4472,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -2647,8 +4496,7 @@
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -2658,11 +4506,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -2693,6 +4536,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -2735,9 +4579,9 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
-        "ci_only": true,
         "isolate_name": "telemetry_gpu_integration_test",
         "merge": {
           "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
@@ -2786,7 +4630,34 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "x86-64",
+              "display_attached": "1",
+              "gpu": "8086:3e9b",
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -2812,7 +4683,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -2838,7 +4709,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -2864,7 +4735,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -2889,7 +4760,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
@@ -2900,11 +4771,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -2912,7 +4789,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -2943,7 +4820,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -2966,7 +4843,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "idempotent": false,
@@ -2978,8 +4855,7 @@
         "args": [
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -2990,11 +4866,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -3005,7 +4876,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -3017,8 +4888,7 @@
           "--flag-specific=webgpu-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -3028,11 +4898,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -3043,7 +4908,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -3059,8 +4924,10 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
+        "ci_only": true,
         "isolate_name": "telemetry_gpu_integration_test",
         "merge": {
           "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
@@ -3078,7 +4945,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "idempotent": false,
@@ -3097,8 +4964,10 @@
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
+        "ci_only": true,
         "isolate_name": "telemetry_gpu_integration_test",
         "merge": {
           "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
@@ -3116,7 +4985,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "idempotent": false,
@@ -3129,8 +4998,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -3140,11 +5008,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -3155,7 +5018,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -3167,8 +5030,7 @@
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -3178,11 +5040,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -3193,7 +5050,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -3211,6 +5068,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -3230,7 +5088,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "idempotent": false,
@@ -3251,6 +5109,7 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -3270,7 +5129,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "idempotent": false,
@@ -3320,317 +5179,22 @@
     ]
   },
   "Dawn Mac x64 Experimental Release (Intel)": {
-    "gtest_tests": [
-      {
-        "args": [
-          "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0",
-          "--exclusive-device-type-preference=discrete,integrated"
-        ],
-        "merge": {
-          "script": "//testing/merge_scripts/standard_gtest_merge.py"
-        },
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
-        },
-        "test": "dawn_end2end_tests",
-        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
-      },
-      {
-        "args": [
-          "--enable-toggles=skip_validation",
-          "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0",
-          "--exclusive-device-type-preference=discrete,integrated"
-        ],
-        "merge": {
-          "script": "//testing/merge_scripts/standard_gtest_merge.py"
-        },
-        "name": "dawn_end2end_skip_validation_tests",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
-        },
-        "test": "dawn_end2end_tests",
-        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
-      },
-      {
-        "args": [
-          "--enable-backend-validation",
-          "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0",
-          "--exclusive-device-type-preference=discrete,integrated"
-        ],
-        "merge": {
-          "script": "//testing/merge_scripts/standard_gtest_merge.py"
-        },
-        "name": "dawn_end2end_validation_layers_tests",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
-        },
-        "test": "dawn_end2end_tests",
-        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
-      },
-      {
-        "args": [
-          "--use-wire",
-          "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0",
-          "--exclusive-device-type-preference=discrete,integrated"
-        ],
-        "merge": {
-          "script": "//testing/merge_scripts/standard_gtest_merge.py"
-        },
-        "name": "dawn_end2end_wire_tests",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
-        },
-        "test": "dawn_end2end_tests",
-        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
-      },
-      {
-        "args": [
-          "--use-cmd-decoder=passthrough",
-          "--use-gl=angle",
-          "--use-gpu-in-tests"
-        ],
-        "merge": {
-          "script": "//testing/merge_scripts/standard_gtest_merge.py"
-        },
-        "name": "gl_tests_passthrough",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
-          "shards": 2
-        },
-        "test": "gl_tests",
-        "test_id_prefix": "ninja://gpu:gl_tests/"
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests"
-        ],
-        "merge": {
-          "script": "//testing/merge_scripts/standard_gtest_merge.py"
-        },
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
-        },
-        "test": "gl_unittests",
-        "test_id_prefix": "ninja://ui/gl:gl_unittests/"
-      }
-    ],
     "isolated_scripts": [
       {
         "args": [
-          "--override-steps=1",
-          "--gtest-benchmark-name=dawn_perf_tests",
-          "-v"
-        ],
-        "isolate_name": "dawn_perf_tests",
-        "merge": {
-          "args": [
-            "--smoke-test-mode"
-          ],
-          "script": "//tools/perf/process_perf_results.py"
-        },
-        "name": "dawn_perf_tests",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
-        },
-        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_perf_tests/"
-      },
-      {
-        "isolate_name": "telemetry_gpu_unittests",
-        "merge": {
-          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
-        },
-        "name": "telemetry_gpu_unittests",
-        "resultdb": {
-          "enable": true
-        },
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "idempotent": false,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
-        },
-        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_unittests/"
-      },
-      {
-        "args": [
-          "--flag-specific=webgpu",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
-        ],
-        "check_flakiness_for_new_tests": false,
-        "isolate_name": "webgpu_blink_web_tests",
-        "merge": {
-          "args": [
-            "--verbose"
-          ],
-          "script": "//third_party/blink/tools/merge_web_test_results.py"
-        },
-        "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
-        "resultdb": {
-          "enable": true
-        },
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
-        },
-        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
-      },
-      {
-        "args": [
-          "--flag-specific=webgpu-with-backend-validation",
-          "--timeout-ms=30000",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
-        ],
-        "isolate_name": "webgpu_blink_web_tests",
-        "merge": {
-          "args": [
-            "--verbose"
-          ],
-          "script": "//third_party/blink/tools/merge_web_test_results.py"
-        },
-        "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
-        "resultdb": {
-          "enable": true
-        },
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
-        },
-        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
-      },
-      {
-        "args": [
-          "webgpu_cts",
+          "noop_sleep",
           "--show-stdout",
           "--browser=release",
           "--passthrough",
           "-v",
           "--stable-jobs",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
-          "--jobs=4"
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
         "merge": {
           "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
         },
-        "name": "webgpu_cts_tests",
-        "resultdb": {
-          "enable": true,
-          "has_native_resultdb_integration": true
-        },
+        "name": "noop_sleep_tests",
         "should_retry_with_patch": false,
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -3639,210 +5203,12 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
+              "os": "Mac-13.3.1"
             }
           ],
           "expiration": 21600,
           "idempotent": false,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
-          "shards": 14
-        },
-        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
-      },
-      {
-        "args": [
-          "webgpu_cts",
-          "--show-stdout",
-          "--browser=release",
-          "--passthrough",
-          "-v",
-          "--stable-jobs",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
-          "--enable-dawn-backend-validation",
-          "--jobs=4"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "merge": {
-          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
-        },
-        "name": "webgpu_cts_with_validation_tests",
-        "resultdb": {
-          "enable": true,
-          "has_native_resultdb_integration": true
-        },
-        "should_retry_with_patch": false,
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "idempotent": false,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
-          "shards": 14
-        },
-        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
-      },
-      {
-        "args": [
-          "--flag-specific=webgpu-swiftshader",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
-        ],
-        "isolate_name": "webgpu_blink_web_tests",
-        "merge": {
-          "args": [
-            "--verbose"
-          ],
-          "script": "//third_party/blink/tools/merge_web_test_results.py"
-        },
-        "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
-        "resultdb": {
-          "enable": true
-        },
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
-        },
-        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
-      },
-      {
-        "args": [
-          "--flag-specific=webgpu-swiftshader-with-backend-validation",
-          "--timeout-ms=30000",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
-        ],
-        "isolate_name": "webgpu_blink_web_tests",
-        "merge": {
-          "args": [
-            "--verbose"
-          ],
-          "script": "//third_party/blink/tools/merge_web_test_results.py"
-        },
-        "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
-        "resultdb": {
-          "enable": true
-        },
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
-        },
-        "test_id_prefix": "ninja://:webgpu_blink_web_tests/"
-      },
-      {
-        "args": [
-          "webgpu_cts",
-          "--show-stdout",
-          "--browser=release",
-          "--passthrough",
-          "-v",
-          "--stable-jobs",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
-          "--use-webgpu-adapter=swiftshader",
-          "--test-filter=*web_platform*",
-          "--jobs=4"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "merge": {
-          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
-        },
-        "name": "webgpu_swiftshader_web_platform_cts_tests",
-        "resultdb": {
-          "enable": true,
-          "has_native_resultdb_integration": true
-        },
-        "should_retry_with_patch": false,
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "idempotent": false,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
-          "shards": 2
-        },
-        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
-      },
-      {
-        "args": [
-          "webgpu_cts",
-          "--show-stdout",
-          "--browser=release",
-          "--passthrough",
-          "-v",
-          "--stable-jobs",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
-          "--use-webgpu-adapter=swiftshader",
-          "--test-filter=*web_platform*",
-          "--enable-dawn-backend-validation",
-          "--jobs=4"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "merge": {
-          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
-        },
-        "name": "webgpu_swiftshader_web_platform_cts_with_validation_tests",
-        "resultdb": {
-          "enable": true,
-          "has_native_resultdb_integration": true
-        },
-        "should_retry_with_patch": false,
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "cpu": "x86-64",
-              "display_attached": "1",
-              "gpu": "8086:3e9b",
-              "os": "Mac-12.5.1"
-            }
-          ],
-          "expiration": 21600,
-          "idempotent": false,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
-          "shards": 2
         },
         "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
       }
@@ -3878,6 +5244,35 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "x86-64",
+              "display_attached": "1",
+              "gpu": "1002:67ef",
+              "hidpi": "1",
+              "os": "Mac-13.2.1",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--use-gpu-in-tests",
           "--test-launcher-retry-limit=0",
@@ -3990,11 +5385,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -4074,8 +5475,7 @@
         "args": [
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -4086,11 +5486,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -4115,8 +5510,7 @@
           "--flag-specific=webgpu-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -4126,11 +5520,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -4159,6 +5548,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -4199,9 +5589,9 @@
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
-        "ci_only": true,
         "isolate_name": "telemetry_gpu_integration_test",
         "merge": {
           "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
@@ -4234,8 +5624,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -4245,11 +5634,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -4274,8 +5658,7 @@
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -4285,11 +5668,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -4320,6 +5698,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -4362,9 +5741,9 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
-        "ci_only": true,
         "isolate_name": "telemetry_gpu_integration_test",
         "merge": {
           "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
@@ -4413,7 +5792,34 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "cpu": "x86-64",
+              "display_attached": "1",
+              "gpu": "8086:3e9b",
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -4439,7 +5845,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -4465,7 +5871,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -4491,7 +5897,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -4516,7 +5922,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
@@ -4527,11 +5933,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -4539,7 +5951,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -4570,7 +5982,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -4593,7 +6005,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "idempotent": false,
@@ -4605,8 +6017,7 @@
         "args": [
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -4617,11 +6028,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -4632,7 +6038,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -4644,8 +6050,7 @@
           "--flag-specific=webgpu-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -4655,11 +6060,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -4670,7 +6070,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -4686,8 +6086,10 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
+        "ci_only": true,
         "isolate_name": "telemetry_gpu_integration_test",
         "merge": {
           "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
@@ -4705,7 +6107,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "idempotent": false,
@@ -4724,8 +6126,10 @@
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
+        "ci_only": true,
         "isolate_name": "telemetry_gpu_integration_test",
         "merge": {
           "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
@@ -4743,7 +6147,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "idempotent": false,
@@ -4756,8 +6160,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -4767,11 +6170,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -4782,7 +6180,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -4794,8 +6192,7 @@
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--platform=mac-mac11",
-          "--git-revision=${got_revision}"
+          "--platform=mac-mac11"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -4805,11 +6202,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -4820,7 +6212,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
@@ -4838,6 +6230,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -4857,7 +6250,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "idempotent": false,
@@ -4878,6 +6271,7 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -4897,7 +6291,7 @@
               "cpu": "x86-64",
               "display_attached": "1",
               "gpu": "8086:3e9b",
-              "os": "Mac-12.5"
+              "os": "Mac-13.3.1"
             }
           ],
           "idempotent": false,
@@ -4942,6 +6336,39 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "display_attached": "1",
+              "gpu": "10de:2184-27.21.14.5638",
+              "os": "Windows-10-18363",
+              "pool": "chromium.tests.gpu"
+            },
+            {
+              "display_attached": "1",
+              "gpu": "8086:9bc5-31.0.101.2111",
+              "os": "Windows-10",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--use-gpu-in-tests",
           "--test-launcher-retry-limit=0",
@@ -5038,11 +6465,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -5135,7 +6568,6 @@
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
           "--target=Release_x64",
-          "--git-revision=${got_revision}",
           "--timeout-ms=48000"
         ],
         "check_flakiness_for_new_tests": false,
@@ -5147,11 +6579,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -5180,8 +6607,7 @@
           "--flag-specific=webgpu-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -5191,11 +6617,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -5228,6 +6649,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=1"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -5266,8 +6688,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -5277,11 +6698,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -5310,8 +6726,7 @@
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -5321,11 +6736,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -5381,6 +6791,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "display_attached": "1",
+              "gpu": "8086:9bc5-31.0.101.2111",
+              "os": "Windows-10",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--use-gpu-in-tests",
           "--test-launcher-retry-limit=0",
@@ -5485,11 +6922,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -5563,8 +7006,7 @@
         "args": [
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -5575,11 +7017,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -5606,6 +7043,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=1"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -5638,8 +7076,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -5649,11 +7086,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -5676,8 +7108,7 @@
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -5687,11 +7118,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -5720,6 +7146,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=1"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -5778,6 +7205,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "display_attached": "1",
+              "gpu": "10de:2184-27.21.14.5638",
+              "os": "Windows-10-18363",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--use-gpu-in-tests",
           "--test-launcher-retry-limit=0",
@@ -5882,11 +7336,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -5960,8 +7420,7 @@
         "args": [
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -5972,11 +7431,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -5999,8 +7453,7 @@
           "--flag-specific=webgpu-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -6010,11 +7463,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -6041,6 +7489,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -6079,6 +7528,7 @@
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -6111,8 +7561,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -6122,11 +7571,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -6149,8 +7593,7 @@
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -6160,11 +7603,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -6193,6 +7631,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -6233,6 +7672,7 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -6327,6 +7767,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "display_attached": "1",
+              "gpu": "8086:9bc5-31.0.101.2111",
+              "os": "Windows-10",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--use-gpu-in-tests",
           "--test-launcher-retry-limit=0",
@@ -6431,11 +7898,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -6509,8 +7982,7 @@
         "args": [
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -6521,11 +7993,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -6552,6 +8019,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=1"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -6584,8 +8052,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -6595,11 +8062,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -6622,8 +8084,7 @@
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -6633,11 +8094,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -6666,6 +8122,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=1"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -6724,6 +8181,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "display_attached": "1",
+              "gpu": "10de:2184-27.21.14.5638",
+              "os": "Windows-10-18363",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--use-gpu-in-tests",
           "--test-launcher-retry-limit=0",
@@ -6828,11 +8312,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -6906,8 +8396,7 @@
         "args": [
           "--flag-specific=webgpu",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -6918,11 +8407,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -6945,8 +8429,7 @@
           "--flag-specific=webgpu-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -6956,11 +8439,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -6987,6 +8465,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -7025,6 +8504,7 @@
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -7057,8 +8537,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -7068,11 +8547,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -7095,8 +8569,7 @@
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
           "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--target=Release_x64",
-          "--git-revision=${got_revision}"
+          "--target=Release_x64"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -7106,11 +8579,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -7139,6 +8607,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -7179,6 +8648,7 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -7239,6 +8709,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "display_attached": "1",
+              "gpu": "8086:9bc5-31.0.101.2111",
+              "os": "Windows-10",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--use-gpu-in-tests",
           "--test-launcher-retry-limit=0",
@@ -7343,11 +8840,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -7420,8 +8923,7 @@
       {
         "args": [
           "--flag-specific=webgpu",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -7432,11 +8934,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -7458,8 +8955,7 @@
         "args": [
           "--flag-specific=webgpu-with-backend-validation",
           "--timeout-ms=30000",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -7469,11 +8965,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -7500,6 +8991,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=1"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -7531,8 +9023,7 @@
       {
         "args": [
           "--flag-specific=webgpu-swiftshader",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -7542,11 +9033,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -7568,8 +9054,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -7579,11 +9064,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -7612,6 +9092,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=1"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -7670,6 +9151,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "display_attached": "1",
+              "gpu": "10de:2184-27.21.14.5638",
+              "os": "Windows-10-18363",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--use-gpu-in-tests",
           "--test-launcher-retry-limit=0",
@@ -7774,11 +9282,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -7851,8 +9365,7 @@
       {
         "args": [
           "--flag-specific=webgpu",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -7863,11 +9376,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -7889,8 +9397,7 @@
         "args": [
           "--flag-specific=webgpu-with-backend-validation",
           "--timeout-ms=30000",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -7900,11 +9407,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -7931,6 +9433,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -7961,47 +9464,8 @@
       },
       {
         "args": [
-          "webgpu_cts",
-          "--show-stdout",
-          "--browser=release",
-          "--passthrough",
-          "-v",
-          "--stable-jobs",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
-          "--enable-dawn-backend-validation",
-          "--jobs=4"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "merge": {
-          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
-        },
-        "name": "webgpu_cts_with_validation_tests",
-        "resultdb": {
-          "enable": true,
-          "has_native_resultdb_integration": true
-        },
-        "should_retry_with_patch": false,
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "display_attached": "1",
-              "gpu": "10de:2184-27.21.14.5638",
-              "os": "Windows-10-18363",
-              "pool": "chromium.tests.gpu"
-            }
-          ],
-          "idempotent": false,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
-          "shards": 14
-        },
-        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
-      },
-      {
-        "args": [
           "--flag-specific=webgpu-swiftshader",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -8011,11 +9475,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -8037,8 +9496,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -8048,11 +9506,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -8081,6 +9534,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -8121,6 +9575,7 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -8215,6 +9670,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "display_attached": "1",
+              "gpu": "8086:9bc5-31.0.101.2111",
+              "os": "Windows-10",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--use-gpu-in-tests",
           "--test-launcher-retry-limit=0",
@@ -8319,11 +9801,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -8396,8 +9884,7 @@
       {
         "args": [
           "--flag-specific=webgpu",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -8408,11 +9895,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -8434,8 +9916,7 @@
         "args": [
           "--flag-specific=webgpu-with-backend-validation",
           "--timeout-ms=30000",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -8445,11 +9926,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -8476,6 +9952,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=1"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -8507,8 +9984,7 @@
       {
         "args": [
           "--flag-specific=webgpu-swiftshader",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -8518,11 +9994,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -8544,8 +10015,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -8555,11 +10025,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -8588,6 +10053,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=1"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -8646,6 +10112,33 @@
       },
       {
         "args": [
+          "--enable-implicit-device-sync",
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0",
+          "--exclusive-device-type-preference=discrete,integrated"
+        ],
+        "ci_only": true,
+        "merge": {
+          "script": "//testing/merge_scripts/standard_gtest_merge.py"
+        },
+        "name": "dawn_end2end_implicit_device_sync_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "display_attached": "1",
+              "gpu": "10de:2184-27.21.14.5638",
+              "os": "Windows-10-18363",
+              "pool": "chromium.tests.gpu"
+            }
+          ],
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://third_party/dawn/src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
           "--enable-toggles=skip_validation",
           "--use-gpu-in-tests",
           "--test-launcher-retry-limit=0",
@@ -8750,11 +10243,17 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--git-revision=${got_revision}"
         ],
         "merge": {
           "script": "//testing/merge_scripts/standard_gtest_merge.py"
         },
+        "precommit_args": [
+          "--gerrit-issue=${patch_issue}",
+          "--gerrit-patchset=${patch_set}",
+          "--buildbucket-id=${buildbucket_build_id}"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
@@ -8827,8 +10326,7 @@
       {
         "args": [
           "--flag-specific=webgpu",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "check_flakiness_for_new_tests": false,
         "isolate_name": "webgpu_blink_web_tests",
@@ -8839,11 +10337,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -8865,8 +10358,7 @@
         "args": [
           "--flag-specific=webgpu-with-backend-validation",
           "--timeout-ms=30000",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -8876,11 +10368,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -8907,6 +10394,7 @@
           "-v",
           "--stable-jobs",
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -8937,47 +10425,8 @@
       },
       {
         "args": [
-          "webgpu_cts",
-          "--show-stdout",
-          "--browser=release",
-          "--passthrough",
-          "-v",
-          "--stable-jobs",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
-          "--enable-dawn-backend-validation",
-          "--jobs=4"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "merge": {
-          "script": "//testing/merge_scripts/standard_isolated_script_merge.py"
-        },
-        "name": "webgpu_cts_with_validation_tests",
-        "resultdb": {
-          "enable": true,
-          "has_native_resultdb_integration": true
-        },
-        "should_retry_with_patch": false,
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "display_attached": "1",
-              "gpu": "10de:2184-27.21.14.5638",
-              "os": "Windows-10-18363",
-              "pool": "chromium.tests.gpu"
-            }
-          ],
-          "idempotent": false,
-          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
-          "shards": 14
-        },
-        "test_id_prefix": "ninja://chrome/test:telemetry_gpu_integration_test/"
-      },
-      {
-        "args": [
           "--flag-specific=webgpu-swiftshader",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -8987,11 +10436,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -9013,8 +10457,7 @@
         "args": [
           "--flag-specific=webgpu-swiftshader-with-backend-validation",
           "--timeout-ms=30000",
-          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000",
-          "--git-revision=${got_revision}"
+          "--initialize-webgpu-adapter-at-startup-timeout-ms=60000"
         ],
         "isolate_name": "webgpu_blink_web_tests",
         "merge": {
@@ -9024,11 +10467,6 @@
           "script": "//third_party/blink/tools/merge_web_test_results.py"
         },
         "name": "webgpu_swiftshader_blink_web_tests_with_backend_validation",
-        "precommit_args": [
-          "--gerrit-issue=${patch_issue}",
-          "--gerrit-patchset=${patch_set}",
-          "--buildbucket-id=${buildbucket_build_id}"
-        ],
         "resultdb": {
           "enable": true
         },
@@ -9057,6 +10495,7 @@
           "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --force_high_performance_gpu",
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",
@@ -9097,6 +10536,7 @@
           "--use-webgpu-adapter=swiftshader",
           "--test-filter=*web_platform*",
           "--enable-dawn-backend-validation",
+          "--use-webgpu-power-preference=default-high-performance",
           "--jobs=4"
         ],
         "isolate_name": "telemetry_gpu_integration_test",

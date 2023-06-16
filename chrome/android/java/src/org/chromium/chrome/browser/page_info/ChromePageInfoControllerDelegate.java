@@ -104,8 +104,7 @@ public class ChromePageInfoControllerDelegate extends PageInfoControllerDelegate
         initOfflinePageParams();
         mOfflinePageLoadUrlDelegate = offlinePageLoadUrlDelegate;
 
-        TrackerFactory.getTrackerForProfile(Profile.getLastUsedRegularProfile())
-                .notifyEvent(EventConstants.PAGE_INFO_OPENED);
+        TrackerFactory.getTrackerForProfile(mProfile).notifyEvent(EventConstants.PAGE_INFO_OPENED);
     }
 
     private void initOfflinePageParams() {
@@ -202,7 +201,8 @@ public class ChromePageInfoControllerDelegate extends PageInfoControllerDelegate
 
     @Override
     public void showCookieSettings() {
-        SiteSettingsHelper.showCategorySettings(mContext, SiteSettingsCategory.Type.COOKIES);
+        SiteSettingsHelper.showCategorySettings(
+                mContext, mProfile, SiteSettingsCategory.Type.COOKIES);
     }
 
     @Override
