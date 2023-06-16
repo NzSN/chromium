@@ -478,6 +478,8 @@ rlim_t GetProcessDataSizeLimit(sandbox::mojom::Sandbox sandbox_type) {
     } else if (sandbox_type == sandbox::mojom::Sandbox::kGpu &&
                physical_memory > 32 * GB) {
       return 32 * GB;
+    } else if (physical_memory > 32 * GB) {
+      return 32 * GB;
     } else if (physical_memory > 16 * GB) {
       return 16 * GB;
     } else {

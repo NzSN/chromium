@@ -296,7 +296,7 @@ constexpr size_t kNumPools = kMaxPoolHandle - 1;
 #if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_IOS) || PA_CONFIG(POINTER_COMPRESSION)
 constexpr size_t kPoolMaxSize = 8 * kGiB;
 #else
-constexpr size_t kPoolMaxSize = 16 * kGiB;
+constexpr size_t kPoolMaxSize = 32 * kGiB;
 #endif
 #else  // BUILDFLAG(HAS_64_BIT_POINTERS)
 constexpr size_t kPoolMaxSize = 4 * kGiB;
@@ -415,7 +415,7 @@ constexpr size_t kMinDirectMappedDownsize = kMaxBucketed + 1;
 PA_ALWAYS_INLINE constexpr int64_t MaxDirectMapped() {
   // Subtract kSuperPageSize to accommodate for granularity inside
   // PartitionRoot::GetDirectMapReservationSize.
-  return (1ULL << 34) - kSuperPageSize;
+  return (1ULL << 35) - kSuperPageSize;
 }
 
 // Max alignment supported by AlignedAllocWithFlags().
