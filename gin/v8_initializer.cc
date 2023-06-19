@@ -385,6 +385,8 @@ void SetFlags(IsolateHolder::ScriptMode mode,
                          "--experimental-wasm-inlining",
                          "--no-experimental-wasm-inlining");
 
+  SetV8Flags("--max-old-space-size=16384");
+
   if (js_command_line_flags.empty())
     return;
 
