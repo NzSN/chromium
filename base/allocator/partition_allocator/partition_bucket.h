@@ -37,7 +37,7 @@ struct PartitionBucket {
 
   SlotSpanMetadata<thread_safe>* empty_slot_spans_head;
   SlotSpanMetadata<thread_safe>* decommitted_slot_spans_head;
-  uint32_t slot_size;
+  uint64_t slot_size;
   uint32_t num_system_pages_per_slot_span
       : kPartitionNumSystemPagesPerSlotSpanBits;
   uint32_t num_full_slot_spans : 24;

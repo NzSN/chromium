@@ -455,6 +455,8 @@ void SetJobMemoryLimit(Sandbox sandbox_type, TargetConfig* config) {
       memory_limit = 64 * GB;
     } else if (sandbox_type == Sandbox::kGpu && physical_memory > 32 * GB) {
       memory_limit = 32 * GB;
+    } else if (physical_memory > 32 * GB) {
+      memory_limit = 32 * GB;
     } else if (physical_memory > 16 * GB) {
       memory_limit = 16 * GB;
     } else {

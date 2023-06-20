@@ -296,7 +296,7 @@ constexpr size_t kNumPools = kMaxPoolHandle - 1;
 #if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_IOS) || PA_CONFIG(POINTER_COMPRESSION)
 constexpr size_t kPoolMaxSize = 8 * kGiB;
 #else
-constexpr size_t kPoolMaxSize = 16 * kGiB;
+constexpr size_t kPoolMaxSize = 32 * kGiB;
 #endif
 #else  // BUILDFLAG(HAS_64_BIT_POINTERS)
 constexpr size_t kPoolMaxSize = 4 * kGiB;
@@ -412,10 +412,10 @@ constexpr size_t kMinDirectMappedDownsize = kMaxBucketed + 1;
 // The definition of MaxDirectMapped does only depend on constants that are
 // unconditionally constexpr. Therefore it is not necessary to use
 // PAGE_ALLOCATOR_CONSTANTS_DECLARE_CONSTEXPR here.
-PA_ALWAYS_INLINE constexpr size_t MaxDirectMapped() {
+PA_ALWAYS_INLINE constexpr int64_t MaxDirectMapped() {
   // Subtract kSuperPageSize to accommodate for granularity inside
   // PartitionRoot::GetDirectMapReservationSize.
-  return (1UL << 31) - kSuperPageSize;
+  return (1ULL << 35) - kSuperPageSize;
 }
 
 // Max alignment supported by AlignedAllocWithFlags().
