@@ -14,6 +14,7 @@
 #include "base/notreached.h"
 #include "base/win/scoped_handle.h"
 #include "base/win/windows_version.h"
+#include "sandbox/win/src/job.h"
 #include "sandbox/win/src/restricted_token.h"
 #include "sandbox/win/src/sandbox_nt_util.h"
 #include "sandbox/win/src/sandbox_utils.h"
