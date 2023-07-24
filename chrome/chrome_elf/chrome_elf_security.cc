@@ -106,10 +106,10 @@ void EarlyBrowserSecurity() {
   nt::CloseRegKey(handle);
 
   // Disable extension points (legacy hooking) in this process.
-  PROCESS_MITIGATION_EXTENSION_POINT_DISABLE_POLICY policy = {};
-  policy.DisableExtensionPoints = true;
-  SetProcessMitigationPolicy(ProcessExtensionPointDisablePolicy, &policy,
-                             sizeof(policy));
+  //PROCESS_MITIGATION_EXTENSION_POINT_DISABLE_POLICY policy = {};
+  //policy.DisableExtensionPoints = true;
+  // SetProcessMitigationPolicy(ProcessExtensionPointDisablePolicy, &policy,
+  //                            sizeof(policy));
   ExtensionPointDisableSet::GetInstance()->SetExtensionPointDisabled(true);
 
   return;

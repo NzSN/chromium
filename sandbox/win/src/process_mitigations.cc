@@ -88,8 +88,11 @@ bool IsRunning32bitEmulatedOnArm64() {
 bool SetProcessMitigationPolicyInternal(PROCESS_MITIGATION_POLICY policy,
                                         PVOID lpBuffer,
                                         SIZE_T dwLength) {
-  PCHECK(::SetProcessMitigationPolicy(policy, lpBuffer, dwLength))
-      << "SetProcessMitigationPolicy failed with Policy: " << policy;
+  // Minimum supported client is Windows 8, so need to comment it to
+  // support Windows 7.
+  //
+  // PCHECK(::SetProcessMitigationPolicy(policy, lpBuffer, dwLength))
+  //     << "SetProcessMitigationPolicy failed with Policy: " << policy;
 
   return true;
 }
