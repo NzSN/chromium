@@ -8323,8 +8323,7 @@ bool WebGLRenderingContextBase::ValidateTexFuncData(
   base::CheckedNumeric<uint32_t> data_size = total_bytes_required;
   data_size += skip_bytes;
   uint32_t data_size_val;
-  if (!data_size.AssignIfValid(&data_size_val) ||
-      data_size_val > kMaximumSupportedArrayBufferSize) {
+  if (!data_size.AssignIfValid(&data_size_val)) {
     SynthesizeGLError(GL_INVALID_VALUE, function_name,
                       "texture data size exceeds the supported range");
     return false;

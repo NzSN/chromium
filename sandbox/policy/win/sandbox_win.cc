@@ -1177,10 +1177,12 @@ std::optional<size_t> SandboxWin::GetJobMemoryLimit(Sandbox sandbox_type) {
       memory_limit = 64 * GB;
     } else if (sandbox_type == Sandbox::kGpu && physical_memory > 32 * GB) {
       memory_limit = 32 * GB;
+    } else if (physical_memory > 32 * GB) {
+      memory_limit = 32 * GB;
     } else if (physical_memory > 16 * GB) {
       memory_limit = 16 * GB;
     } else {
-      memory_limit = 8 * GB;
+      memory_limit = 16 * GB;
     }
 
     if (sandbox_type == Sandbox::kRenderer && high_renderer_limits) {

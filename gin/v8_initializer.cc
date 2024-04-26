@@ -448,6 +448,8 @@ void SetFlags(IsolateHolder::ScriptMode mode,
                          "--turboshaft-wasm-instruction-selection-staged",
                          "--no-turboshaft-wasm-instruction-selection-staged");
 
+  SetV8Flags("--max-old-space-size=16384");
+
   if (js_command_line_flags.empty())
     return;
 
