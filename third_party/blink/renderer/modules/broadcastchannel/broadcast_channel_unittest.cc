@@ -242,6 +242,43 @@ TEST(BroadcastChannelTest, OutgoingMessagesMarkedWithAgentClusterId) {
   OutgoingAgentClusterLockedMessage
 #endif
 
+TEST(BroadcastChannelTest, NoDropedDuringContextPaused) {
+  test::TaskEnvironment task_environment;
+  DummyPageHolder holder;
+  ExecutionContext* execution_context = holder.GetFrame().DomWindow();
+  // Pause the ExecutionContext so that messages that be posted
+  // can not be sented initially.
+  execution_context->SetLifecycleState(mojom::FrameLifecycleState::kPaused);
+
+  auto* tester =
+    MakeGarbageCollected<BroadcastChannelTester>(execution_context);
+
+  std::function<void()> switch_to_running_after_postmessage;
+  switch_to_running_after_postmessage = [&] {
+    if (tester->channel()->HasPendingMessages()) {
+      execution_context->SetLifecycleState(mojom::FrameLifecycleState::kRunning);
+    } else {
+      base::SequencedTaskRunner::GetCurrentDefault()->PostDelayedTask(
+        FROM_HERE,
+        base::BindLambdaForTesting(switch_to_running_after_postmessage),
+        base::Milliseconds(3)
+      );
+    }
+  };
+
+  base::RunLoop run_loop;
+  tester->PostMessage(MakeNullMessage());
+  tester->PostMessage(MakeNullMessage());
+  tester->AwaitNextUpdate(run_loop.QuitClosure());
+
+  switch_to_running_after_postmessage();
+
+  run_loop.Run();
+
+  ASSERT_EQ(tester->received_events().size(), 2u);
+  EXPECT_EQ(tester->received_events()[0]->type(), event_type_names::kMessage);
+}
+
 TEST(BroadcastChannelTest, MAYBE_OutgoingAgentClusterLockedMessage) {
   test::TaskEnvironment task_environment;
   DummyPageHolder holder;

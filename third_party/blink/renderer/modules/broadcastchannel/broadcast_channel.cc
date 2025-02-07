@@ -26,6 +26,8 @@ namespace blink {
 
 namespace {
 
+constexpr size_t flushing_period_duration = 100;
+
 // To ensure proper ordering of messages sent to/from multiple BroadcastChannel
 // instances in the same thread, this uses one BroadcastChannelProvider
 // connection as basis for all connections to channels from the same thread. The
@@ -153,6 +155,10 @@ bool BroadcastChannel::HasPendingActivity() const {
   return receiver_.is_bound() && HasEventListeners(event_type_names::kMessage);
 }
 
+bool BroadcastChannel::HasPendingMessages() const {
+  return outgoing_events_.size() > 0;
+}
+
 void BroadcastChannel::ContextDestroyed() {
   CloseInternal();
 }
@@ -163,9 +169,49 @@ void BroadcastChannel::Trace(Visitor* visitor) const {
   visitor->Trace(receiver_);
   visitor->Trace(remote_client_);
   visitor->Trace(associated_remote_);
+  visitor->Trace(weak_factory_);
 }
 
-void BroadcastChannel::OnMessage(BlinkCloneableMessage message) {
+bool BroadcastChannel::IsAbleToDispatchMessage() {
+  auto* context = GetExecutionContext();
+  return !context->IsContextPaused() && FlushOutgoingMessages();
+}
+
+bool BroadcastChannel::FlushOutgoingMessages() {
+  auto* context = GetExecutionContext();
+  if (context->IsContextPaused()) {
+    return false;
+  }
+
+  while (outgoing_events_.size() > 0) {
+    OnMessageInternal(std::move(outgoing_events_.front()));
+    outgoing_events_.pop();
+  }
+
+  return true;
+}
+
+void BroadcastChannel::TryFlushOutgoingMessageAsync() {
+  if (explicitly_closed_) {
+    return;
+  }
+  if (!FlushOutgoingMessages()) {
+    auto task_runner = base::SequencedTaskRunner::GetCurrentDefault();
+    DCHECK(task_runner->RunsTasksInCurrentSequence());
+    task_runner->PostDelayedTask(
+      FROM_HERE,
+      base::BindOnce(
+        base::IgnoreResult(&BroadcastChannel::TryFlushOutgoingMessageAsync),
+        WrapPersistent(weak_factory_.GetWeakCell())),
+        base::Milliseconds(flushing_period_duration)
+      );
+    already_flushing_periodically_ = true;
+  } else {
+    already_flushing_periodically_ = false;
+  }
+}
+
+void BroadcastChannel::OnMessageInternal(BlinkCloneableMessage message) {
   auto* context = GetExecutionContext();
 
   // Queue a task to dispatch the event.
@@ -204,6 +250,17 @@ void BroadcastChannel::OnMessage(BlinkCloneableMessage message) {
   // target BroadcastChannel object's BroadcastChannel settings object.
   // </spec>
   DispatchEvent(*event);
+}
+
+void BroadcastChannel::OnMessage(BlinkCloneableMessage message) {
+  if (!IsAbleToDispatchMessage()) {
+    outgoing_events_.push(std::move(message));
+    if (!already_flushing_periodically_) {
+      TryFlushOutgoingMessageAsync();
+    }
+  } else {
+    OnMessageInternal(std::move(message));
+  }
 }
 
 void BroadcastChannel::OnError() {

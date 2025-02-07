@@ -5,6 +5,10 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_MODULES_BROADCASTCHANNEL_BROADCAST_CHANNEL_H_
 #define THIRD_PARTY_BLINK_RENDERER_MODULES_BROADCASTCHANNEL_BROADCAST_CHANNEL_H_
 
+#include <queue>
+
+#include "base/containers/queue.h"
+#include "third_party/blink/renderer/platform/heap/weak_cell.h"
 #include "third_party/blink/public/mojom/broadcastchannel/broadcast_channel.mojom-blink.h"
 #include "third_party/blink/renderer/bindings/core/v8/active_script_wrappable.h"
 #include "third_party/blink/renderer/core/dom/events/event_target.h"
@@ -14,6 +18,7 @@
 #include "third_party/blink/renderer/platform/mojo/heap_mojo_associated_receiver.h"
 #include "third_party/blink/renderer/platform/mojo/heap_mojo_associated_remote.h"
 #include "third_party/blink/renderer/platform/scheduler/public/frame_or_worker_scheduler.h"
+#include "third_party/blink/renderer/core/events/message_event.h"
 
 namespace blink {
 
@@ -70,6 +75,8 @@ class MODULES_EXPORT BroadcastChannel final
   // ScriptWrappable:
   bool HasPendingActivity() const override;
 
+  bool HasPendingMessages() const;
+
   // ExecutionContextLifecycleObserver:
   void ContextDestroyed() override;
 
@@ -102,10 +109,20 @@ class MODULES_EXPORT BroadcastChannel final
   // Close the mojo receivers and remotes.
   void CloseInternal();
 
+  bool IsAbleToDispatchMessage();
+  bool FlushOutgoingMessages();
+  void TryFlushOutgoingMessageAsync();
+
+  void OnMessageInternal(BlinkCloneableMessage message);
+
   String name_;
+
+  base::queue<BlinkCloneableMessage> outgoing_events_;
 
   // Tracks whether this BroadcastChannel object has had close.
   bool explicitly_closed_ = false;
+
+  bool already_flushing_periodically_ = false;
 
   // BroadcastChannelClient receiver for messages sent from the browser to
   // this channel and BroadcastChannelClient remote for messages sent from
@@ -126,6 +143,8 @@ class MODULES_EXPORT BroadcastChannel final
   // instantiated from a worker execution context, this member is not used.
   HeapMojoAssociatedRemote<mojom::blink::BroadcastChannelProvider>
       associated_remote_;
+
+  WeakCellFactory<BroadcastChannel> weak_factory_{ this };
 };
 
 }  // namespace blink
