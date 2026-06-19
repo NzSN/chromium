@@ -1,0 +1,100 @@
+import("//build/config/ui.gni")
+import("//build/config/win/console_app.gni")
+import("//build/config/sanitizers/sanitizers.gni")
+
+config("mash_lib_warnings") {
+  # Reserved for future warning suppressions.
+}
+
+# --- Main Delegate (app layer) ---
+static_library("mash_app") {
+  sources = [
+    "app/mash_main_delegate.cc",
+    "app/mash_main_delegate.h",
+  ]
+  deps = [
+    ":mash_lib",
+    "//content/public/app",
+  ]
+}
+
+# --- Core library (browser, renderer, common) ---
+static_library("mash_lib") {
+  sources = [
+    "browser/mash_browser_context.cc",
+    "browser/mash_browser_context.h",
+    "browser/mash_browser_main_parts.cc",
+    "browser/mash_browser_main_parts.h",
+    "browser/mash_content_browser_client.cc",
+    "browser/mash_content_browser_client.h",
+    "browser/mash_window.cc",
+    "browser/mash_window.h",
+    "common/mash_content_client.cc",
+    "common/mash_content_client.h",
+    "common/mash_paths.cc",
+    "common/mash_paths.h",
+    "common/mash_switches.cc",
+    "common/mash_switches.h",
+    "renderer/mash_content_renderer_client.cc",
+    "renderer/mash_content_renderer_client.h",
+    "renderer/mash_render_frame_observer.cc",
+    "renderer/mash_render_frame_observer.h",
+  ]
+
+  configs += [ ":mash_lib_warnings" ]
+
+  if (is_component_build) {
+    check_includes = false
+  }
+
+  deps = [
+    "//base",
+    "//components/embedder_support",
+    "//components/performance_manager",
+    "//content/public/browser",
+    "//content/public/renderer",
+    "//content/public/common",
+    "//content/public/child",
+    "//net",
+    "//ui/base",
+    "//ui/gfx",
+    "//ui/gfx/geometry",
+    "//url",
+  ]
+
+  if (toolkit_views) {
+    deps += [
+      "//ui/views",
+      "//ui/views/controls/webview",
+    ]
+  }
+}
+
+# --- Executable ---
+executable("mash") {
+  sources = [ "app/mash_main.cc" ]
+  deps = [
+    ":mash_app",
+    ":mash_lib",
+    "//content/public/app",
+    "//sandbox",
+  ]
+
+  if (is_win) {
+    deps += [
+      "//base",
+      "//sandbox",
+    ]
+    if (win_console_app) {
+      defines = [ "WIN_CONSOLE_APP" ]
+    } else {
+      configs -= [ "//build/config/win:console" ]
+      configs += [ "//build/config/win:windowed" ]
+    }
+    ldflags = [ "/STACK:0x800000" ]
+  }
+
+  if ((is_linux || is_chromeos) && !is_component_build) {
+    configs += [ "//build/config/gcc:rpath_for_built_shared_libraries" ]
+  }
+}
