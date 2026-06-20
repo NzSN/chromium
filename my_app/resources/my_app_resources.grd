@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grit latest_public_release="0" current_release="1">
+  <outputs>
+    <output filename="grit/my_app_resources.h" type="rc_header">
+      <emit emit_type='prepend'></emit>
+    </output>
+    <output filename="my_app_resources.pak" type="data_package" />
+  </outputs>
+  <translations />
+  <release seq="1">
+    <includes>
+      <include name="IDR_MY_APP_INDEX_HTML" file="web/index.html" type="BINDATA" />
+      <include name="IDR_MY_APP_APP_JS" file="web/app.js" type="BINDATA" />
+      <include name="IDR_MY_APP_APP_CSS" file="web/app.css" type="BINDATA" />
+    </includes>
+  </release>
+</grit>

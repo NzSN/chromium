@@ -1738,6 +1738,10 @@
     "messages": [10120],
   },
 
+  "my_app/resources/my_app_resources.grd": {
+    "includes": [11900],
+  },
+
   "<(SHARED_INTERMEDIATE_DIR)/THIS_IS_A_PLACEHOLDER.grd": {
     "META": {"sizes": {"includes": [800]}},
     "includes": [12000],

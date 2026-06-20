@@ -1,0 +1,7 @@
+# Release build args for my_app
+# Usage: gn gen out/MyAppRelease --args='import("//my_app/tools/args_release.gn")'
+
+is_debug = false
+is_official_build = true
+is_component_build = false
+symbol_level = 0

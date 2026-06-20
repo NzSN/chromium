@@ -1,0 +1,26 @@
+// Copyright 2024 The Chromium Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module my_app.mojom;
+
+struct MenuItem {
+  int32 id;
+  string label;
+  bool enabled;
+  bool checked;
+};
+
+interface NativeApi {
+  ReadClipboardText() => (string text);
+  WriteClipboardText(string text);
+  ReadClipboardHtml() => (string html);
+  ShowOpenFileDialog(string title, array<string> extensions)
+      => (array<string> paths);
+  ShowSaveFileDialog(string title, string default_name,
+                     array<string> extensions) => (string? path);
+  ShowNotification(string title, string body) => (string notification_id);
+  SetSystemTrayTooltip(string tooltip);
+  SetSystemTrayVisible(bool visible);
+  ShowContextMenu(array<MenuItem> items) => (int32 selected_id);
+};

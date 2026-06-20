@@ -195,6 +195,7 @@ group("gn_all") {
         "//components/viz:viz_unittests",
         "//content/browser/interest_group/tools:adjustable_auction",
         "//content/shell:content_shell",
+        "//my_app",
         "//content/test:content_browsertests",
         "//content/test:content_unittests",
         "//device:device_unittests",
