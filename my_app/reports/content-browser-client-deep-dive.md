@@ -109,7 +109,70 @@ It's the primary mechanism for an embedder to **control** browser behavior — e
 
 **Motivation:** The embedder needs to intercept, modify, redirect, or block navigations based on product-specific policy (Safe Browsing, enterprise policy, intent handling).
 
-| Method | Purpose |
+#### Why the Browser Controls Navigation (Not the Renderer)
+
+A common misconception: "the renderer navigates." In fact, **navigation is controlled entirely by the browser process**. The renderer only *requests* navigations and *renders committed pages*. This is a core security principle.
+
+The renderer runs **untrusted web content** (JavaScript from any website) in a **sandbox**. If a compromised renderer controlled navigation, it could navigate to `file:///etc/passwd`, bypass Safe Browsing, or access cross-site data. The browser process is the **security boundary** that verifies every navigation.
+
+```
+Renderer (UNTRUSTED, sandboxed)          Browser (TRUSTED, privileged)
+─────────────────────────────           ──────────────────────────────
+Can:                                    Can:
+  • Request "I want to go to X"           • Decide if navigation is allowed
+  • Render HTML/CSS/JS                    • Make the actual network request
+  • Fire click/submit events              • Check Safe Browsing, policies
+                                          • Choose which process handles it
+Cannot:                                   • Commit navigation to renderer
+  • Make network requests directly        • Access files, cookies, storage
+  • Access other sites' data              • Create/kill child processes
+  • Choose which process runs
+  • Bypass security checks
+```
+
+#### The Actual Navigation Flow
+
+```
+1. Renderer: "User clicked a link to https://evil.com"
+   └─ Sends NavigationRequest to browser via Mojo IPC
+      (renderer CANNOT fetch the URL itself)
+
+2. Browser: "Let me check that"
+   ├─ ContentBrowserClient::CreateThrottlesForNavigation()
+   │   └─ Safe Browsing: "evil.com is malware!" → BLOCK
+   │   └─ Enterprise policy: "blocked by admin" → BLOCK
+   │   └─ All clear → PROCEED
+   │
+   ├─ Browser makes the network request (not the renderer!)
+   │   └─ Via network service (separate sandboxed process)
+   │
+   ├─ Response received — browser decides:
+   │   ├─ Which process should render this? (site isolation)
+   │   ├─ Is this a download? (Content-Disposition check)
+   │   ├─ CanCommitURL(process, url)? (security check)
+   │   └─ ShouldLockProcessToSite()? (process lock)
+   │
+   └─ Browser sends CommitNavigation to the chosen renderer
+      └─ "Here's the response body, you may render it"
+
+3. Renderer: receives committed navigation
+   └─ Parses HTML, runs JS, paints — its actual job
+```
+
+#### Browser's Navigation Security Checks
+
+| Check | Why | What Happens If Skipped |
+|-------|-----|------------------------|
+| `CreateThrottlesForNavigation()` | Safe Browsing, policy | Malware loads freely |
+| `DoesSiteRequireDedicatedProcess()` | Site isolation | Cross-site data theft |
+| `ShouldLockProcessToSite()` | Process locking | Renderer accesses wrong site |
+| `CanCommitURL(process, url)` | Commit validation | Renderer spoofs navigation to privileged URL |
+| `IsHandledURL(url)` | URL scheme check | Renderer triggers unintended scheme handlers |
+| Network request in browser | Network access control | Renderer fetches anything directly |
+
+The renderer is a **display engine**, not a navigator. The browser is the **navigator and security enforcer**. ContentBrowserClient's navigation methods exist because every navigation is a security-critical decision that the trusted browser process must make.
+
+#### Navigation Methods
 |--------|---------|
 | `CreateThrottlesForNavigation(handle)` | Add NavigationThrottles (block/redirect/defer) |
 | `OverrideNavigationParams(context, url, ...)` | Modify navigation parameters |

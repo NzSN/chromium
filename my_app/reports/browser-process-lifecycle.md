@@ -16,7 +16,7 @@ The embedder participates via two interfaces:
 main()
   │
   ╔═══════════════════════════════════════════════════════════════╗
-  ║                     INITIALIZATION                           ║
+  ║                     INITIALIZATION                            ║
   ╚═══════════════════════════════════════════════════════════════╝
   │
   ├─ ContentMain() → Initialize() → RunBrowser()
@@ -154,6 +154,183 @@ main()
        • AtExitManager runs exit callbacks
        • Process exits
 ```
+
+---
+
+## Runtime: ContentBrowserClient During the Message Loop
+
+`BrowserMainParts` handles **startup and shutdown** (the 12 phases above). But the browser's life is mostly spent in `RunLoop::Run()` — processing events, navigations, and IPC. During this phase, `//content` calls `ContentBrowserClient`'s **350+ other methods** continuously for runtime decisions.
+
+### Two Complementary Roles
+
+```
+Browser Lifetime
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  STARTUP                    RUNNING                     SHUTDOWN
+  (BrowserMainParts)         (ContentBrowserClient)      (BrowserMainParts)
+  ┌───────────────┐          ┌───────────────────┐       ┌───────────────┐
+  │PreCreateThreads│         │ Called on every:   │       │PostMainMsg    │
+  │PreMainMsgLoop  │         │  • navigation      │       │LoopRun        │
+  │WillRunMainMsg  │         │  • process launch  │       │PostDestroy    │
+  │                │         │  • Mojo binding    │       │Threads        │
+  └──────┬─────────┘         │  • permission ask  │       └───────────────┘
+         │                   │  • SW registration │              ▲
+         ▼                   │  • URL load        │              │
+    RunLoop::Run() ────────► │  • cookie access   │ ──────► quit_closure
+                             │  • ...350+ hooks   │
+                             └───────────────────┘
+```
+
+**BrowserMainParts** = "what happens at startup and shutdown" (lifecycle phases)
+**ContentBrowserClient** = "what to decide at runtime" (policy decisions, called continuously)
+
+### Runtime Decision Categories
+
+During `RunLoop::Run()`, every significant event in the browser process triggers a callback to `ContentBrowserClient`. These are grouped by when they fire:
+
+#### On Every Navigation
+
+```cpp
+// content calls these for EACH navigation:
+CreateThrottlesForNavigation(handle)              // Add throttles to block/redirect/defer
+OverrideNavigationParams(context, url, ...)       // Modify transition type, referrer
+ShouldOverrideUrlLoading(params)                  // Override loading (e.g., Android intents)
+WillComputeSiteForNavigation(context, url, ...)   // Pre-compute site for process selection
+GetEffectiveURL(context, url)                     // Map URL for process model decisions
+```
+
+**Example:** Chrome adds Safe Browsing + enterprise policy throttles via `CreateThrottlesForNavigation()`. my_app uses defaults (no throttles).
+
+#### On Every Process Launch
+
+```cpp
+// content calls these when spawning a child process:
+RenderProcessWillLaunch(host)                     // Configure the new renderer
+BrowserChildProcessHostCreated(host)              // Any child process (GPU, utility, etc.)
+AppendExtraCommandLineSwitches(cmd, child_id)      // Add flags to child process command line
+ShouldUseSpareRenderProcessHost(context, url)      // Use pre-spawned spare process?
+ShouldTryToUseExistingProcessHost(context, url)    // Reuse existing renderer?
+IsSuitableHost(process_host, instance)            // Is this process suitable for this site?
+DoesSiteRequireDedicatedProcess(context, site)     // Must this site be isolated?
+ShouldLockProcessToSite(context, site)             // Lock renderer to one site?
+```
+
+**Example:** Chrome gives extensions their own process, locks sites for site isolation. my_app uses defaults.
+
+#### On Every Frame Creation / Mojo Binding
+
+```cpp
+// content calls these when a new frame appears or needs interfaces:
+RegisterBrowserInterfaceBindersForFrame(rfh, map)  // Bind Mojo interfaces for this frame
+RegisterBrowserInterfaceBindersForServiceWorker(ctx, map)  // Bind for service workers
+ExposeInterfacesToRenderer(registry, rfh)          // Expose process-scoped interfaces
+OverrideURLLoaderFactoryParams(process, origin, p) // Modify URL loader factory params
+```
+
+**Example:** my_app binds `mojom::NativeApi` here — this is how JS calls native clipboard, file dialogs, etc.
+
+#### On Every URL Load
+
+```cpp
+// content calls these for resource loading:
+CreateNonNetworkNavigationURLLoaderFactory(scheme, id)       // Factory for custom scheme nav
+RegisterNonNetworkSubresourceURLLoaderFactories(pid, fid, ..) // Factory for custom subresources
+ShouldAllowNoLongerUsedProcessToExit()            // Kill idle renderers?
+ConfigureNetworkContextParams(context, in_mem, ...) // Network config (proxy, SSL, cache)
+```
+
+**Example:** my_app returns `AppURLLoaderFactory` for `myapp://` URLs — serves bundled HTML/CSS/JS from pak files.
+
+#### On Permission / Policy Checks
+
+```cpp
+// content calls these when web content requests capabilities:
+AllowServiceWorker(scope, site, context, rfh)      // Allow Service Worker registration?
+AllowSharedWorker(url, site, name, origin, ...)     // Allow Shared Worker?
+IsClipboardPasteAllowed(rfh, source, type)         // Allow paste operation?
+IsClipboardPasteAllowedByPolicy(src, dst, data, cb) // Enterprise clipboard policy
+IsDragAllowedByPolicy(source, data)                // Enterprise drag policy
+IsFileAccessAllowed(path, absolute, profile)       // File access permitted?
+IsJitDisabledForSite(context, url)                 // Disable V8 JIT?
+```
+
+**Example:** Chrome checks enterprise DLP policies for clipboard, blocks JIT on sensitive origins. my_app uses defaults (allow all).
+
+#### On Security Decisions
+
+```cpp
+// content calls these for security enforcement:
+CanCommitURL(process_host, url)                    // Can this process commit this URL?
+ShouldEnableStrictSiteIsolation()                  // Isolate every site?
+GetOriginsRequiringDedicatedProcess()              // Origins needing own process
+ShouldIsolateErrorPage(in_main_frame)              // Isolate error pages?
+ShouldBlockRendererDebugURL(url, context)           // Block chrome://crash etc.?
+```
+
+#### On UI Events
+
+```cpp
+// content calls these for UI-related decisions:
+GetUserAgent()                                     // Every HTTP request
+GetAcceptLangs(context)                            // Every HTTP request
+GetWebContentsViewDelegate(web_contents)           // Creating a view for WebContents
+IsFullscreenAllowedForUnfocusedWebContents(wc)     // Fullscreen when unfocused?
+GetDefaultFavicon()                                // Default page icon
+```
+
+### Runtime Flow Example: User Clicks a Link
+
+```
+User clicks <a href="https://example.com">
+  │
+  ├─ Renderer sends navigation request to browser
+  │
+  ├─ ContentBrowserClient::CreateThrottlesForNavigation()
+  │   └─ [Chrome] adds SafeBrowsingThrottle, PolicyThrottle
+  │   └─ [my_app] returns empty (no throttles)
+  │
+  ├─ ContentBrowserClient::GetEffectiveURL()
+  │   └─ Maps URL for process model decisions
+  │
+  ├─ ContentBrowserClient::DoesSiteRequireDedicatedProcess()
+  │   └─ [Chrome] yes for most sites (site isolation)
+  │   └─ [my_app] uses default (content decides)
+  │
+  ├─ ContentBrowserClient::ShouldTryToUseExistingProcessHost()
+  │   └─ Should we reuse an existing renderer?
+  │
+  ├─ ContentBrowserClient::ShouldLockProcessToSite()
+  │   └─ Lock this renderer to example.com?
+  │
+  ├─ ContentBrowserClient::RenderProcessWillLaunch()
+  │   └─ [Chrome] configure process, add extensions
+  │   └─ [my_app] (not overridden)
+  │
+  ├─ ContentBrowserClient::AppendExtraCommandLineSwitches()
+  │   └─ Add flags to renderer command line
+  │
+  ├─ [Navigation commits — renderer loads page]
+  │
+  ├─ ContentBrowserClient::RegisterBrowserInterfaceBindersForFrame()
+  │   └─ [my_app] binds mojom::NativeApi
+  │   └─ [Chrome] binds extensions, autofill, translate, etc.
+  │
+  └─ Page is loaded and interactive
+```
+
+### my_app's Runtime Methods (6 of 350+)
+
+| Method | When Called | What my_app Does |
+|--------|------------|------------------|
+| `GetUserAgent()` | Every HTTP request | Returns `"MyApp/1.0"` |
+| `GetAcceptLangs()` | Every HTTP request | Returns `"en-US,en"` |
+| `RegisterBrowserInterfaceBindersForFrame()` | Every new frame | Binds `mojom::NativeApi` |
+| `CreateNonNetworkNavigationURLLoaderFactory()` | Every `myapp://` navigation | Returns `AppURLLoaderFactory` |
+| `RegisterNonNetworkSubresourceURLLoaderFactories()` | Every `myapp://` subresource | Returns `AppURLLoaderFactory` |
+| `CreateBrowserMainParts()` | Once at startup | Returns `AppBrowserMainParts` |
+
+The other ~344 methods use content's defaults — designed to be safe and functional without embedder customization.
 
 ---
 
