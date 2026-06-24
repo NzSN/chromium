@@ -26,6 +26,7 @@ class AppMainDelegate : public content::ContentMainDelegate {
  private:
   std::optional<int> BasicStartupComplete() override;
   void PreSandboxStartup() override;
+  std::optional<int> PostEarlyInitialization(InvokedIn invoked_in) override;
   content::ContentBrowserClient* CreateContentBrowserClient() override;
   content::ContentRendererClient* CreateContentRendererClient() override;
 

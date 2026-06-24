@@ -4,18 +4,50 @@
 
 #include "my_app/app/main_delegate.h"
 
+#include "my_app/app/main_delegate.h"
+
 #include "base/check.h"
+#include "base/command_line.h"
+#include "base/base_switches.h"
 #include "base/files/file_path.h"
 #include "base/logging.h"
 #include "base/logging/logging_settings.h"
 #include "base/path_service.h"
+#include "components/crash/core/app/crash_reporter_client.h"
+#include "components/crash/core/app/crashpad.h"
+#include "components/crash/core/app/crashpad.h"
 #include "content/public/common/content_client.h"
+#include "content/public/common/content_switches.h"
+#include "my_app/app/app_crash_reporter_client.h"
 #include "my_app/browser/app_browser_client.h"
 #include "my_app/common/app_content_client.h"
 #include "my_app/renderer/app_renderer_client.h"
 #include "ui/base/resource/resource_bundle.h"
 
 namespace my_app {
+
+namespace {
+
+AppCrashReporterClient* GetCrashReporterClient() {
+  static base::NoDestructor<AppCrashReporterClient> client;
+  return client.get();
+}
+
+void InitializeCrashpadIfEnabled() {
+  if (!base::CommandLine::ForCurrentProcess()->HasSwitch(
+          switches::kEnableCrashReporter)) {
+    return;
+  }
+
+  std::string process_type =
+      base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
+          switches::kProcessType);
+
+  crash_reporter::SetCrashReporterClient(GetCrashReporterClient());
+  crash_reporter::InitializeCrashpad(process_type.empty(), process_type);
+}
+
+}  // namespace
 
 AppMainDelegate::AppMainDelegate() = default;
 AppMainDelegate::~AppMainDelegate() = default;
@@ -37,6 +69,12 @@ void AppMainDelegate::PreSandboxStartup() {
   CHECK(res);
   pak_file = pak_file.Append(FILE_PATH_LITERAL("my_app.pak"));
   ui::ResourceBundle::InitSharedInstanceWithPakPath(pak_file);
+}
+
+std::optional<int> AppMainDelegate::PostEarlyInitialization(
+    InvokedIn invoked_in) {
+  InitializeCrashpadIfEnabled();
+  return std::nullopt;
 }
 
 content::ContentBrowserClient* AppMainDelegate::CreateContentBrowserClient() {

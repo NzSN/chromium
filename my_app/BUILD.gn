@@ -119,6 +119,8 @@ static_library("my_app_lib") {
 
 static_library("my_app_app") {
   sources = [
+    "app/app_crash_reporter_client.cc",
+    "app/app_crash_reporter_client.h",
     "app/main_delegate.cc",
     "app/main_delegate.h",
   ]
@@ -126,7 +128,9 @@ static_library("my_app_app") {
   deps = [
     ":my_app_lib",
     "//base",
+    "//components/crash/core/app",
     "//content/public/app",
+    "//content/public/common",
     "//ui/base",
   ]
 }
